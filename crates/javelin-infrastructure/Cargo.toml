@@ -1,0 +1,27 @@
+[package]
+name = "javelin-infrastructure"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Internal dependencies
+javelin-domain = { workspace = true }
+javelin-application ={ workspace = true }
+
+# External dependencies
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+lmdb = "0.8"
+lmdb-sys = "0.8"
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+serial_test = "3.2"
+tempfile = { workspace = true }
+proptest = { workspace = true }

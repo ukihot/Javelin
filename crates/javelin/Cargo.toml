@@ -1,0 +1,22 @@
+[package]
+name = "javelin"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "javelin"
+path = "src/main.rs"
+
+[dependencies]
+# Internal dependencies - all layers
+javelin-domain = { workspace = true }
+javelin-application = { workspace = true }
+javelin-infrastructure = { workspace = true }
+javelin-adapter = { workspace = true }
+
+# External dependencies
+thiserror = { workspace = true }
+color-eyre = { workspace = true }
+tokio = { workspace = true }

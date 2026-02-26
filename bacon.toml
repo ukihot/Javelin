@@ -1,0 +1,127 @@
+# Bacon configuration for Javelin Workspace
+# https://dystroy.org/bacon/
+
+default_job = "check"
+
+[jobs.check]
+command = ["cargo", "check", "--workspace", "--color", "always"]
+need_stdout = false
+watch = ["crates"]
+
+[jobs.check-all]
+command = ["cargo", "check", "--workspace", "--all-targets", "--color", "always"]
+need_stdout = false
+watch = ["crates"]
+
+[jobs.clippy]
+command = [
+    "cargo", "clippy",
+    "--workspace",
+    "--all-targets",
+    "--color", "always",
+    "--",
+    "-W", "clippy::pedantic",
+    "-W", "clippy::nursery",
+    "-W", "clippy::unwrap_used",
+]
+need_stdout = false
+watch = ["crates"]
+
+[jobs.test]
+command = ["cargo", "nextest", "run", "--workspace", "--color", "always"]
+need_stdout = true
+watch = ["crates"]
+
+[jobs.test-domain]
+command = [
+    "cargo", "nextest", "run",
+    "-p", "javelin-domain",
+    "--color", "always",
+]
+need_stdout = true
+watch = ["crates/javelin-domain"]
+
+[jobs.test-application]
+command = [
+    "cargo", "nextest", "run",
+    "-p", "javelin-application",
+    "--color", "always",
+]
+need_stdout = true
+watch = ["crates/javelin-application"]
+
+[jobs.test-infrastructure]
+command = [
+    "cargo", "nextest", "run",
+    "-p", "javelin-infrastructure",
+    "--color", "always",
+]
+need_stdout = true
+watch = ["crates/javelin-infrastructure"]
+
+[jobs.test-adapter]
+command = [
+    "cargo", "nextest", "run",
+    "-p", "javelin-adapter",
+    "--color", "always",
+]
+need_stdout = true
+watch = ["crates/javelin-adapter"]
+
+[jobs.test-integration]
+command = [
+    "cargo", "nextest", "run",
+    "-p", "javelin",
+    "--color", "always",
+]
+need_stdout = true
+watch = ["crates/javelin/src"]
+
+[jobs.doc]
+command = ["cargo", "doc", "--workspace", "--color", "always", "--no-deps"]
+need_stdout = false
+watch = ["crates"]
+
+[jobs.run]
+command = ["cargo", "run", "-p", "javelin", "--color", "always"]
+need_stdout = true
+watch = ["crates"]
+on_success = "back"
+
+[jobs.build]
+command = ["cargo", "build", "--workspace", "--color", "always"]
+need_stdout = false
+watch = ["crates"]
+
+[jobs.build-release]
+command = ["cargo", "build", "--workspace", "--release", "--color", "always"]
+need_stdout = false
+watch = ["crates"]
+
+[jobs.fmt]
+command = ["cargo", "fmt", "--all"]
+need_stdout = false
+watch = ["crates"]
+
+[jobs.tree]
+command = ["cargo", "tree", "-p", "javelin"]
+need_stdout = true
+
+[keybindings]
+# デフォルトキーバインディング
+# c: check
+# t: test
+# r: run
+# d: doc
+# q: quit
+
+# カスタムキーバインディング
+a = "job:test-application"
+i = "job:test-infrastructure"
+m = "job:test-domain"
+p = "job:test-adapter"
+g = "job:test-integration"
+f = "job:fmt"
+l = "job:clippy"
+b = "job:build"
+w = "job:tree"

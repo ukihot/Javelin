@@ -1,0 +1,18 @@
+[package]
+name = "javelin-domain"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Domain layer has NO external dependencies except for basic utilities
+thiserror = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+mockall = "0.14.0"
+tokio-test = "0.4"

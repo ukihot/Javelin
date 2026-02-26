@@ -1,0 +1,62 @@
+# Javelin Workspace Root
+# Clean Architecture + Event Sourcing + CQRS
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/javelin",           # Main application entry point
+    "crates/javelin-domain",    # Domain layer (no dependencies)
+    "crates/javelin-application", # Application layer (depends on domain)
+    "crates/javelin-infrastructure", # Infrastructure layer (depends on domain)
+    "crates/javelin-adapter",   # Adapter layer (depends on application)
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Yu Tokunaga"]
+license = "MPL-2.0"
+
+[workspace.dependencies]
+# Internal crates
+javelin-domain = { path = "crates/javelin-domain" }
+javelin-application = { path = "crates/javelin-application" }
+javelin-infrastructure = { path = "crates/javelin-infrastructure" }
+javelin-adapter = { path = "crates/javelin-adapter" }
+
+# External dependencies - async runtime
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+futures = "0.3"
+async-trait = "0.1"
+
+# External dependencies - error handling
+thiserror = "2"
+color-eyre = "0.6.5"
+
+# External dependencies - serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# External dependencies - date/time
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Dev dependencies
+tempfile = "3.14"
+proptest = "1.5"
+
+[profile.dev]
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"
+
+[profile.test]
+opt-level = 1
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
