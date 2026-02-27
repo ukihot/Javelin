@@ -12,7 +12,10 @@ chrono = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+# `mockall` is needed by consumers of the domain mocks, so expose it as a
+# normal dependency rather than a dev-dependency.
+mockall = "0.14.0"
+
 [dev-dependencies]
 proptest = { workspace = true }
-mockall = "0.14.0"
 tokio-test = "0.4"

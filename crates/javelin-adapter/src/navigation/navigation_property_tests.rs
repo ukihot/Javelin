@@ -139,17 +139,17 @@ mod tests {
 
         // All three variants should be constructible and usable
         match _go {
-            NavAction::Go(_) => assert!(true),
+            NavAction::Go(Route::Search) => {}
             _ => panic!("Expected Go variant"),
         }
 
         match _back {
-            NavAction::Back => assert!(true),
+            NavAction::Back => {}
             _ => panic!("Expected Back variant"),
         }
 
         match _none {
-            NavAction::None => assert!(true),
+            NavAction::None => {}
             _ => panic!("Expected None variant"),
         }
     }

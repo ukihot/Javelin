@@ -50,8 +50,11 @@ pub trait RepositoryBase: Send + Sync {
     async fn get_latest_sequence(&self) -> DomainResult<u64>;
 }
 
+// expose mocks for all crates; they are lightweight and useful in integration tests
+pub use mock::{MockClosingRepository, MockJournalEntryRepository};
+
 // テスト用のモック実装
-#[cfg(test)]
+// the mock module contains automock implementations used by tests and consumers
 pub mod mock {
     use mockall::mock;
 
@@ -60,6 +63,8 @@ pub mod mock {
     // JournalEntryEvent用のモック
     mock! {
         pub JournalEntryRepository {}
+        #[allow(async_fn_in_trait)]
+        impl crate::repositories::journal_entry_repository::JournalEntryRepository for JournalEntryRepository {}
 
         #[allow(async_fn_in_trait)]
         impl RepositoryBase for JournalEntryRepository {
@@ -78,6 +83,8 @@ pub mod mock {
     // ClosingEvent用のモック
     mock! {
         pub ClosingRepository {}
+        #[allow(async_fn_in_trait)]
+        impl crate::repositories::closing_repository::ClosingRepository for ClosingRepository {}
 
         #[allow(async_fn_in_trait)]
         impl RepositoryBase for ClosingRepository {
@@ -93,6 +100,3 @@ pub mod mock {
         }
     }
 }
-
-#[cfg(test)]
-pub use mock::{MockClosingRepository, MockJournalEntryRepository};

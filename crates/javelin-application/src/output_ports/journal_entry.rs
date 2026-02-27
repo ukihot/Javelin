@@ -38,6 +38,9 @@ pub trait JournalEntryOutputPort: Send + Sync {
     async fn present_delete_draft_result(&self, response: DeleteDraftJournalEntryResponse);
 }
 
+#[cfg(test)]
+pub use mock::MockJournalEntryOutputPort;
+
 // テスト用のモック実装
 #[cfg(test)]
 pub mod mock {
@@ -63,6 +66,3 @@ pub mod mock {
         }
     }
 }
-
-#[cfg(test)]
-pub use mock::MockJournalEntryOutputPort;

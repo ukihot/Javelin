@@ -254,7 +254,7 @@ mod tests {
     #[test]
     fn test_impairment_indicator_enum() {
         // 各バリアントが区別可能であることを確認
-        let indicators = vec![
+        let indicators = [
             ImpairmentIndicator::SignificantMarketPriceDeclination,
             ImpairmentIndicator::CollectionDifficultIndicator,
             ImpairmentIndicator::UnfavorableContractModification,
@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn test_inventory_valuation_methods() {
-        let methods = vec![
+        let methods = [
             InventoryValuationMethod::Fifo,
             InventoryValuationMethod::Lifo,
             InventoryValuationMethod::WeightedAverageCost,
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_provision_type_all_variants() {
-        let types = vec![
+        let types = [
             ProvisionType::ProductWarranty,
             ProvisionType::LitigationRisk,
             ProvisionType::ContractualObligation,

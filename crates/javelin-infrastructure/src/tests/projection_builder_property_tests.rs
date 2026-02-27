@@ -140,14 +140,20 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let path = proj_shared_path();
+            println!("[test] serial_projection_builder_write: removing dir: {:?}", &path);
             let _ = std::fs::remove_dir_all(&path);
+            println!("[test] serial_projection_builder_write: removed dir");
             let event_store = Arc::new(EventStore::new(&path).await.unwrap());
+            println!("[test] serial_projection_builder_write: created EventStore");
             let projection_db = Arc::new(ProjectionDb::new(&path).await.unwrap());
+            println!("[test] serial_projection_builder_write: created ProjectionDb");
 
             let builder =
                 ProjectionBuilderImpl::new(Arc::clone(&projection_db), Arc::clone(&event_store));
+            println!("[test] serial_projection_builder_write: before rebuild");
             // just ensure we can rebuild even on empty store
             builder.rebuild_all_projections().await.unwrap();
+            println!("[test] serial_projection_builder_write: after rebuild");
         });
     }
 
@@ -157,12 +163,42 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let path = proj_shared_path();
+            // ensure a clean environment before opening LMDB to avoid leftover files from previous
+            // runs
+            println!(
+                "[test] serial_projection_builder_read: removing dir before open: {:?}",
+                &path
+            );
+            let _ = std::fs::remove_dir_all(&path);
+            println!("[test] serial_projection_builder_read: path={:?}", &path);
             let event_store = Arc::new(EventStore::new(&path).await.unwrap());
+            println!("[test] serial_projection_builder_read: created EventStore");
+            println!("[test] serial_projection_builder_read: path exists={} ", path.exists());
+            if path.exists() {
+                match std::fs::read_dir(&path) {
+                    Ok(entries) => {
+                        for e in entries {
+                            if let Ok(e) = e {
+                                println!(
+                                    "[test] serial_projection_builder_read: entry={:?}",
+                                    e.path()
+                                );
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        println!("[test] serial_projection_builder_read: read_dir error={}", err)
+                    }
+                }
+            }
             let projection_db = Arc::new(ProjectionDb::new(&path).await.unwrap());
+            println!("[test] serial_projection_builder_read: created ProjectionDb");
             let builder =
                 ProjectionBuilderImpl::new(Arc::clone(&projection_db), Arc::clone(&event_store));
+            println!("[test] serial_projection_builder_read: before rebuild");
             // ensure builder still works (reads checkpoint etc.)
             builder.rebuild_all_projections().await.unwrap();
+            println!("[test] serial_projection_builder_read: after rebuild");
         });
     }
 }

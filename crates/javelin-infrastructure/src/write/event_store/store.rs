@@ -67,12 +67,27 @@ impl EventStore {
             0
         };
 
-        // 既存ファイルサイズに余裕を持たせるが、指数関数的な増加を防ぐ
-        // existing_size + 50%の余裕、または initial_map_size のいずれか大きい方
-        // ただし、最大10GBまでに制限（異常な増加を防ぐ）
-        const MAX_MAP_SIZE: usize = 10 * 1024 * 1024 * 1024; // 10GB
-        let calculated_size = std::cmp::max(initial_map_size, existing_size + (existing_size / 2));
-        let map_size = std::cmp::min(calculated_size, MAX_MAP_SIZE);
+        // 既存ファイルサイズに基づいて map_size を調整するが、過度な増加を防止する
+        // - 既存ファイルが無ければ `initial_map_size` を使用
+        // - 既存ファイルがある場合は既存サイズの +50% を試算するが上限を設ける
+        // - 過去の運用で極端に大きなファイルが残っていると exponential に増える懸念があるため
+        //   安全側に倒して上限を低めに設定する（現状 1GB）
+        const MAX_MAP_SIZE: usize = 1024 * 1024 * 1024; // 1GB
+        let map_size = if existing_size == 0 {
+            initial_map_size
+        } else {
+            // candidate は existing_size の +50%（過度な拡大を抑える）
+            let mut candidate = existing_size.saturating_add(existing_size / 2);
+            if candidate > MAX_MAP_SIZE {
+                // 既存ファイルが異常に大きい場合は上限に切り詰める（安全措置）
+                eprintln!(
+                    "EventStore: existing data.mdb size ({}) exceeds MAX_MAP_SIZE ({}). capping to MAX.",
+                    existing_size, MAX_MAP_SIZE
+                );
+                candidate = MAX_MAP_SIZE;
+            }
+            std::cmp::max(initial_map_size, candidate)
+        };
 
         let mut env_builder = Environment::new();
         env_builder.set_max_dbs(2).set_map_size(map_size);

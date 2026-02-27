@@ -1,5 +1,24 @@
-// PresenterRegistry - Global registry mapping page instances to presenters
-// Enables controllers to find the correct presenter for each page instance
+//! PresenterRegistry - Global registry mapping page instances to presenters
+//! Enables controllers to find the correct presenter for each page instance
+//!
+//! When a page creates its own channels, it also creates presenters
+//! and registers them here. Controllers use this registry to find
+//! the correct presenter for the current page instance.
+//!
+//! # Thread Safety
+//!
+//! Uses `RwLock` for thread-safe concurrent access. Multiple readers
+//! can access the registry simultaneously, but writers have exclusive access.
+//!
+//! # Example
+//!
+//! ```no_run
+//! // In SearchPageState::new()
+//! let id = uuid::Uuid::new_v4();
+//! let presenter = std::sync::Arc::new(crate::presenter::SearchPresenter::new(...));
+//! let registry = crate::navigation::presenter_registry::PresenterRegistry::new();
+//! registry.register_search_presenter(id, presenter);
+//! ```
 
 use std::{
     collections::HashMap,

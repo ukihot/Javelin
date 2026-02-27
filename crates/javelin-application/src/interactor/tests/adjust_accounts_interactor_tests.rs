@@ -6,7 +6,8 @@ mod tests {
     use std::sync::Arc;
 
     use javelin_domain::{
-        financial_close::closing_events::ClosingEvent, repositories::RepositoryBase,
+        financial_close::closing_events::ClosingEvent,
+        repositories::{MockClosingRepository, RepositoryBase},
     };
 
     use crate::{
@@ -19,51 +20,8 @@ mod tests {
         },
     };
 
-    /// MockClosingRepository
-    struct MockClosingRepository;
-
-    impl MockClosingRepository {
-        fn new() -> Self {
-            Self
-        }
-    }
-
-    impl RepositoryBase for MockClosingRepository {
-        type Event = ClosingEvent;
-
-        async fn append(&self, _event: Self::Event) -> javelin_domain::error::DomainResult<()> {
-            Ok(())
-        }
-
-        async fn append_events<T>(
-            &self,
-            _id: &str,
-            events: Vec<T>,
-        ) -> javelin_domain::error::DomainResult<u64>
-        where
-            T: serde::Serialize + Send + 'static,
-        {
-            Ok(events.len() as u64)
-        }
-
-        async fn get_events(
-            &self,
-            _id: &str,
-        ) -> javelin_domain::error::DomainResult<Vec<serde_json::Value>> {
-            Ok(vec![])
-        }
-
-        async fn get_all_events(
-            &self,
-            _from_sequence: u64,
-        ) -> javelin_domain::error::DomainResult<Vec<serde_json::Value>> {
-            Ok(vec![])
-        }
-
-        async fn get_latest_sequence(&self) -> javelin_domain::error::DomainResult<u64> {
-            Ok(0)
-        }
-    }
+    // we already have a mock implementation generated in the domain layer
+    // reuse `MockClosingRepository` from there rather than redefining it
 
     /// モックLedgerQueryService
     struct MockLedgerQueryService;
@@ -101,20 +59,35 @@ mod tests {
 
     #[tokio::test]
     async fn test_successful_adjust_accounts() {
-        let mock_repo = MockClosingRepository::new();
+        let mut mock_repo = MockClosingRepository::new();
+        mock_repo.expect_append().returning(|_| Ok(()));
+        mock_repo
+            .expect_append_events::<ClosingEvent>()
+            .returning(|_, events| Ok(events.len() as u64));
+        mock_repo.expect_get_events().returning(|_| Ok(vec![]));
+        mock_repo.expect_get_all_events().returning(|_| Ok(vec![]));
+        mock_repo.expect_get_latest_sequence().returning(|| Ok(0));
         let query_service = Arc::new(MockLedgerQueryService);
         let interactor: AdjustAccountsInteractor<MockClosingRepository, MockLedgerQueryService> =
             AdjustAccountsInteractor::new(Arc::new(mock_repo), query_service);
 
         let request = AdjustAccountsRequest { fiscal_year: 2024, period: 1 };
 
-        let result = interactor.execute(request).await;
+        let result: crate::error::ApplicationResult<crate::dtos::AdjustAccountsResponse> =
+            interactor.execute(request).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_validation_error_invalid_period() {
-        let mock_repo = MockClosingRepository::new();
+        let mut mock_repo = MockClosingRepository::new();
+        mock_repo.expect_append().returning(|_| Ok(()));
+        mock_repo
+            .expect_append_events::<ClosingEvent>()
+            .returning(|_, events| Ok(events.len() as u64));
+        mock_repo.expect_get_events().returning(|_| Ok(vec![]));
+        mock_repo.expect_get_all_events().returning(|_| Ok(vec![]));
+        mock_repo.expect_get_latest_sequence().returning(|| Ok(0));
         let query_service = Arc::new(MockLedgerQueryService);
         let interactor: AdjustAccountsInteractor<MockClosingRepository, MockLedgerQueryService> =
             AdjustAccountsInteractor::new(Arc::new(mock_repo), query_service);
@@ -133,14 +106,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_event_store_failure() {
-        let mock_repo = MockClosingRepository::new();
+        let mut mock_repo = MockClosingRepository::new();
+        mock_repo.expect_append().returning(|_| Ok(()));
+        mock_repo
+            .expect_append_events::<ClosingEvent>()
+            .returning(|_, events| Ok(events.len() as u64));
+        mock_repo.expect_get_events().returning(|_| Ok(vec![]));
+        mock_repo.expect_get_all_events().returning(|_| Ok(vec![]));
+        mock_repo.expect_get_latest_sequence().returning(|| Ok(0));
         let query_service = Arc::new(MockLedgerQueryService);
         let interactor: AdjustAccountsInteractor<MockClosingRepository, MockLedgerQueryService> =
             AdjustAccountsInteractor::new(Arc::new(mock_repo), query_service);
 
         let request = AdjustAccountsRequest { fiscal_year: 2024, period: 1 };
 
-        let result = interactor.execute(request).await;
+        let result: crate::error::ApplicationResult<crate::dtos::AdjustAccountsResponse> =
+            interactor.execute(request).await;
         // モックはエラーを返さないため、成功するはず
         assert!(result.is_ok());
     }

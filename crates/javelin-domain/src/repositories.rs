@@ -18,7 +18,6 @@ pub use company_master_repository::*;
 pub use journal_entry_repository::*;
 pub use repository_base::*;
 // テスト用のモックを再エクスポート
-#[cfg(test)]
 pub use repository_base::{MockClosingRepository, MockJournalEntryRepository};
 pub use subsidiary_account_master_repository::*;
 pub use system_master_repository::*;

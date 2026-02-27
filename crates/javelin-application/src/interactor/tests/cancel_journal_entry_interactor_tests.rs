@@ -7,7 +7,7 @@ mod tests {
 
     use javelin_domain::{
         financial_close::journal_entry::events::JournalEntryEvent,
-        repositories::{JournalEntryRepository, RepositoryBase},
+        repositories::{JournalEntryRepository, MockJournalEntryRepository, RepositoryBase},
     };
     use tokio::sync::mpsc;
 
@@ -19,63 +19,8 @@ mod tests {
         query_service::JournalEntryFinderService,
     };
 
-    /// モックEventRepository
-    struct MockEventRepository {
-        saved_events: Arc<Mutex<Vec<(String, Vec<serde_json::Value>)>>>,
-    }
-
-    impl MockEventRepository {
-        fn new() -> Self {
-            Self { saved_events: Arc::new(Mutex::new(Vec::new())) }
-        }
-    }
-
-    impl RepositoryBase for MockEventRepository {
-        type Event = JournalEntryEvent;
-
-        async fn append(&self, _event: Self::Event) -> javelin_domain::error::DomainResult<()> {
-            Ok(())
-        }
-
-        async fn append_events<T>(
-            &self,
-            aggregate_id: &str,
-            events: Vec<T>,
-        ) -> javelin_domain::error::DomainResult<u64>
-        where
-            T: serde::Serialize + Send + 'static,
-        {
-            let json_events: Vec<serde_json::Value> =
-                events.into_iter().map(|e| serde_json::to_value(e).unwrap()).collect();
-
-            self.saved_events
-                .lock()
-                .unwrap()
-                .push((aggregate_id.to_string(), json_events.clone()));
-
-            Ok(json_events.len() as u64)
-        }
-
-        async fn get_events(
-            &self,
-            _aggregate_id: &str,
-        ) -> javelin_domain::error::DomainResult<Vec<serde_json::Value>> {
-            Ok(vec![])
-        }
-
-        async fn get_all_events(
-            &self,
-            _from_sequence: u64,
-        ) -> javelin_domain::error::DomainResult<Vec<serde_json::Value>> {
-            Ok(vec![])
-        }
-
-        async fn get_latest_sequence(&self) -> javelin_domain::error::DomainResult<u64> {
-            Ok(0)
-        }
-    }
-
-    impl JournalEntryRepository for MockEventRepository {}
+    // use auto-generated mock from domain rather than hand-rolled repository
+    // (MockJournalEntryRepository already implements RepositoryBase<Event = JournalEntryEvent>)
 
     /// モックJournalEntryFinderService
     struct MockJournalEntryFinderService;
@@ -191,7 +136,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_validation_error_empty_entry_id() {
-        let repo = Arc::new(MockEventRepository::new());
+        let mut mock_repo = MockJournalEntryRepository::new();
+        mock_repo.expect_append().returning(|_| Ok(()));
+        mock_repo.expect_append_events::<JournalEntryEvent>().returning(|_, _| Ok(0));
+        mock_repo.expect_get_events().returning(|_| Ok(vec![]));
+        mock_repo.expect_get_all_events().returning(|_| Ok(vec![]));
+        mock_repo.expect_get_latest_sequence().returning(|| Ok(0));
+        let repo = Arc::new(mock_repo);
         let (sender, _receiver) = mpsc::unbounded_channel();
         let output_port = Arc::new(MockJournalEntryOutputPort { sender });
         let finder_service = Arc::new(MockJournalEntryFinderService);
