@@ -136,7 +136,7 @@ impl InputField {
             return;
         }
 
-        // Calendar入力タイプの場合は8桁まで
+        // Calendar入力タイプの場合は7-8桁まで
         if self.input_type == ModifyInputType::Calendar {
             if self.temp_buffer.len() < 8 {
                 self.temp_buffer.push(ch);

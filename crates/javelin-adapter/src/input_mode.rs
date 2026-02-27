@@ -26,6 +26,38 @@ pub enum ModifyInputType {
     BooleanToggle,
 }
 
+/// 日付パース結果
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ParsedDate {
+    year: u32,
+    month: u32,
+    day: u32,
+}
+
+/// 日付バリデーションエラー
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DateValidationError {
+    InvalidLength,
+    NonNumeric,
+    InvalidYear,
+    InvalidMonth,
+    InvalidDay,
+    InvalidFormat,
+}
+
+impl DateValidationError {
+    const fn message(self) -> &'static str {
+        match self {
+            Self::InvalidLength => "7-8桁で入力してください",
+            Self::NonNumeric => "数字のみ入力可能です",
+            Self::InvalidYear => "2000年代の日付を入力してください",
+            Self::InvalidMonth => "月は1-12の範囲で入力してください",
+            Self::InvalidDay => "日が月の範囲を超えています",
+            Self::InvalidFormat => "月と日の桁数が不正です",
+        }
+    }
+}
+
 impl ModifyInputType {
     /// 入力タイプの表示名を取得
     pub fn display_name(&self) -> &str {
@@ -52,72 +84,106 @@ impl ModifyInputType {
         }
     }
 
-    /// 日付入力のバリデーション（Calendar用）
-    /// 入力: 8桁の数字文字列（YYYYMMDD）
-    /// 戻り値: (バリデーション成功, エラーメッセージ)
-    pub fn validate_date_input(input: &str) -> (bool, Option<&'static str>) {
-        // 8桁チェック
-        if input.len() != 8 {
-            return (false, Some("8桁で入力してください"));
+    /// 日付入力文字列をパース（内部用）
+    fn parse_date_input(input: &str) -> Result<ParsedDate, DateValidationError> {
+        let len = input.len();
+
+        // 長さチェック
+        if !(7..=8).contains(&len) {
+            return Err(DateValidationError::InvalidLength);
         }
 
         // 数字のみチェック
-        if !input.chars().all(|c| c.is_ascii_digit()) {
-            return (false, Some("数字のみ入力可能です"));
+        if !input.bytes().all(|b| b.is_ascii_digit()) {
+            return Err(DateValidationError::NonNumeric);
         }
 
-        // 年月日を抽出
-        let year: u32 = match input[0..4].parse() {
-            Ok(y) => y,
-            Err(_) => return (false, Some("年が不正です")),
-        };
-        let month: u32 = match input[4..6].parse() {
-            Ok(m) => m,
-            Err(_) => return (false, Some("月が不正です")),
-        };
-        let day: u32 = match input[6..8].parse() {
-            Ok(d) => d,
-            Err(_) => return (false, Some("日が不正です")),
-        };
+        // 年を抽出（最初の4桁）
+        let year = input[..4].parse::<u32>().map_err(|_| DateValidationError::InvalidYear)?;
 
-        // 年チェック（2000年代のみ）
+        // 年の範囲チェック
         if !(2000..3000).contains(&year) {
-            return (false, Some("2000年代の日付を入力してください"));
+            return Err(DateValidationError::InvalidYear);
         }
 
-        // 月チェック（1-12）
+        // 5桁目の文字で月と日の境界を判定
+        // 7桁: 月1桁+日2桁のみ許可（月は2-9）
+        // 8桁: 月2桁+日2桁のみ許可（月は01-12）
+        let fifth_byte = input.as_bytes()[4];
+        let (month_str, day_str) = match (fifth_byte, len) {
+            // 8桁で月が2桁（01-12）
+            (b'0' | b'1', 8) => (&input[4..6], &input[6..8]),
+            // 7桁で月が1桁（2-9）
+            (b'2'..=b'9', 7) => (&input[4..5], &input[5..7]),
+            // その他の組み合わせは不正
+            _ => return Err(DateValidationError::InvalidFormat),
+        };
+
+        let month = month_str.parse::<u32>().map_err(|_| DateValidationError::InvalidMonth)?;
+
+        let day = day_str.parse::<u32>().map_err(|_| DateValidationError::InvalidDay)?;
+
+        // 月の範囲チェック
         if !(1..=12).contains(&month) {
-            return (false, Some("月は01-12の範囲で入力してください"));
+            return Err(DateValidationError::InvalidMonth);
         }
 
-        // 日チェック
+        // 日の範囲チェック
         let max_day = days_in_month(year, month);
-        if day < 1 || day > max_day {
-            return (false, Some("日が月の範囲を超えています"));
+        if !(1..=max_day).contains(&day) {
+            return Err(DateValidationError::InvalidDay);
         }
 
-        (true, None)
+        Ok(ParsedDate { year, month, day })
+    }
+
+    /// 日付入力のバリデーション（Calendar用）
+    /// 入力: 7-8桁の数字文字列（YYYYMMDD または YYYYMDD）
+    /// 戻り値: (バリデーション成功, エラーメッセージ)
+    pub fn validate_date_input(input: &str) -> (bool, Option<&'static str>) {
+        match Self::parse_date_input(input) {
+            Ok(_) => (true, None),
+            Err(err) => (false, Some(err.message())),
+        }
     }
 
     /// 日付入力を表示用にフォーマット（YYYY-MM-DD）
+    /// 入力途中の表示用なので、バリデーションより柔軟
     pub fn format_date_input(input: &str) -> String {
         let len = input.len();
 
-        if len <= 4 {
-            // 4桁以下: そのまま表示
-            input.to_string()
-        } else if len <= 6 {
-            // 5-6桁: YYYY-MM
-            format!("{}-{}", &input[0..4], &input[4..])
-        } else {
-            // 7-8桁: YYYY-MM-DD
-            format!("{}-{}-{}", &input[0..4], &input[4..6], &input[6..])
+        match len {
+            0..=4 => input.to_string(),
+            5 => {
+                // 5桁目の数字で判断
+                let fifth_byte = input.as_bytes()[4];
+                match fifth_byte {
+                    b'0' | b'1' => format!("{}-{}", &input[..4], &input[4..]),
+                    _ => format!("{}-{}", &input[..4], &input[4..5]),
+                }
+            }
+            6 => {
+                let fifth_byte = input.as_bytes()[4];
+                match fifth_byte {
+                    b'0' | b'1' => format!("{}-{}", &input[..4], &input[4..6]),
+                    _ => format!("{}-{}-{}", &input[..4], &input[4..5], &input[5..6]),
+                }
+            }
+            7 => {
+                let fifth_byte = input.as_bytes()[4];
+                match fifth_byte {
+                    // 7桁で月が2桁の場合も表示はする（バリデーションで弾かれる）
+                    b'0' | b'1' => format!("{}-{}-{}", &input[..4], &input[4..6], &input[6..7]),
+                    _ => format!("{}-{}-{}", &input[..4], &input[4..5], &input[5..7]),
+                }
+            }
+            _ => format!("{}-{}-{}", &input[..4], &input[4..6], &input[6..8]),
         }
     }
 }
 
 /// 指定された年月の日数を返す（うるう年考慮）
-fn days_in_month(year: u32, month: u32) -> u32 {
+const fn days_in_month(year: u32, month: u32) -> u32 {
     match month {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
@@ -133,7 +199,7 @@ fn days_in_month(year: u32, month: u32) -> u32 {
 }
 
 /// うるう年判定
-fn is_leap_year(year: u32) -> bool {
+const fn is_leap_year(year: u32) -> bool {
     (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
 }
 
@@ -347,10 +413,15 @@ mod tests {
 
     #[test]
     fn test_validate_date_input() {
-        // 正常な日付
+        // 正常な日付（8桁）
         assert!(ModifyInputType::validate_date_input("20240315").0);
         assert!(ModifyInputType::validate_date_input("20000101").0);
         assert!(ModifyInputType::validate_date_input("29991231").0);
+
+        // 正常な日付（7桁 - 月が1桁）
+        assert!(ModifyInputType::validate_date_input("2026227").0); // 2026-2-27
+        assert!(ModifyInputType::validate_date_input("2024315").0); // 2024-3-15
+        assert!(ModifyInputType::validate_date_input("2024901").0); // 2024-9-01
 
         // うるう年
         assert!(ModifyInputType::validate_date_input("20240229").0); // 2024年はうるう年
@@ -359,8 +430,8 @@ mod tests {
         assert!(!ModifyInputType::validate_date_input("21000229").0); // 2100年は平年
 
         // 桁数エラー
-        assert!(!ModifyInputType::validate_date_input("2024031").0);
-        assert!(!ModifyInputType::validate_date_input("202403155").0);
+        assert!(!ModifyInputType::validate_date_input("202403").0); // 6桁
+        assert!(!ModifyInputType::validate_date_input("202403155").0); // 9桁
 
         // 数字以外
         assert!(!ModifyInputType::validate_date_input("2024-03-15").0);
@@ -373,23 +444,50 @@ mod tests {
         // 月の範囲外
         assert!(!ModifyInputType::validate_date_input("20240015").0);
         assert!(!ModifyInputType::validate_date_input("20241315").0);
+        assert!(!ModifyInputType::validate_date_input("2024015").0); // 7桁で月が0
 
         // 日の範囲外
         assert!(!ModifyInputType::validate_date_input("20240100").0);
         assert!(!ModifyInputType::validate_date_input("20240132").0);
         assert!(!ModifyInputType::validate_date_input("20240431").0); // 4月は30日まで
         assert!(!ModifyInputType::validate_date_input("20230229").0); // 平年の2月は28日まで
+        assert!(!ModifyInputType::validate_date_input("2024232").0); // 2月は29日まで（うるう年でも）
     }
 
     #[test]
     fn test_format_date_input() {
+        // 4桁以下
         assert_eq!(ModifyInputType::format_date_input("2"), "2");
         assert_eq!(ModifyInputType::format_date_input("20"), "20");
         assert_eq!(ModifyInputType::format_date_input("202"), "202");
         assert_eq!(ModifyInputType::format_date_input("2024"), "2024");
+
+        // 5桁 - 月が2桁確定（0または1で始まる）
         assert_eq!(ModifyInputType::format_date_input("20240"), "2024-0");
+        assert_eq!(ModifyInputType::format_date_input("20241"), "2024-1");
+
+        // 5桁 - 月が1桁（2-9）
+        assert_eq!(ModifyInputType::format_date_input("20242"), "2024-2");
+        assert_eq!(ModifyInputType::format_date_input("20249"), "2024-9");
+
+        // 6桁 - 月が2桁
         assert_eq!(ModifyInputType::format_date_input("202403"), "2024-03");
+        assert_eq!(ModifyInputType::format_date_input("202412"), "2024-12");
+
+        // 6桁 - 月が1桁、日が1桁
+        assert_eq!(ModifyInputType::format_date_input("202422"), "2024-2-2");
+        assert_eq!(ModifyInputType::format_date_input("202491"), "2024-9-1");
+
+        // 7桁 - 月が2桁、日が1桁
         assert_eq!(ModifyInputType::format_date_input("2024031"), "2024-03-1");
+        assert_eq!(ModifyInputType::format_date_input("2024125"), "2024-12-5");
+
+        // 7桁 - 月が1桁、日が2桁
+        assert_eq!(ModifyInputType::format_date_input("2026227"), "2026-2-27");
+        assert_eq!(ModifyInputType::format_date_input("2024315"), "2024-3-15");
+        assert_eq!(ModifyInputType::format_date_input("2024901"), "2024-9-01");
+
+        // 8桁 - 月も日も2桁
         assert_eq!(ModifyInputType::format_date_input("20240315"), "2024-03-15");
         assert_eq!(ModifyInputType::format_date_input("20260220"), "2026-02-20");
     }
