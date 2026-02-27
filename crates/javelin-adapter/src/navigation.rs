@@ -16,6 +16,8 @@ mod memory_leak_tests;
 mod navigation_integration_tests;
 #[cfg(test)]
 mod navigation_property_tests;
+#[cfg(test)]
+mod navigation_stack_tests;
 
 pub use controllers::Controllers;
 pub use nav_action::NavAction;

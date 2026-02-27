@@ -3,8 +3,9 @@
 
 #[cfg(test)]
 mod tests {
-    use super::super::*;
     use std::sync::{Arc, Mutex};
+
+    use super::super::*;
 
     // Mock PageState for testing
     struct MockPageState {
@@ -20,14 +21,6 @@ mod tests {
                 pause_count: Arc::new(Mutex::new(0)),
                 resume_count: Arc::new(Mutex::new(0)),
             }
-        }
-
-        fn pause_count(&self) -> usize {
-            *self.pause_count.lock().unwrap()
-        }
-
-        fn resume_count(&self) -> usize {
-            *self.resume_count.lock().unwrap()
         }
     }
 
@@ -54,7 +47,7 @@ mod tests {
     }
 
     /// Property 1: Navigation Stack Maintains History
-    /// 
+    ///
     /// When pages are pushed onto the stack, they should be maintained
     /// in the correct order (LIFO - Last In, First Out).
     #[test]
@@ -89,7 +82,7 @@ mod tests {
     }
 
     /// Property 2: Back Navigation Returns to Previous Screen
-    /// 
+    ///
     /// When navigating back (pop), the current screen should be
     /// the screen that was active before the last push.
     #[test]
@@ -118,7 +111,7 @@ mod tests {
     }
 
     /// Property 10: Pause Notification on Navigation Away
-    /// 
+    ///
     /// When navigating away from a screen (pushing a new screen),
     /// the current screen's on_pause() should be called.
     #[test]
@@ -147,7 +140,7 @@ mod tests {
     }
 
     /// Property 11: Resume Notification on Navigation Back
-    /// 
+    ///
     /// When navigating back to a screen (popping the current screen),
     /// the previous screen's on_resume() should be called.
     #[test]
@@ -176,7 +169,7 @@ mod tests {
     }
 
     /// Property: Multiple Push/Pop Cycles
-    /// 
+    ///
     /// Verifies that pause and resume are called correctly
     /// across multiple navigation cycles.
     #[test]
@@ -209,7 +202,7 @@ mod tests {
     }
 
     /// Property: Empty Stack Behavior
-    /// 
+    ///
     /// Verifies that operations on an empty stack behave correctly.
     #[test]
     fn property_empty_stack_behavior() {
