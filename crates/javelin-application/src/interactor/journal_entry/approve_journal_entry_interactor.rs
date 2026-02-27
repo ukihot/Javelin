@@ -47,7 +47,8 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort> ApproveJournalEntryUs
         }
 
         // 2. イベントをJournalEntryEventに変換
-        let mut journal_events = Vec::new();
+        // モダンプラクティス: イベント数で初期キャパシティを確保
+        let mut journal_events = Vec::with_capacity(events.len());
         for event_json in events {
             let event: JournalEntryEvent = serde_json::from_value(event_json).map_err(|e| {
                 ApplicationError::ValidationFailed(vec![format!(

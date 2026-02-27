@@ -1,7 +1,6 @@
 // BatchHistoryQueryServiceImpl - バッチ実行履歴クエリサービス実装
 // 責務: バッチ実行履歴の読み取り（モックデータ）
 
-use async_trait::async_trait;
 use javelin_application::{
     error::ApplicationResult,
     query_service::{BatchHistoryQueryService, BatchHistoryRecord, GetBatchHistoryQuery},
@@ -15,7 +14,7 @@ impl BatchHistoryQueryServiceImpl {
     }
 }
 
-#[async_trait]
+// モダンプラクティス: async fn in traits は Rust 1.75+ で安定化済み
 impl BatchHistoryQueryService for BatchHistoryQueryServiceImpl {
     async fn get_batch_history(
         &self,

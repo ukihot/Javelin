@@ -28,7 +28,7 @@ javelin-adapter = { path = "crates/javelin-adapter" }
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
 futures = "0.3"
-async-trait = "0.1"
+# async-trait は不要（Rust 1.75+ で async fn in traits が安定化）
 
 # External dependencies - error handling
 thiserror = "2"

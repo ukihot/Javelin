@@ -1,7 +1,7 @@
 // BatchHistoryQueryService - バッチ実行履歴クエリサービス
 // 責務: バッチ実行履歴の読み取り専用クエリ
 
-use async_trait::async_trait;
+use std::future::Future;
 
 use crate::error::ApplicationResult;
 
@@ -34,11 +34,13 @@ pub struct GetBatchHistoryQuery {
 }
 
 /// バッチ実行履歴クエリサービス
-#[async_trait]
+/// モダンプラクティス: async fn in traits は Rust 1.75+ で安定化済み
+/// 戻り値の型を明示的に `impl Future + Send` として指定することで、
+/// auto trait bounds を明確にする。
 pub trait BatchHistoryQueryService: Send + Sync {
     /// バッチ実行履歴を取得
-    async fn get_batch_history(
+    fn get_batch_history(
         &self,
         query: GetBatchHistoryQuery,
-    ) -> ApplicationResult<Vec<BatchHistoryRecord>>;
+    ) -> impl Future<Output = ApplicationResult<Vec<BatchHistoryRecord>>> + Send;
 }

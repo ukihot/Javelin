@@ -590,7 +590,6 @@ impl ProjectionBuilderImpl {
     }
 }
 
-#[async_trait::async_trait]
 impl ProjectionBuilderTrait for ProjectionBuilderImpl {
     async fn rebuild_all_projections(&self) -> ApplicationResult<()> {
         // EventStoreから全イベントを取得（シーケンス0から）

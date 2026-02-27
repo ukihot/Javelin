@@ -2,6 +2,8 @@
 // 責務: Event → Projection変換の抽象化
 // 再構築: 全イベント再生で生成可能
 
+use std::future::Future;
+
 use crate::error::ApplicationResult;
 
 /// ProjectionBuilderトレイト
@@ -9,8 +11,9 @@ use crate::error::ApplicationResult;
 /// イベントストリームからRead Modelを構築するコンポーネントのインターフェース。
 /// 具象実装はInfrastructure層で提供される。
 ///
-/// 要件: 2.1, 2.2
-#[async_trait::async_trait]
+/// モダンプラクティス: async fn in traits は Rust 1.75+ で安定化済み
+/// 戻り値の型を明示的に `impl Future + Send` として指定することで、
+/// auto trait bounds を明確にする。
 pub trait ProjectionBuilder: Send + Sync {
     /// イベントストリームから全Projectionを再構築
     ///
@@ -21,7 +24,7 @@ pub trait ProjectionBuilder: Send + Sync {
     ///
     /// # Returns
     /// 成功時はOk(())、失敗時はエラー
-    async fn rebuild_all_projections(&self) -> ApplicationResult<()>;
+    fn rebuild_all_projections(&self) -> impl Future<Output = ApplicationResult<()>> + Send;
 
     /// 単一イベントからProjectionを更新
     ///
@@ -34,5 +37,8 @@ pub trait ProjectionBuilder: Send + Sync {
     ///
     /// # Returns
     /// 成功時はOk(())、失敗時はエラー
-    async fn process_event(&self, event_data: &[u8]) -> ApplicationResult<()>;
+    fn process_event(
+        &self,
+        event_data: &[u8],
+    ) -> impl Future<Output = ApplicationResult<()>> + Send;
 }

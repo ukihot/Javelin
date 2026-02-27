@@ -22,5 +22,3 @@ time = { version = "0.3", features = ["local-offset", "macros"] }
 uuid = { workspace = true }
 lazy_static = "1.4"
 
-[dev-dependencies]
-async-trait = { workspace = true }
