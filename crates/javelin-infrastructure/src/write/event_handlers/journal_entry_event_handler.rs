@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
 
-use crate::{error::InfrastructureResult, read::projections::JournalEntryProjectionWorker};
+use crate::{error::InfrastructureResult, read::journal_entry::JournalEntryProjectionWorker};
 
 /// JournalEntryEventHandler
 ///
@@ -152,7 +152,7 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::{event_store::EventStore, read::projections::ProjectionDb};
+    use crate::{event_store::EventStore, read::infrastructure::ProjectionDb};
 
     #[tokio::test]
     async fn test_event_handler_creation() {

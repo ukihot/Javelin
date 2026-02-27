@@ -4,8 +4,8 @@
 use std::sync::Arc;
 
 use javelin_application::dtos::RegisterJournalEntryRequest;
-use javelin_infrastructure::write::{
-    event_store::EventStore, services::VoucherNumberDomainServiceImpl,
+use javelin_infrastructure::{
+    read::journal_entry::JournalEntrySearchQueryServiceImpl, write::event_store::EventStore,
 };
 
 /// 仕訳登録コントローラ
@@ -14,7 +14,7 @@ use javelin_infrastructure::write::{
 /// ユースケースへの委譲のみを行い、ビジネスロジックは含まない。
 pub struct JournalEntryController {
     event_store: Arc<EventStore>,
-    voucher_generator: Arc<VoucherNumberDomainServiceImpl>,
+    search_query_service: Arc<JournalEntrySearchQueryServiceImpl>,
     presenter_registry: Arc<crate::navigation::PresenterRegistry>,
 }
 
@@ -22,10 +22,10 @@ impl JournalEntryController {
     /// 新しいコントローラインスタンスを作成
     pub fn new(
         event_store: Arc<EventStore>,
-        voucher_generator: Arc<VoucherNumberDomainServiceImpl>,
+        search_query_service: Arc<JournalEntrySearchQueryServiceImpl>,
         presenter_registry: Arc<crate::navigation::PresenterRegistry>,
     ) -> Self {
-        Self { event_store, voucher_generator, presenter_registry }
+        Self { event_store, search_query_service, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
@@ -60,7 +60,7 @@ impl JournalEntryController {
             let interactor = javelin_application::interactor::RegisterJournalEntryInteractor::new(
                 Arc::clone(&self.event_store),
                 Arc::new(journal_entry_presenter),
-                Arc::clone(&self.voucher_generator),
+                Arc::clone(&self.search_query_service),
             );
 
             // 実行

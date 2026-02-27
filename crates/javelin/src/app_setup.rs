@@ -24,16 +24,15 @@ use javelin_application::{
 };
 use javelin_infrastructure::{
     read::{
-        projections::{ProjectionBuilderImpl, ProjectionDb},
-        query_services::{
-            BatchHistoryQueryServiceImpl, JournalEntrySearchQueryServiceImpl,
-            LedgerQueryServiceImpl, MasterDataLoaderImpl,
-        },
+        batch_history::BatchHistoryQueryServiceImpl,
+        infrastructure::{ProjectionBuilderImpl, ProjectionDb},
+        journal_entry::JournalEntrySearchQueryServiceImpl,
+        ledger::LedgerQueryServiceImpl,
+        master_data::MasterDataLoaderImpl,
     },
     write::{
         event_store::{ClosingEventStore, EventStore},
         repositories::SubsidiaryAccountMasterRepositoryImpl,
-        services::VoucherNumberDomainServiceImpl,
     },
 };
 use tokio::sync::mpsc;
@@ -164,9 +163,6 @@ pub async fn setup_controllers(
     // PresenterRegistry
     let presenter_registry = Arc::new(PresenterRegistry::new());
 
-    // VoucherNumberGenerator
-    let voucher_generator = Arc::new(VoucherNumberDomainServiceImpl::new());
-
     // マスタリポジトリの作成（補助科目のみ個別に必要）
     let master_db_path = data_dir.join("master_data");
     let subsidiary_account_master_repository = Arc::new(
@@ -196,7 +192,7 @@ pub async fn setup_controllers(
     // 業務コントローラ構築
     let journal_entry_controller = Arc::new(JournalEntryController::new(
         Arc::clone(&event_store),
-        Arc::clone(&voucher_generator),
+        Arc::clone(&search_query_service),
         Arc::clone(&presenter_registry),
     ));
 

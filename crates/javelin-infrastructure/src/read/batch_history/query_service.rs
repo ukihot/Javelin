@@ -8,8 +8,8 @@ use javelin_application::{
     query_service::{BatchHistoryQueryService, BatchHistoryRecord, GetBatchHistoryQuery},
 };
 
-use crate::read::projections::{
-    batch_history_projection::BatchHistoryReadModel, projection_db::ProjectionDb,
+use crate::read::{
+    batch_history::projection::BatchHistoryReadModel, infrastructure::db::ProjectionDb,
 };
 
 pub struct BatchHistoryQueryServiceImpl {

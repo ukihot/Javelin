@@ -9,10 +9,9 @@ use tokio::time::{Duration, interval};
 use crate::{
     error::InfrastructureResult,
     event_store::EventStore,
-    read::projections::{
-        journal_entry_projection::{JournalEntryProjection, JournalEntryProjectionStrategy},
-        projection_db::ProjectionDb,
-        projection_trait::ProjectionStrategy,
+    read::{
+        infrastructure::{db::ProjectionDb, traits::ProjectionStrategy},
+        journal_entry::projection::{JournalEntryProjection, JournalEntryProjectionStrategy},
     },
     types::Sequence,
 };
@@ -87,7 +86,7 @@ impl JournalEntryProjectionWorker {
                 .or_insert_with(|| JournalEntryProjection::new(entry_id.clone()));
 
             // イベントを適用
-            use crate::read::projections::projection_trait::Apply;
+            use crate::read::infrastructure::traits::Apply;
             projection.apply(journal_event)?;
 
             last_sequence = Sequence::new(event.global_sequence);
@@ -97,7 +96,7 @@ impl JournalEntryProjectionWorker {
         // モダンプラクティス: projections数で初期キャパシティを確保
         let mut updates = Vec::with_capacity(projections.len());
         for (entry_id, projection) in projections {
-            use crate::read::projections::projection_trait::ToReadModel;
+            use crate::read::infrastructure::traits::ToReadModel;
             let read_model = projection.to_read_model();
             let value = serde_json::to_vec(&read_model).map_err(|e| {
                 crate::error::InfrastructureError::SerializationFailed(e.to_string())
@@ -158,12 +157,12 @@ impl JournalEntryProjectionWorker {
                     crate::error::InfrastructureError::DeserializationFailed(e.to_string())
                 })?;
 
-            use crate::read::projections::projection_trait::Apply;
+            use crate::read::infrastructure::traits::Apply;
             projection.apply(journal_event)?;
         }
 
         // Projectionを保存
-        use crate::read::projections::projection_trait::ToReadModel;
+        use crate::read::infrastructure::traits::ToReadModel;
         let read_model = projection.to_read_model();
         let value = serde_json::to_vec(&read_model)
             .map_err(|e| crate::error::InfrastructureError::SerializationFailed(e.to_string()))?;

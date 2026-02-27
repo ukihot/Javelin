@@ -23,4 +23,16 @@ pub trait JournalEntrySearchQueryService: Send + Sync {
         &self,
         criteria: SearchCriteriaDto,
     ) -> ApplicationResult<JournalEntrySearchResultDto>;
+
+    /// 指定された会計年度の既存伝票番号リストを取得
+    ///
+    /// # Arguments
+    /// * `fiscal_year` - 会計年度（例: 2024）
+    ///
+    /// # Returns
+    /// * `ApplicationResult<Vec<String>>` - 伝票番号リスト
+    async fn get_voucher_numbers_by_fiscal_year(
+        &self,
+        fiscal_year: u32,
+    ) -> ApplicationResult<Vec<String>>;
 }

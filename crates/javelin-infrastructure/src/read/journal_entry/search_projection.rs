@@ -2,14 +2,89 @@
 // JournalEntryEventから検索用ReadModelを構築
 
 use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
+use serde::{Deserialize, Serialize};
 
-use crate::{
-    error::InfrastructureResult,
-    read::projections::{
-        journal_entry_search_read_model::{JournalEntryLineReadModel, JournalEntrySearchReadModel},
-        projection_trait::Apply,
-    },
-};
+use crate::{error::InfrastructureResult, read::infrastructure::traits::Apply};
+
+/// 仕訳明細ReadModel
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct JournalEntryLineReadModel {
+    pub line_number: u32,
+    pub side: String,
+    pub account_code: String,
+    pub account_name: String,
+    pub amount: f64,
+    pub description: Option<String>,
+}
+
+impl JournalEntryLineReadModel {
+    pub fn new(
+        line_number: u32,
+        side: String,
+        account_code: String,
+        account_name: String,
+        amount: f64,
+        description: Option<String>,
+    ) -> Self {
+        Self { line_number, side, account_code, account_name, amount, description }
+    }
+}
+
+/// 仕訳検索ReadModel
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct JournalEntrySearchReadModel {
+    pub entry_id: String,
+    pub entry_number: Option<String>,
+    pub transaction_date: String,
+    pub status: String,
+    pub lines: Vec<JournalEntryLineReadModel>,
+}
+
+impl JournalEntrySearchReadModel {
+    pub fn new(
+        entry_id: String,
+        entry_number: Option<String>,
+        transaction_date: String,
+        status: String,
+        lines: Vec<JournalEntryLineReadModel>,
+    ) -> Self {
+        Self { entry_id, entry_number, transaction_date, status, lines }
+    }
+
+    /// 摘要に指定文字列が含まれるか（部分一致、大文字小文字非区別）
+    pub fn contains_description(&self, keyword: &str) -> bool {
+        let keyword_lower = keyword.to_lowercase();
+        self.lines.iter().any(|line| {
+            line.description
+                .as_ref()
+                .map(|desc| desc.to_lowercase().contains(&keyword_lower))
+                .unwrap_or(false)
+        })
+    }
+
+    /// 勘定科目コードが含まれるか
+    pub fn contains_account(&self, account_code: &str) -> bool {
+        self.lines.iter().any(|line| line.account_code == account_code)
+    }
+
+    /// 借方貸方区分が含まれるか
+    pub fn contains_side(&self, side: &str) -> bool {
+        self.lines.iter().any(|line| line.side == side)
+    }
+
+    /// 金額範囲に該当する明細があるか
+    pub fn contains_amount_in_range(
+        &self,
+        min_amount: Option<f64>,
+        max_amount: Option<f64>,
+    ) -> bool {
+        self.lines.iter().any(|line| {
+            let min_ok = min_amount.map(|min| line.amount >= min).unwrap_or(true);
+            let max_ok = max_amount.map(|max| line.amount <= max).unwrap_or(true);
+            min_ok && max_ok
+        })
+    }
+}
 
 /// 仕訳検索用Projection
 ///

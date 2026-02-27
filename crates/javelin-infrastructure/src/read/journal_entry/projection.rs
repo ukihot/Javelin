@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::InfrastructureResult,
     event_stream::StoredEvent,
-    read::projections::projection_trait::{Apply, ProjectionStrategy, ToReadModel},
+    read::infrastructure::traits::{Apply, ProjectionStrategy, ToReadModel},
 };
 
 /// 仕訳一覧用ReadModel

@@ -11,9 +11,7 @@ use javelin_application::{
     },
 };
 
-use crate::read::projections::{
-    ledger_projection::LedgerEntryReadModel, projection_db::ProjectionDb,
-};
+use crate::read::{infrastructure::db::ProjectionDb, ledger::projection::LedgerEntryReadModel};
 
 /// LedgerQueryService実装
 ///

@@ -19,28 +19,33 @@ use crate::{
     error::{ApplicationError, ApplicationResult},
     input_ports::RegisterJournalEntryUseCase,
     output_ports::JournalEntryOutputPort,
+    query_service::JournalEntrySearchQueryService,
 };
 
 pub struct RegisterJournalEntryInteractor<
     R: JournalEntryRepository,
     O: JournalEntryOutputPort,
-    V: VoucherNumberDomainService,
+    Q: JournalEntrySearchQueryService,
 > {
     event_repository: Arc<R>,
     output_port: Arc<O>,
-    voucher_generator: Arc<V>,
+    search_query_service: Arc<Q>,
 }
 
-impl<R: JournalEntryRepository, O: JournalEntryOutputPort, V: VoucherNumberDomainService>
-    RegisterJournalEntryInteractor<R, O, V>
+impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearchQueryService>
+    RegisterJournalEntryInteractor<R, O, Q>
 {
-    pub fn new(event_repository: Arc<R>, output_port: Arc<O>, voucher_generator: Arc<V>) -> Self {
-        Self { event_repository, output_port, voucher_generator }
+    pub fn new(
+        event_repository: Arc<R>,
+        output_port: Arc<O>,
+        search_query_service: Arc<Q>,
+    ) -> Self {
+        Self { event_repository, output_port, search_query_service }
     }
 }
 
-impl<R: JournalEntryRepository, O: JournalEntryOutputPort, V: VoucherNumberDomainService>
-    RegisterJournalEntryUseCase for RegisterJournalEntryInteractor<R, O, V>
+impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearchQueryService>
+    RegisterJournalEntryUseCase for RegisterJournalEntryInteractor<R, O, Q>
 {
     async fn execute(&self, request: RegisterJournalEntryRequest) -> ApplicationResult<()> {
         // 1. 入力バリデーション - 取引日付のパース
@@ -72,10 +77,24 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, V: VoucherNumberDomai
             // 取引日付から年度を取得（簡易的に年を使用）
             let fiscal_year = transaction_date.value().year() as u32;
 
-            match self.voucher_generator.generate_next(fiscal_year).await {
+            // QueryServiceを使って既存の伝票番号リストを取得
+            let existing_voucher_numbers = self
+                .search_query_service
+                .get_voucher_numbers_by_fiscal_year(fiscal_year)
+                .await
+                .map_err(|e| {
+                    let error_msg = format!("既存伝票番号の取得に失敗しました: {}", e);
+                    ApplicationError::QueryExecutionFailed(error_msg)
+                })?;
+
+            // ドメインサービスを使って次の伝票番号を生成
+            match VoucherNumberDomainService::generate_next(fiscal_year, &existing_voucher_numbers)
+            {
                 Ok(vn) => {
                     // 進捗通知: 伝票番号採番完了
-                    self.output_port.notify_progress("伝票番号を採番しました".to_string()).await;
+                    self.output_port
+                        .notify_progress(format!("伝票番号を採番しました: {}", vn))
+                        .await;
                     vn
                 }
                 Err(e) => {

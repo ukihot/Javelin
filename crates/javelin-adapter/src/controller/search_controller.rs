@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use javelin_application::dtos::request::SearchCriteriaDto;
-use javelin_infrastructure::read::query_services::JournalEntrySearchQueryServiceImpl;
+use javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl;
 
 use crate::navigation::PresenterRegistry;
 

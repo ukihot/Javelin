@@ -24,7 +24,7 @@ use javelin_application::{
     },
 };
 use javelin_infrastructure::{
-    read::query_services::LedgerQueryServiceImpl, write::event_store::ClosingEventStore,
+    read::ledger::LedgerQueryServiceImpl, write::event_store::ClosingEventStore,
 };
 
 use crate::{error::AdapterResult, presenter::LedgerPresenter};
@@ -84,10 +84,11 @@ impl ClosingController {
         &self,
         request: ConsolidateLedgerRequest,
     ) -> AdapterResult<ConsolidateLedgerResponse> {
-        self.consolidate_ledger
-            .execute(request)
-            .await
-            .map_err(crate::error::AdapterError::ApplicationError)
+        self.consolidate_ledger.execute(request).await.map_err(
+            |e: javelin_application::error::ApplicationError| {
+                crate::error::AdapterError::ApplicationError(e)
+            },
+        )
     }
 
     /// 締準備処理
@@ -95,10 +96,11 @@ impl ClosingController {
         &self,
         request: PrepareClosingRequest,
     ) -> AdapterResult<PrepareClosingResponse> {
-        self.prepare_closing
-            .execute(request)
-            .await
-            .map_err(crate::error::AdapterError::ApplicationError)
+        self.prepare_closing.execute(request).await.map_err(
+            |e: javelin_application::error::ApplicationError| {
+                crate::error::AdapterError::ApplicationError(e)
+            },
+        )
     }
 
     /// 締日固定処理

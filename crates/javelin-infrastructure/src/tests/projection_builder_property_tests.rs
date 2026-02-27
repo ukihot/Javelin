@@ -10,7 +10,7 @@ mod tests {
     use tempfile::TempDir;
 
     use crate::{
-        read::projections::{ProjectionBuilderImpl, ProjectionDb},
+        read::infrastructure::{ProjectionBuilderImpl, ProjectionDb},
         write::event_store::EventStore,
     };
 

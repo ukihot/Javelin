@@ -202,6 +202,13 @@ mod tests {
         ) -> ApplicationResult<crate::dtos::response::JournalEntrySearchResultDto> {
             Ok(crate::dtos::response::JournalEntrySearchResultDto::empty())
         }
+
+        async fn get_voucher_numbers_by_fiscal_year(
+            &self,
+            _fiscal_year: u32,
+        ) -> ApplicationResult<Vec<String>> {
+            Ok(vec![])
+        }
     }
 
     struct MockOutputPort;

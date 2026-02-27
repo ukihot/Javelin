@@ -12,8 +12,8 @@ use javelin_application::{
     query_service::JournalEntrySearchQueryService,
 };
 
-use crate::read::projections::{
-    journal_entry_search_read_model::JournalEntrySearchReadModel, projection_db::ProjectionDb,
+use crate::read::{
+    infrastructure::db::ProjectionDb, journal_entry::search_projection::JournalEntrySearchReadModel,
 };
 
 /// JournalEntrySearchQueryService実装
@@ -202,6 +202,33 @@ impl JournalEntrySearchQueryService for JournalEntrySearchQueryServiceImpl {
             .collect();
 
         Ok(JournalEntrySearchResultDto { entries: entry_dtos, total_count })
+    }
+
+    async fn get_voucher_numbers_by_fiscal_year(
+        &self,
+        fiscal_year: u32,
+    ) -> ApplicationResult<Vec<String>> {
+        // ProjectionDBから仕訳エントリを取得
+        let entries = self.get_journal_entries().await?;
+
+        // 指定された会計年度の伝票番号のみを抽出
+        // 取引日付から年度を判定（簡易的に年を使用）
+        let voucher_numbers: Vec<String> = entries
+            .into_iter()
+            .filter_map(|entry| {
+                // transaction_date形式: "YYYY-MM-DD"
+                if let Some(year_str) = entry.transaction_date.split('-').next()
+                    && let Ok(year) = year_str.parse::<u32>()
+                    && year == fiscal_year
+                {
+                    // entry_numberがSomeの場合のみ返す
+                    return entry.entry_number;
+                }
+                None
+            })
+            .collect();
+
+        Ok(voucher_numbers)
     }
 }
 

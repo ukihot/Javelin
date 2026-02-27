@@ -25,16 +25,49 @@ pub trait EntryNumberExistenceDomainService: Send + Sync {
 ///
 /// 伝票番号（VoucherNumber）は、エンドユーザが理解しやすいように
 /// 年度単位で連番を付与する。これは証憑番号ではなく、伝票コードである。
-#[allow(async_fn_in_trait)]
-pub trait VoucherNumberDomainService: Send + Sync {
+///
+/// このサービスは既存の伝票番号リストを受け取り、次の番号を生成する判断ロジックのみを持つ。
+/// データの取得はアプリケーション層がQueryServiceを使って行う。
+pub struct VoucherNumberDomainService;
+
+impl VoucherNumberDomainService {
     /// 指定された会計年度の次の伝票番号を生成する
     ///
     /// # Arguments
     /// * `fiscal_year` - 会計年度（例: 2024）
+    /// * `existing_voucher_numbers` - 既存の伝票番号リスト（同一年度のもの）
     ///
     /// # Returns
     /// 生成された伝票番号（例: "V-2024-00001"）
-    async fn generate_next(&self, fiscal_year: u32) -> DomainResult<String>;
+    pub fn generate_next(
+        fiscal_year: u32,
+        existing_voucher_numbers: &[String],
+    ) -> DomainResult<String> {
+        if !(2000..=2100).contains(&fiscal_year) {
+            return Err(DomainError::InvalidAmount(format!(
+                "Invalid fiscal year: {}",
+                fiscal_year
+            )));
+        }
+
+        // 既存番号から最大の連番を取得
+        let max_sequence = existing_voucher_numbers
+            .iter()
+            .filter_map(|num| {
+                // "V-2024-00001" のような形式から連番部分を抽出
+                let parts: Vec<&str> = num.split('-').collect();
+                if parts.len() == 3 && parts[0] == "V" {
+                    parts[2].parse::<u32>().ok()
+                } else {
+                    None
+                }
+            })
+            .max()
+            .unwrap_or(0);
+
+        let next_sequence = max_sequence + 1;
+        Ok(format!("V-{}-{:05}", fiscal_year, next_sequence))
+    }
 }
 
 // テスト用のモック実装
@@ -52,19 +85,10 @@ pub mod mock {
             async fn exists(&self, entry_number: &EntryNumber) -> DomainResult<bool>;
         }
     }
-
-    mock! {
-        pub VoucherNumberDomainService {}
-
-        #[allow(async_fn_in_trait)]
-        impl VoucherNumberDomainService for VoucherNumberDomainService {
-            async fn generate_next(&self, fiscal_year: u32) -> DomainResult<String>;
-        }
-    }
 }
 
 #[cfg(test)]
-pub use mock::{MockEntryNumberExistenceDomainService, MockVoucherNumberDomainService};
+pub use mock::MockEntryNumberExistenceDomainService;
 
 /// 仕訳ドメインサービス
 ///
@@ -320,5 +344,43 @@ mod tests {
                 prop_assert_eq!(original[0].side(), reversed_twice[0].side());
             }
         }
+    }
+
+    // VoucherNumberDomainService tests
+    #[test]
+    fn test_generate_next_with_empty_list() {
+        let result = VoucherNumberDomainService::generate_next(2024, &[]);
+        assert_eq!(result.unwrap(), "V-2024-00001");
+    }
+
+    #[test]
+    fn test_generate_next_with_existing_numbers() {
+        let existing = vec!["V-2024-00001".to_string(), "V-2024-00002".to_string()];
+        let result = VoucherNumberDomainService::generate_next(2024, &existing);
+        assert_eq!(result.unwrap(), "V-2024-00003");
+    }
+
+    #[test]
+    fn test_generate_next_with_non_sequential_numbers() {
+        let existing = vec!["V-2024-00001".to_string(), "V-2024-00005".to_string()];
+        let result = VoucherNumberDomainService::generate_next(2024, &existing);
+        assert_eq!(result.unwrap(), "V-2024-00006");
+    }
+
+    #[test]
+    fn test_generate_next_invalid_fiscal_year() {
+        let result = VoucherNumberDomainService::generate_next(1999, &[]);
+        assert!(result.is_err());
+
+        let result = VoucherNumberDomainService::generate_next(2101, &[]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_generate_next_ignores_invalid_format() {
+        let existing =
+            vec!["V-2024-00001".to_string(), "INVALID".to_string(), "V-2024-00002".to_string()];
+        let result = VoucherNumberDomainService::generate_next(2024, &existing);
+        assert_eq!(result.unwrap(), "V-2024-00003");
     }
 }

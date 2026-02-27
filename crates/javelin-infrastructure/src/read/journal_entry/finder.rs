@@ -13,7 +13,7 @@ use javelin_application::{
     query_service::{JournalEntryFinderService, JournalEntrySearchResult},
 };
 
-use crate::read::projections::projection_db::ProjectionDb;
+use crate::read::infrastructure::db::ProjectionDb;
 
 /// 仕訳検索・照会サービス具象実装
 ///

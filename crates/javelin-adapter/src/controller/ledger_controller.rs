@@ -6,7 +6,7 @@ use std::sync::Arc;
 use javelin_application::query_service::{
     GetLedgerQuery, GetTrialBalanceQuery, LedgerQueryService,
 };
-use javelin_infrastructure::read::query_services::LedgerQueryServiceImpl;
+use javelin_infrastructure::read::ledger::LedgerQueryServiceImpl;
 
 /// 元帳コントローラ（具体型版）
 ///

@@ -13,7 +13,9 @@ use javelin_application::{
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
-use crate::{event_store::EventStore, event_stream::StoredEvent, read::projections::ProjectionDb};
+use crate::{
+    event_store::EventStore, event_stream::StoredEvent, read::infrastructure::db::ProjectionDb,
+};
 
 /// 再試行キューエントリ
 #[derive(Debug, Clone)]
@@ -162,16 +164,17 @@ impl ProjectionBuilderImpl {
                 self.projection_db
                     .update_projection(&key, &data, event.global_sequence)
                     .await
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+                    .map_err(|e: crate::error::InfrastructureError| {
+                        ApplicationError::ProjectionDatabaseError(e.to_string())
+                    })?;
             }
             "SubmittedForApproval" => {
                 // ステータスを更新
-                if let Some(existing_data) = self
-                    .projection_db
-                    .get_projection(&key)
-                    .await
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?
-                {
+                if let Some(existing_data) = self.projection_db.get_projection(&key).await.map_err(
+                    |e: crate::error::InfrastructureError| {
+                        ApplicationError::ProjectionDatabaseError(e.to_string())
+                    },
+                )? {
                     let mut stored_entry: StoredJournalEntry =
                         serde_json::from_slice(&existing_data).map_err(|e| {
                             ApplicationError::ProjectionDatabaseError(e.to_string())
@@ -190,12 +193,11 @@ impl ProjectionBuilderImpl {
             }
             "Approved" => {
                 // ステータスを更新
-                if let Some(existing_data) = self
-                    .projection_db
-                    .get_projection(&key)
-                    .await
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?
-                {
+                if let Some(existing_data) = self.projection_db.get_projection(&key).await.map_err(
+                    |e: crate::error::InfrastructureError| {
+                        ApplicationError::ProjectionDatabaseError(e.to_string())
+                    },
+                )? {
                     let mut stored_entry: StoredJournalEntry =
                         serde_json::from_slice(&existing_data).map_err(|e| {
                             ApplicationError::ProjectionDatabaseError(e.to_string())
@@ -222,12 +224,11 @@ impl ProjectionBuilderImpl {
             }
             "Rejected" => {
                 // ステータスを更新
-                if let Some(existing_data) = self
-                    .projection_db
-                    .get_projection(&key)
-                    .await
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?
-                {
+                if let Some(existing_data) = self.projection_db.get_projection(&key).await.map_err(
+                    |e: crate::error::InfrastructureError| {
+                        ApplicationError::ProjectionDatabaseError(e.to_string())
+                    },
+                )? {
                     let mut stored_entry: StoredJournalEntry =
                         serde_json::from_slice(&existing_data).map_err(|e| {
                             ApplicationError::ProjectionDatabaseError(e.to_string())
@@ -284,10 +285,11 @@ impl ProjectionBuilderImpl {
             }
             "Deleted" => {
                 // エントリを削除
-                self.projection_db
-                    .delete_projection(&key)
-                    .await
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+                self.projection_db.delete_projection(&key).await.map_err(
+                    |e: crate::error::InfrastructureError| {
+                        ApplicationError::ProjectionDatabaseError(e.to_string())
+                    },
+                )?;
             }
             "Corrected" | "Reversed" => {
                 // 訂正・取消の場合は新しいエントリとして扱う（元のエントリは残す）
@@ -377,7 +379,9 @@ impl ProjectionBuilderImpl {
                 self.projection_db
                     .update_projection(&ledger_key, &data, event.global_sequence)
                     .await
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+                    .map_err(|e: crate::error::InfrastructureError| {
+                        ApplicationError::ProjectionDatabaseError(e.to_string())
+                    })?;
             }
 
             // 試算表Projectionも更新
@@ -465,7 +469,9 @@ impl ProjectionBuilderImpl {
         self.projection_db
             .update_projection(&trial_balance_key, &data, event.global_sequence)
             .await
-            .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+            .map_err(|e: crate::error::InfrastructureError| {
+                ApplicationError::ProjectionDatabaseError(e.to_string())
+            })?;
 
         Ok(())
     }

@@ -11,7 +11,7 @@ use crate::{
     error::InfrastructureResult,
     event_store::EventStore,
     event_stream::StoredEvent,
-    read::projections::{ProjectionDb, ProjectionStrategy},
+    read::infrastructure::{ProjectionDb, ProjectionStrategy},
     types::Sequence,
 };
 

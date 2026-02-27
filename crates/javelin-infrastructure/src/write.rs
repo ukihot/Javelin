@@ -3,4 +3,3 @@
 pub mod event_handlers;
 pub mod event_store;
 pub mod repositories;
-pub mod services;
