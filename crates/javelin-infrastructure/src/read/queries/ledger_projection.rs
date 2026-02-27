@@ -157,17 +157,23 @@ impl Apply<JournalEntryEvent> for LedgerProjection {
             }
             // 記帳時に元帳に反映
             JournalEntryEvent::Posted { entry_id, entry_number, .. } => {
+                // モダンプラクティス: is_some_andではなく、if letで明示的に処理
                 if let Some(lines) = self.entry_lines_cache.get(&entry_id).cloned() {
+                    // デフォルト値を定数として定義
+                    const DEFAULT_DATE: &str = "1900-01-01";
+                    const DEFAULT_DESC: &str = "記帳済";
+
+                    // 借用チェッカー対策: 先に値をcloneして不変借用を終了させる
                     let transaction_date = self
                         .entry_transaction_date_cache
                         .get(&entry_id)
                         .cloned()
-                        .unwrap_or_else(|| "1900-01-01".to_string());
+                        .unwrap_or_else(|| DEFAULT_DATE.to_string());
                     let description = self
                         .entry_description_cache
                         .get(&entry_id)
                         .cloned()
-                        .unwrap_or_else(|| "記帳済".to_string());
+                        .unwrap_or_else(|| DEFAULT_DESC.to_string());
 
                     self.create_ledger_entries(
                         &entry_number,
