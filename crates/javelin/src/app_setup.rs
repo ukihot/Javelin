@@ -21,6 +21,7 @@ use javelin_application::{
     },
     projection_builder::ProjectionBuilder,
 };
+use javelin_domain::event::DomainEvent;
 use javelin_infrastructure::{
     read::{
         batch_history::BatchHistoryQueryServiceImpl,
@@ -33,6 +34,105 @@ use javelin_infrastructure::{
 use tokio::sync::mpsc;
 
 use crate::app_error::{AppError, AppResult};
+
+/// マスタデータの初期化（イベントが0件の場合のみ）
+async fn initialize_master_data(event_store: &Arc<EventStore>) -> AppResult<()> {
+    use javelin_domain::masters::{AccountMasterEvent, AccountType};
+
+    // イベントが既に存在する場合はスキップ
+    let latest_sequence =
+        event_store.get_latest_sequence().await.map(|seq| seq.as_u64()).unwrap_or(0);
+    if latest_sequence > 0 {
+        return Ok(());
+    }
+
+    println!("✓ Initializing master data with IFRS template...");
+
+    // IFRSベースの勘定科目テンプレート
+    let accounts = vec![
+        // 資産の部 - 流動資産
+        ("1100", "現金及び現金同等物", AccountType::Asset),
+        ("1110", "営業債権及びその他の債権", AccountType::Asset),
+        ("1120", "棚卸資産", AccountType::Asset),
+        ("1130", "その他の金融資産（流動）", AccountType::Asset),
+        ("1140", "その他の流動資産", AccountType::Asset),
+        // 資産の部 - 非流動資産
+        ("1200", "有形固定資産", AccountType::Asset),
+        ("1210", "使用権資産", AccountType::Asset),
+        ("1220", "のれん", AccountType::Asset),
+        ("1230", "無形資産", AccountType::Asset),
+        ("1240", "持分法で会計処理されている投資", AccountType::Asset),
+        ("1250", "その他の金融資産（非流動）", AccountType::Asset),
+        ("1260", "繰延税金資産", AccountType::Asset),
+        ("1270", "その他の非流動資産", AccountType::Asset),
+        // 負債の部 - 流動負債
+        ("2100", "営業債務及びその他の債務", AccountType::Liability),
+        ("2110", "社債及び借入金（流動）", AccountType::Liability),
+        ("2120", "リース負債（流動）", AccountType::Liability),
+        ("2130", "その他の金融負債（流動）", AccountType::Liability),
+        ("2140", "未払法人所得税", AccountType::Liability),
+        ("2150", "引当金（流動）", AccountType::Liability),
+        ("2160", "その他の流動負債", AccountType::Liability),
+        // 負債の部 - 非流動負債
+        ("2200", "社債及び借入金（非流動）", AccountType::Liability),
+        ("2210", "リース負債（非流動）", AccountType::Liability),
+        ("2220", "その他の金融負債（非流動）", AccountType::Liability),
+        ("2230", "退職給付に係る負債", AccountType::Liability),
+        ("2240", "引当金（非流動）", AccountType::Liability),
+        ("2250", "繰延税金負債", AccountType::Liability),
+        ("2260", "その他の非流動負債", AccountType::Liability),
+        // 資本の部
+        ("3100", "資本金", AccountType::Equity),
+        ("3110", "資本剰余金", AccountType::Equity),
+        ("3120", "利益剰余金", AccountType::Equity),
+        ("3130", "自己株式", AccountType::Equity),
+        ("3140", "その他の資本の構成要素", AccountType::Equity),
+        ("3150", "非支配持分", AccountType::Equity),
+        // 収益の部
+        ("4100", "売上収益", AccountType::Revenue),
+        ("4200", "その他の収益", AccountType::Revenue),
+        ("4300", "金融収益", AccountType::Revenue),
+        ("4400", "持分法による投資利益", AccountType::Revenue),
+        // 費用の部
+        ("5100", "売上原価", AccountType::Expense),
+        ("5200", "販売費及び一般管理費", AccountType::Expense),
+        ("5300", "研究開発費", AccountType::Expense),
+        ("5400", "その他の費用", AccountType::Expense),
+        ("5500", "金融費用", AccountType::Expense),
+        ("5600", "持分法による投資損失", AccountType::Expense),
+        ("5700", "法人所得税費用", AccountType::Expense),
+    ];
+
+    for (code, name, account_type) in &accounts {
+        let event = AccountMasterEvent::AccountMasterCreated {
+            code: code.to_string(),
+            name: name.to_string(),
+            account_type: *account_type,
+            is_active: true,
+        };
+
+        let payload = serde_json::to_vec(&event).map_err(|e| {
+            AppError::InitializationFailed(Box::new(std::io::Error::other(e.to_string())))
+        })?;
+
+        event_store
+            .append_event(
+                event.event_type(),
+                event.aggregate_id(),
+                event.version(),
+                javelin_infrastructure::shared::types::ExpectedVersion::any(),
+                &payload,
+            )
+            .await
+            .map_err(|e| {
+                AppError::InitializationFailed(Box::new(std::io::Error::other(e.to_string())))
+            })?;
+    }
+
+    println!("✓ Master data initialized ({} accounts)", accounts.len());
+
+    Ok(())
+}
 
 /// インフラ層のセットアップ結果
 pub struct InfrastructureComponents {
@@ -75,6 +175,9 @@ pub async fn setup_infrastructure(data_dir: &Path) -> AppResult<InfrastructureCo
     let notification_handler =
         projection_builder.clone().create_event_notification_handler(infra_error_sender);
     event_store.set_notification_callback(notification_handler);
+
+    // 初期データの投入（イベントが0件の場合のみ）
+    initialize_master_data(&event_store).await?;
 
     // Projection再構築チェック
     check_and_rebuild_projections(&event_store, &projection_db, &projection_builder).await?;

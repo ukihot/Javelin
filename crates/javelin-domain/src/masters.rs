@@ -4,6 +4,7 @@
 pub mod account_master;
 pub mod application_settings;
 pub mod company_master;
+pub mod events;
 pub mod subsidiary_account_master;
 
 // 公開インターフェース
@@ -13,6 +14,7 @@ pub use application_settings::{
     FiscalYearStartMonth, Language,
 };
 pub use company_master::{CompanyCode, CompanyMaster, CompanyName};
+pub use events::AccountMasterEvent;
 pub use subsidiary_account_master::{
     SubsidiaryAccountCode, SubsidiaryAccountMaster, SubsidiaryAccountName,
 };

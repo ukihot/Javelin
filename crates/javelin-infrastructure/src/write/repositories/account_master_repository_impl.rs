@@ -4,11 +4,14 @@ use std::{path::Path, sync::Arc};
 
 use javelin_domain::{
     error::DomainResult,
-    masters::{AccountCode, AccountMaster, AccountName, AccountType},
+    event::DomainEvent,
+    masters::{AccountCode, AccountMaster, AccountMasterEvent, AccountName, AccountType},
     repositories::AccountMasterRepository,
 };
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction};
 use serde::{Deserialize, Serialize};
+
+use crate::{types::ExpectedVersion, write::event_store::EventStore};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct StoredAccountMaster {
@@ -21,10 +24,14 @@ struct StoredAccountMaster {
 pub struct AccountMasterRepositoryImpl {
     env: Arc<Environment>,
     db: Database,
+    event_store: Arc<EventStore>,
 }
 
 impl AccountMasterRepositoryImpl {
-    pub async fn new(path: &Path) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn new(
+        path: &Path,
+        event_store: Arc<EventStore>,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         if !path.exists() {
             tokio::fs::create_dir_all(path).await?;
         }
@@ -33,7 +40,7 @@ impl AccountMasterRepositoryImpl {
 
         let db = env.create_db(Some("account_masters"), DatabaseFlags::empty())?;
 
-        let repository = Self { env: Arc::new(env), db };
+        let repository = Self { env: Arc::new(env), db, event_store };
         repository.initialize_defaults().await?;
 
         Ok(repository)
@@ -363,6 +370,7 @@ impl AccountMasterRepository for AccountMasterRepositoryImpl {
         let db = self.db;
         let key = account_master.code().value().to_string();
 
+        // LMDBに保存
         tokio::task::spawn_blocking(move || {
             let mut txn = env.begin_rw_txn()?;
             txn.put(db, &key, &value, lmdb::WriteFlags::empty())?;
@@ -373,6 +381,28 @@ impl AccountMasterRepository for AccountMasterRepositoryImpl {
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
 
+        // イベントを発行
+        let event = AccountMasterEvent::AccountMasterCreated {
+            code: account_master.code().value().to_string(),
+            name: account_master.name().value().to_string(),
+            account_type: account_master.account_type(),
+            is_active: account_master.is_active(),
+        };
+
+        let payload = serde_json::to_vec(&event)
+            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+
+        self.event_store
+            .append_event(
+                event.event_type(),
+                event.aggregate_id(),
+                event.version(),
+                ExpectedVersion::any(),
+                &payload,
+            )
+            .await
+            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+
         Ok(())
     }
 
@@ -381,6 +411,7 @@ impl AccountMasterRepository for AccountMasterRepositoryImpl {
         let db = self.db;
         let key = code.value().to_string();
 
+        // LMDBから削除
         tokio::task::spawn_blocking(move || {
             let mut txn = env.begin_rw_txn()?;
             txn.del(db, &key, None)?;
@@ -390,6 +421,23 @@ impl AccountMasterRepository for AccountMasterRepositoryImpl {
         .await
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+
+        // イベントを発行
+        let event = AccountMasterEvent::AccountMasterDeleted { code: code.value().to_string() };
+
+        let payload = serde_json::to_vec(&event)
+            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+
+        self.event_store
+            .append_event(
+                event.event_type(),
+                event.aggregate_id(),
+                event.version(),
+                ExpectedVersion::any(),
+                &payload,
+            )
+            .await
+            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
 
         Ok(())
     }

@@ -199,6 +199,45 @@ impl ProjectionDb {
 
         Ok(())
     }
+
+    /// プレフィックスでProjectionをスキャン
+    pub async fn scan_prefix(&self, prefix: &str) -> InfrastructureResult<Vec<(String, Vec<u8>)>> {
+        use lmdb::Cursor;
+
+        let env = Arc::clone(&self.env);
+        let state_db = self.state_db;
+        let prefix = prefix.to_string();
+
+        let result = tokio::task::spawn_blocking(move || {
+            let txn =
+                env.begin_ro_txn().map_err(|e| InfrastructureError::LmdbError(e.to_string()))?;
+
+            let mut cursor = txn
+                .open_ro_cursor(state_db)
+                .map_err(|e| InfrastructureError::LmdbError(e.to_string()))?;
+
+            let mut results = Vec::new();
+            let prefix_bytes = prefix.as_bytes();
+
+            // プレフィックスから開始して効率的にスキャン
+            for (key_bytes, value_bytes) in cursor.iter_from(prefix_bytes) {
+                // プレフィックスに一致しなくなったら終了（ソート順を利用）
+                if !key_bytes.starts_with(prefix_bytes) {
+                    break;
+                }
+
+                let key = String::from_utf8_lossy(key_bytes).to_string();
+                let value = value_bytes.to_vec();
+                results.push((key, value));
+            }
+
+            Ok::<Vec<(String, Vec<u8>)>, InfrastructureError>(results)
+        })
+        .await
+        .map_err(|e| InfrastructureError::LmdbError(e.to_string()))??;
+
+        Ok(result)
+    }
 }
 
 #[cfg(test)]

@@ -75,6 +75,10 @@ impl ProjectionBuilderImpl {
                 // 仕訳一覧Projectionを更新（Task 4.1で実装）
                 self.update_journal_entry_list_projection(event).await?;
             }
+            "AccountMasterCreated" | "AccountMasterUpdated" | "AccountMasterDeleted" => {
+                // 勘定科目マスタProjectionを更新
+                self.update_account_master_projection(event).await?;
+            }
             _ => {
                 // 未知のイベント種別はログに記録して無視
                 // 本番環境ではログ出力を追加すべき
@@ -298,6 +302,75 @@ impl ProjectionBuilderImpl {
             _ => {
                 // 未知のイベント種別は無視
             }
+        }
+
+        Ok(())
+    }
+
+    /// 勘定科目マスタProjectionを更新
+    async fn update_account_master_projection(&self, event: &StoredEvent) -> ApplicationResult<()> {
+        use serde_json::Value;
+
+        let event_data: Value = serde_json::from_slice(&event.payload)
+            .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+        match event.event_type.as_str() {
+            "AccountMasterCreated" | "AccountMasterUpdated" => {
+                let code = event_data["code"].as_str().ok_or_else(|| {
+                    ApplicationError::ProjectionDatabaseError("Missing code".to_string())
+                })?;
+                let name = event_data["name"].as_str().ok_or_else(|| {
+                    ApplicationError::ProjectionDatabaseError("Missing name".to_string())
+                })?;
+                let account_type = event_data["account_type"].as_str().ok_or_else(|| {
+                    ApplicationError::ProjectionDatabaseError("Missing account_type".to_string())
+                })?;
+                let is_active = event_data["is_active"].as_bool().unwrap_or(true);
+
+                let key = format!("account_master:{}", code);
+                let stored_data = serde_json::json!({
+                    "code": code,
+                    "name": name,
+                    "account_type": account_type,
+                    "is_active": is_active,
+                });
+
+                let data = serde_json::to_vec(&stored_data)
+                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+                self.projection_db
+                    .update_projection(&key, &data, event.global_sequence)
+                    .await
+                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+            }
+            "AccountMasterDeleted" => {
+                let code = event_data["code"].as_str().ok_or_else(|| {
+                    ApplicationError::ProjectionDatabaseError("Missing code".to_string())
+                })?;
+
+                let key = format!("account_master:{}", code);
+
+                // 削除はis_activeをfalseにする
+                if let Some(existing_data) = self.projection_db.get_projection(&key).await.map_err(
+                    |e: crate::error::InfrastructureError| {
+                        ApplicationError::ProjectionDatabaseError(e.to_string())
+                    },
+                )? {
+                    let mut stored_data: Value = serde_json::from_slice(&existing_data)
+                        .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+                    stored_data["is_active"] = Value::Bool(false);
+
+                    let data = serde_json::to_vec(&stored_data)
+                        .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+                    self.projection_db
+                        .update_projection(&key, &data, event.global_sequence)
+                        .await
+                        .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+                }
+            }
+            _ => {}
         }
 
         Ok(())

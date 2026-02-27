@@ -54,9 +54,24 @@ impl AccountMasterProjection {
     pub async fn get_all(
         &self,
     ) -> Result<Vec<AccountMaster>, Box<dyn std::error::Error + Send + Sync>> {
-        // ProjectionDBから全件取得するには、プレフィックスでスキャンする必要がある
-        // 現時点では空のVecを返す（マスタデータはRepositoryから直接保存される想定）
-        Ok(Vec::new())
+        // ProjectionDBから全件取得（プレフィックススキャン）
+        let prefix = "account_master:";
+        let all_data = self.projection_db.scan_prefix(prefix).await.map_err(|e| {
+            Box::new(std::io::Error::other(e.to_string()))
+                as Box<dyn std::error::Error + Send + Sync>
+        })?;
+
+        let mut accounts = Vec::new();
+        for (_key, value) in all_data {
+            let stored: StoredAccountMaster = serde_json::from_slice(&value)?;
+            // is_activeがtrueのもののみ返す
+            if stored.is_active {
+                let account = Self::from_stored(&stored)?;
+                accounts.push(account);
+            }
+        }
+
+        Ok(accounts)
     }
 
     /// コードで勘定科目マスタを取得
