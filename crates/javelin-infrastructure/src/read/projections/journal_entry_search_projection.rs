@@ -5,9 +5,9 @@ use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
 
 use crate::{
     error::InfrastructureResult,
-    projection_trait::Apply,
-    read::queries::journal_entry_search_read_model::{
-        JournalEntryLineReadModel, JournalEntrySearchReadModel,
+    read::projections::{
+        journal_entry_search_read_model::{JournalEntryLineReadModel, JournalEntrySearchReadModel},
+        projection_trait::Apply,
     },
 };
 
@@ -37,11 +37,17 @@ impl JournalEntrySearchProjection {
         &mut self.entries
     }
 
-    /// 勘定科目名を取得（マスタデータから）
-    /// TODO: 実際のマスタデータ連携実装時に置き換え
+    /// 勘定科目名を取得（暫定実装）
+    ///
+    /// 注意: Projectionは読み取り最適化のため、勘定科目名を非正規化して保持する。
+    /// 本来はマスタデータから取得すべきだが、Projection構築時にマスタデータへの
+    /// 依存を避けるため、現時点では固定マッピングを使用。
+    ///
+    /// 将来的な改善案:
+    /// 1. AccountMasterのイベントを購読してProjection内にマスタデータをキャッシュ
+    /// 2. または、表示時にアプリケーション層でマスタデータと結合
     fn get_account_name(&self, account_code: &str) -> String {
-        // 暫定実装: 勘定科目コードをそのまま返す
-        // 実際の実装では、MasterDataLoaderを使用して勘定科目名を取得する
+        // 暫定実装: 主要な勘定科目のみマッピング
         match account_code {
             "1000" => "現金".to_string(),
             "1100" => "普通預金".to_string(),

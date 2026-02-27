@@ -1,5 +1,5 @@
 // JournalEntrySearchQueryServiceImpl - 仕訳検索サービス実装（Infrastructure層）
-// JournalEntrySearchProjectionから仕訳データを検索
+// ProjectionDBから仕訳データを検索（CQRS読み取り側）
 
 use std::sync::Arc;
 
@@ -12,53 +12,51 @@ use javelin_application::{
     query_service::JournalEntrySearchQueryService,
 };
 
-use crate::{
-    EventStore,
-    projection_trait::Apply,
-    queries::{
-        journal_entry_search_projection::JournalEntrySearchProjection,
-        journal_entry_search_read_model::JournalEntrySearchReadModel,
-    },
+use crate::read::projections::{
+    journal_entry_search_read_model::JournalEntrySearchReadModel, projection_db::ProjectionDb,
 };
 
 /// JournalEntrySearchQueryService実装
 ///
-/// EventStoreからイベントを取得してJournalEntrySearchProjectionを構築し、
-/// 検索条件に基づいて仕訳データを返す。
+/// ProjectionDBから仕訳データを検索する。
+/// CQRS原則: クエリサービスはProjectionDB（読み取り最適化）を使用
 pub struct JournalEntrySearchQueryServiceImpl {
-    event_store: Arc<EventStore>,
+    projection_db: Arc<ProjectionDb>,
 }
 
 impl JournalEntrySearchQueryServiceImpl {
     /// 新しいインスタンスを作成
-    pub fn new(event_store: Arc<EventStore>) -> Self {
-        Self { event_store }
+    pub fn new(projection_db: Arc<ProjectionDb>) -> Self {
+        Self { projection_db }
     }
 
-    /// イベントストリームからJournalEntrySearchProjectionを構築
-    async fn build_search_projection(&self) -> ApplicationResult<JournalEntrySearchProjection> {
-        use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
+    /// ProjectionDBから仕訳エントリを取得
+    async fn get_journal_entries(&self) -> ApplicationResult<Vec<JournalEntrySearchReadModel>> {
+        let mut entries = Vec::with_capacity(1000);
 
-        let mut projection = JournalEntrySearchProjection::new();
+        // ProjectionDBから仕訳エントリを取得
+        // キー形式: "journal_entry:{entry_id}"
+        // 簡易実装: シーケンシャルスキャン
+        for seq in 0..10000 {
+            let key = format!("journal_entry:{:08}", seq);
 
-        // 全イベントを取得（EventStoreから直接）
-        let events = self
-            .event_store
-            .get_all_events(0)
-            .await
-            .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
-
-        // イベントを適用
-        for stored_event in events.iter() {
-            // JournalEntryEventにデシリアライズ
-            if let Ok(event) = serde_json::from_slice::<JournalEntryEvent>(&stored_event.payload) {
-                projection
-                    .apply(event)
+            if let Some(data) = self
+                .projection_db
+                .get_projection(&key)
+                .await
+                .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?
+            {
+                let entry: JournalEntrySearchReadModel = serde_json::from_slice(&data)
                     .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+                entries.push(entry);
+            } else {
+                // データが終わった
+                break;
             }
         }
 
-        Ok(projection)
+        Ok(entries)
     }
 
     /// 日付範囲でフィルタリング
@@ -131,11 +129,8 @@ impl JournalEntrySearchQueryService for JournalEntrySearchQueryServiceImpl {
         &self,
         criteria: SearchCriteriaDto,
     ) -> ApplicationResult<JournalEntrySearchResultDto> {
-        // JournalEntrySearchProjectionを構築
-        let projection = self.build_search_projection().await?;
-
-        // 全エントリーを取得
-        let mut entries: Vec<JournalEntrySearchReadModel> = projection.entries().to_vec();
+        // ProjectionDBから仕訳エントリを取得
+        let mut entries = self.get_journal_entries().await?;
 
         // 日付範囲でフィルタリング
         if criteria.from_date.is_some() || criteria.to_date.is_some() {
@@ -219,8 +214,8 @@ mod tests {
     #[tokio::test]
     async fn test_search_empty_criteria() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = JournalEntrySearchQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = JournalEntrySearchQueryServiceImpl::new(projection_db);
 
         let criteria = SearchCriteriaDto::new();
         let result = service.search(criteria).await.unwrap();
@@ -232,8 +227,8 @@ mod tests {
     #[tokio::test]
     async fn test_search_with_date_range() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = JournalEntrySearchQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = JournalEntrySearchQueryServiceImpl::new(projection_db);
 
         let criteria = SearchCriteriaDto::new()
             .with_from_date("2024-01-01".to_string())
@@ -248,8 +243,8 @@ mod tests {
     #[tokio::test]
     async fn test_search_with_description() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = JournalEntrySearchQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = JournalEntrySearchQueryServiceImpl::new(projection_db);
 
         let criteria = SearchCriteriaDto::new().with_description("売上".to_string());
 
@@ -262,8 +257,8 @@ mod tests {
     #[tokio::test]
     async fn test_search_with_account_code() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = JournalEntrySearchQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = JournalEntrySearchQueryServiceImpl::new(projection_db);
 
         let criteria = SearchCriteriaDto::new().with_account_code("1000".to_string());
 
@@ -276,8 +271,8 @@ mod tests {
     #[tokio::test]
     async fn test_search_with_debit_credit() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = JournalEntrySearchQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = JournalEntrySearchQueryServiceImpl::new(projection_db);
 
         let criteria = SearchCriteriaDto::new().with_debit_credit("Debit".to_string());
 
@@ -290,8 +285,8 @@ mod tests {
     #[tokio::test]
     async fn test_search_with_amount_range() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = JournalEntrySearchQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = JournalEntrySearchQueryServiceImpl::new(projection_db);
 
         let criteria = SearchCriteriaDto::new().with_min_amount(10000.0).with_max_amount(100000.0);
 
@@ -304,8 +299,8 @@ mod tests {
     #[tokio::test]
     async fn test_search_with_pagination() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = JournalEntrySearchQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = JournalEntrySearchQueryServiceImpl::new(projection_db);
 
         let criteria = SearchCriteriaDto::new().with_limit(50).with_offset(10);
 

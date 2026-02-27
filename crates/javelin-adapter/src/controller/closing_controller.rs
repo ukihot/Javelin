@@ -24,7 +24,7 @@ use javelin_application::{
     },
 };
 use javelin_infrastructure::{
-    read::queries::LedgerQueryServiceImpl, write::event_store::ClosingEventStore,
+    read::query_services::LedgerQueryServiceImpl, write::event_store::ClosingEventStore,
 };
 
 use crate::{error::AdapterResult, presenter::LedgerPresenter};

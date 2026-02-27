@@ -1,7 +1,7 @@
 // LedgerQueryServiceImpl - 元帳照会サービス実装（Infrastructure層）
-// LedgerProjectionから元帳データを取得
+// ProjectionDBから元帳データを取得（CQRS読み取り側）
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use javelin_application::{
     error::{ApplicationError, ApplicationResult},
@@ -11,64 +11,91 @@ use javelin_application::{
     },
 };
 
-use crate::{
-    EventStore,
-    projection_trait::Apply,
-    queries::ledger_projection::{LedgerEntryReadModel, LedgerProjection},
+use crate::read::projections::{
+    ledger_projection::LedgerEntryReadModel, projection_db::ProjectionDb,
 };
 
 /// LedgerQueryService実装
 ///
-/// EventStoreからイベントを取得してLedgerProjectionを構築し、
-/// 元帳データを返す。
+/// ProjectionDBから元帳データを取得する。
+/// CQRS原則: クエリサービスはProjectionDB（読み取り最適化）を使用
 pub struct LedgerQueryServiceImpl {
-    event_store: Arc<EventStore>,
+    projection_db: Arc<ProjectionDb>,
+    /// 勘定科目マスタのキャッシュ（code -> name）
+    /// 注意: 本来はマスタデータローダーを使用すべきだが、
+    /// 簡易実装として固定マッピングを使用
+    account_names: HashMap<String, String>,
 }
 
 impl LedgerQueryServiceImpl {
     /// 新しいインスタンスを作成
-    pub fn new(event_store: Arc<EventStore>) -> Self {
-        Self { event_store }
+    pub fn new(projection_db: Arc<ProjectionDb>) -> Self {
+        // 主要な勘定科目のマッピングを初期化
+        let mut account_names = HashMap::new();
+        account_names.insert("1000".to_string(), "現金".to_string());
+        account_names.insert("1100".to_string(), "普通預金".to_string());
+        account_names.insert("1200".to_string(), "売掛金".to_string());
+        account_names.insert("2000".to_string(), "買掛金".to_string());
+        account_names.insert("2100".to_string(), "未払金".to_string());
+        account_names.insert("3000".to_string(), "資本金".to_string());
+        account_names.insert("4000".to_string(), "売上高".to_string());
+        account_names.insert("5000".to_string(), "仕入高".to_string());
+        account_names.insert("6000".to_string(), "給料手当".to_string());
+        account_names.insert("7000".to_string(), "地代家賃".to_string());
+
+        Self { projection_db, account_names }
     }
 
-    /// イベントストリームからLedgerProjectionを構築
-    async fn build_ledger_projection(&self) -> ApplicationResult<LedgerProjection> {
-        use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
+    /// 勘定科目名を取得
+    fn get_account_name(&self, account_code: &str) -> String {
+        self.account_names
+            .get(account_code)
+            .cloned()
+            .unwrap_or_else(|| format!("勘定科目{}", account_code))
+    }
 
-        let mut projection = LedgerProjection::new();
+    /// ProjectionDBから元帳エントリを取得
+    async fn get_ledger_entries(&self) -> ApplicationResult<Vec<LedgerEntryReadModel>> {
+        let mut entries = Vec::with_capacity(1000);
 
-        // 全イベントを取得（EventStoreから直接）
-        let events = self
-            .event_store
-            .get_all_events(0)
-            .await
-            .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+        // ProjectionDBから元帳エントリを取得
+        // キー形式: "ledger:{account_code}:{sequence}"
+        // 簡易実装: 全勘定科目・全シーケンスをスキャン
+        for account_code in
+            &["1000", "1100", "1200", "2000", "2100", "3000", "4000", "5000", "6000", "7000"]
+        {
+            for seq in 0..10000 {
+                let key = format!("ledger:{}:{:08}", account_code, seq);
 
-        // イベントを適用
-        for stored_event in events.iter() {
-            // JournalEntryEventにデシリアライズ
-            if let Ok(event) = serde_json::from_slice::<JournalEntryEvent>(&stored_event.payload) {
-                projection
-                    .apply(event)
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+                if let Some(data) = self
+                    .projection_db
+                    .get_projection(&key)
+                    .await
+                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?
+                {
+                    let entry: LedgerEntryReadModel = serde_json::from_slice(&data)
+                        .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+                    entries.push(entry);
+                } else {
+                    // この勘定科目のデータが終わった
+                    break;
+                }
             }
         }
 
-        Ok(projection)
+        Ok(entries)
     }
 }
 
 impl LedgerQueryService for LedgerQueryServiceImpl {
     async fn get_ledger(&self, query: GetLedgerQuery) -> ApplicationResult<LedgerResult> {
-        // LedgerProjectionを構築
-        let projection = self.build_ledger_projection().await?;
-
-        // 元帳エントリを取得
-        let all_entries = projection.entries();
+        // ProjectionDBから元帳エントリを取得
+        let all_entries = self.get_ledger_entries().await?;
 
         // 勘定科目でフィルタリング
-        let mut filtered_entries: Vec<&LedgerEntryReadModel> = all_entries
-            .iter()
+        let mut filtered_entries: Vec<LedgerEntryReadModel> = all_entries
+            .into_iter()
             .filter(|entry| entry.account_code == query.account_code)
             .collect();
 
@@ -83,18 +110,18 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
         // 取引日付でソート
         filtered_entries.sort_by(|a, b| a.transaction_date.cmp(&b.transaction_date));
 
-        // ページネーション適用
-        let offset = query.offset.unwrap_or(0) as usize;
-        let limit = query.limit.unwrap_or(100) as usize;
-        let paginated_entries: Vec<&LedgerEntryReadModel> =
-            filtered_entries.iter().skip(offset).take(limit).copied().collect();
-
         // 期首残高を計算（フィルタ前の最初のエントリの残高 - その借方貸方差額）
         let opening_balance = if let Some(first_entry) = filtered_entries.first() {
             first_entry.balance - (first_entry.debit_amount - first_entry.credit_amount)
         } else {
             0.0
         };
+
+        // ページネーション適用
+        let offset = query.offset.unwrap_or(0) as usize;
+        let limit = query.limit.unwrap_or(100) as usize;
+        let paginated_entries: Vec<&LedgerEntryReadModel> =
+            filtered_entries.iter().skip(offset).take(limit).collect();
 
         // 借方合計、貸方合計を計算
         let mut total_debit = 0.0;
@@ -110,7 +137,7 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
 
         // LedgerEntryに変換
         let entries: Vec<LedgerEntry> = paginated_entries
-            .into_iter()
+            .iter()
             .map(|entry| LedgerEntry {
                 transaction_date: entry.transaction_date.clone(),
                 entry_number: entry.entry_number.clone(),
@@ -124,7 +151,7 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
 
         Ok(LedgerResult {
             account_code: query.account_code.clone(),
-            account_name: format!("勘定科目{}", query.account_code), // TODO: マスタデータから取得
+            account_name: self.get_account_name(&query.account_code),
             opening_balance,
             entries,
             closing_balance,
@@ -141,16 +168,13 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
 
         use javelin_application::query_service::TrialBalanceEntry;
 
-        // LedgerProjectionを構築
-        let projection = self.build_ledger_projection().await?;
-
-        // 元帳エントリを取得
-        let all_entries = projection.entries();
+        // ProjectionDBから元帳エントリを取得
+        let all_entries = self.get_ledger_entries().await?;
 
         // 期間でフィルタリング（YYYY-MM形式）
         let period_str = format!("{:04}-{:02}", query.period_year, query.period_month);
-        let filtered_entries: Vec<&LedgerEntryReadModel> = all_entries
-            .iter()
+        let filtered_entries: Vec<LedgerEntryReadModel> = all_entries
+            .into_iter()
             .filter(|entry| entry.transaction_date.starts_with(&period_str))
             .collect();
 
@@ -172,16 +196,21 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
         // TrialBalanceEntryに変換
         let mut entries: Vec<TrialBalanceEntry> = account_map
             .into_iter()
-            .map(|(account_code, (opening_balance, debit_amount, credit_amount, closing_balance))| {
-                TrialBalanceEntry {
-                    account_code: account_code.clone(),
-                    account_name: format!("勘定科目{}", account_code), // TODO: マスタデータから取得
-                    opening_balance,
-                    debit_amount,
-                    credit_amount,
-                    closing_balance,
-                }
-            })
+            .map(
+                |(
+                    account_code,
+                    (opening_balance, debit_amount, credit_amount, closing_balance),
+                )| {
+                    TrialBalanceEntry {
+                        account_code: account_code.clone(),
+                        account_name: self.get_account_name(&account_code),
+                        opening_balance,
+                        debit_amount,
+                        credit_amount,
+                        closing_balance,
+                    }
+                },
+            )
             .collect();
 
         // 勘定科目コードでソート
@@ -214,8 +243,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_ledger() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = LedgerQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = LedgerQueryServiceImpl::new(projection_db);
 
         let query = GetLedgerQuery {
             account_code: "1001".to_string(),
@@ -233,8 +262,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_trial_balance() {
         let temp_dir = TempDir::new().unwrap();
-        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
-        let service = LedgerQueryServiceImpl::new(event_store);
+        let projection_db = Arc::new(ProjectionDb::new(temp_dir.path()).await.unwrap());
+        let service = LedgerQueryServiceImpl::new(projection_db);
 
         let query = GetTrialBalanceQuery { period_year: 2024, period_month: 1 };
 

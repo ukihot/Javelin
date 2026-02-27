@@ -7,7 +7,7 @@ use javelin_application::{
     input_ports::LoadApplicationSettingsInputPort,
     interactor::master_data::LoadApplicationSettingsInteractor,
 };
-use javelin_infrastructure::read::queries::MasterDataLoaderImpl;
+use javelin_infrastructure::read::query_services::MasterDataLoaderImpl;
 
 use crate::navigation::PresenterRegistry;
 

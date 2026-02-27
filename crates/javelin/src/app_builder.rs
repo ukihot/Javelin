@@ -53,6 +53,7 @@ impl ApplicationBuilder {
         let controller_components = setup_controllers(
             &data_dir,
             infra.event_store.clone(),
+            infra.projection_db.clone(),
             infra.master_data_loader.clone(),
         )
         .await?;

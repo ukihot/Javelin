@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use javelin_application::query_service::{BatchHistoryQueryService, GetBatchHistoryQuery};
-use javelin_infrastructure::read::queries::BatchHistoryQueryServiceImpl;
+use javelin_infrastructure::read::query_services::BatchHistoryQueryServiceImpl;
 
 use crate::navigation::PresenterRegistry;
 

@@ -25,7 +25,7 @@ use javelin_application::{
 use javelin_infrastructure::{
     read::{
         projections::{ProjectionBuilderImpl, ProjectionDb},
-        queries::{
+        query_services::{
             BatchHistoryQueryServiceImpl, JournalEntrySearchQueryServiceImpl,
             LedgerQueryServiceImpl, MasterDataLoaderImpl,
         },
@@ -142,6 +142,7 @@ async fn check_and_rebuild_projections(
 pub async fn setup_controllers(
     data_dir: &Path,
     event_store: Arc<EventStore>,
+    projection_db: Arc<ProjectionDb>,
     master_data_loader: Arc<MasterDataLoaderImpl>,
 ) -> AppResult<ControllerComponents> {
     // LedgerPresenterチャネル
@@ -154,10 +155,11 @@ pub async fn setup_controllers(
     let _ledger_presenter = Arc::new(LedgerPresenter::new(dummy_ledger_tx, trial_balance_tx));
 
     // QueryService構築
-    let ledger_query_service = Arc::new(LedgerQueryServiceImpl::new(Arc::clone(&event_store)));
+    let ledger_query_service = Arc::new(LedgerQueryServiceImpl::new(Arc::clone(&projection_db)));
     let search_query_service =
-        Arc::new(JournalEntrySearchQueryServiceImpl::new(Arc::clone(&event_store)));
-    let batch_history_query_service = Arc::new(BatchHistoryQueryServiceImpl::new());
+        Arc::new(JournalEntrySearchQueryServiceImpl::new(Arc::clone(&projection_db)));
+    let batch_history_query_service =
+        Arc::new(BatchHistoryQueryServiceImpl::new(Arc::clone(&projection_db)));
 
     // PresenterRegistry
     let presenter_registry = Arc::new(PresenterRegistry::new());

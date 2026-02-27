@@ -1,13 +1,9 @@
-// Read-side: Query implementations
+// Query Service implementations
+// クエリサービス実装（CQRS読み取り側）
 
 pub mod batch_history_query_service_impl;
 pub mod journal_entry_finder_impl;
-pub mod journal_entry_projection;
-pub mod journal_entry_projection_worker;
-pub mod journal_entry_search_projection;
 pub mod journal_entry_search_query_service_impl;
-pub mod journal_entry_search_read_model;
-pub mod ledger_projection;
 pub mod ledger_query_service_impl;
 pub mod master_data_loader_impl;
 

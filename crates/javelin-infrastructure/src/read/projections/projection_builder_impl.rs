@@ -13,7 +13,7 @@ use javelin_application::{
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
-use crate::{event_store::EventStore, event_stream::StoredEvent, projection_db::ProjectionDb};
+use crate::{event_store::EventStore, event_stream::StoredEvent, read::projections::ProjectionDb};
 
 /// 再試行キューエントリ
 #[derive(Debug, Clone)]

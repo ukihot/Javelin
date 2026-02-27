@@ -8,8 +8,11 @@ use std::sync::Arc;
 use tokio::time::{Duration, interval};
 
 use crate::{
-    error::InfrastructureResult, event_store::EventStore, event_stream::StoredEvent,
-    projection_db::ProjectionDb, projection_trait::ProjectionStrategy, types::Sequence,
+    error::InfrastructureResult,
+    event_store::EventStore,
+    event_stream::StoredEvent,
+    read::projections::{ProjectionDb, ProjectionStrategy},
+    types::Sequence,
 };
 
 /// ProjectionWorker実装
