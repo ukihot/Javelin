@@ -280,7 +280,8 @@ impl SystemMasterRepository for SystemMasterRepositoryImpl {
         let result = tokio::task::spawn_blocking(move || {
             let txn = env.begin_ro_txn()?;
             let mut cursor = txn.open_ro_cursor(db)?;
-            let mut system_masters = Vec::new();
+            // モダンプラクティス: 初期キャパシティを確保（システムマスタは少数）
+            let mut system_masters = Vec::with_capacity(5);
 
             for (key, value) in cursor.iter() {
                 let _key_str = std::str::from_utf8(key)

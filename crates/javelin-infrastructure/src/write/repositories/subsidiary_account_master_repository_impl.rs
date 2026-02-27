@@ -134,7 +134,8 @@ impl SubsidiaryAccountMasterRepository for SubsidiaryAccountMasterRepositoryImpl
         let result = tokio::task::spawn_blocking(move || {
             let txn = env.begin_ro_txn()?;
             let mut cursor = txn.open_ro_cursor(db)?;
-            let mut accounts = Vec::new();
+            // モダンプラクティス: 初期キャパシティを確保（補助科目は数十〜数百件）
+            let mut accounts = Vec::with_capacity(100);
 
             for (_key, value) in cursor.iter() {
                 let stored: StoredSubsidiaryAccountMaster = serde_json::from_slice(value)?;
@@ -162,7 +163,8 @@ impl SubsidiaryAccountMasterRepository for SubsidiaryAccountMasterRepositoryImpl
         let result = tokio::task::spawn_blocking(move || {
             let txn = env.begin_ro_txn()?;
             let mut cursor = txn.open_ro_cursor(db)?;
-            let mut accounts = Vec::new();
+            // モダンプラクティス: 初期キャパシティを確保（親勘定科目配下は少数）
+            let mut accounts = Vec::with_capacity(20);
 
             for (_key, value) in cursor.iter() {
                 let stored: StoredSubsidiaryAccountMaster = serde_json::from_slice(value)?;

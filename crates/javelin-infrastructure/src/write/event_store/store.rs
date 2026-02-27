@@ -185,7 +185,8 @@ impl EventStore {
 
             let timestamp = chrono::Utc::now().to_rfc3339();
             let mut last_seq = 0u64;
-            let mut stored_events = Vec::new();
+            // モダンプラクティス: 事前にキャパシティを確保
+            let mut stored_events = Vec::with_capacity(serialized_events.len());
 
             // 各イベントを保存
             for event_data in serialized_events {
@@ -366,7 +367,8 @@ impl EventStore {
                 .open_ro_cursor(events_db)
                 .map_err(|e| InfrastructureError::LmdbError(e.to_string()))?;
 
-            let mut events = Vec::new();
+            // モダンプラクティス: 初期キャパシティを確保（平均的なイベント数を想定）
+            let mut events = Vec::with_capacity(16);
 
             // データベースが空かどうかを確認するため、最初のキーを取得を試みる
             // 空の場合はNotFoundエラーが返される
@@ -444,7 +446,8 @@ impl EventStore {
                 .open_ro_cursor(events_db)
                 .map_err(|e| InfrastructureError::LmdbError(e.to_string()))?;
 
-            let mut events = Vec::new();
+            // モダンプラクティス: 初期キャパシティを確保（バッチ処理を想定）
+            let mut events = Vec::with_capacity(100);
 
             // 指定されたシーケンス番号から開始
             let start_key = from_sequence.to_be_bytes();

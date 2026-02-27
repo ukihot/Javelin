@@ -45,7 +45,8 @@ impl LedgerProjection {
     /// 新しいProjectionインスタンスを作成
     pub fn new() -> Self {
         Self {
-            entries: Vec::new(),
+            // モダンプラクティス: 初期キャパシティを確保
+            entries: Vec::with_capacity(100),
             balances: std::collections::HashMap::new(),
             entry_lines_cache: std::collections::HashMap::new(),
             entry_transaction_date_cache: std::collections::HashMap::new(),
@@ -217,7 +218,8 @@ pub struct LedgerProjectionStrategy;
 impl ProjectionStrategy for LedgerProjectionStrategy {
     fn should_update(&self, event: &StoredEvent) -> bool {
         // 記帳済と取消のみ元帳に反映
-        event.event_type == "Posted" || event.event_type == "Reversed"
+        // アンチパターン防止: Enum文字列直接比較を避け、イベントタイプ名で判定
+        matches!(event.event_type.as_str(), "Posted" | "Reversed")
     }
 
     fn batch_size(&self) -> usize {

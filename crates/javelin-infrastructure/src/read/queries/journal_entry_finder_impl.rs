@@ -72,7 +72,8 @@ impl<O: QueryOutputPort> JournalEntryFinderService for JournalEntryFinderImpl<O>
         &self,
         voucher_number: &str,
     ) -> ApplicationResult<Vec<JournalEntrySearchResult>> {
-        let mut results = Vec::new();
+        // モダンプラクティス: 初期キャパシティを確保
+        let mut results = Vec::with_capacity(10);
 
         for i in 0..1000 {
             let entry_id = format!("entry-{}", i);
@@ -108,7 +109,8 @@ impl<O: QueryOutputPort> JournalEntryFinderService for JournalEntryFinderImpl<O>
         from_date: &str,
         to_date: &str,
     ) -> ApplicationResult<Vec<JournalEntrySearchResult>> {
-        let mut results = Vec::new();
+        // モダンプラクティス: 初期キャパシティを確保
+        let mut results = Vec::with_capacity(50);
 
         for i in 0..1000 {
             let entry_id = format!("entry-{}", i);
@@ -144,7 +146,8 @@ impl<O: QueryOutputPort> JournalEntryFinderService for JournalEntryFinderImpl<O>
     // === 仕訳一覧・詳細取得（画面表示用） ===
 
     async fn list_journal_entries(&self, query: ListJournalEntriesQuery) -> ApplicationResult<()> {
-        let mut all_entries: Vec<JournalEntryListItem> = Vec::new();
+        // モダンプラクティス: 初期キャパシティを確保
+        let mut all_entries: Vec<JournalEntryListItem> = Vec::with_capacity(100);
 
         for i in 0..1000 {
             let entry_id = format!("entry-{}", i);

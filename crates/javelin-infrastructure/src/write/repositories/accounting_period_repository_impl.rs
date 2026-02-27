@@ -82,7 +82,8 @@ impl AccountingPeriodRepositoryImpl {
             .map_err(InfrastructureError::DeserializationFailed)?;
         let stream = self.event_store.stream_aggregate_events(agg_id, Sequence::new(0));
 
-        let mut events = Vec::new();
+        // モダンプラクティス: 初期キャパシティを確保（会計期間イベントは少数）
+        let mut events = Vec::with_capacity(8);
         for event_result in stream.iter() {
             let stored_event = event_result?;
             let event: AccountingPeriodEvent = serde_json::from_slice(&stored_event.payload)

@@ -40,7 +40,8 @@ impl JournalEntryRepositoryImpl {
             .map_err(InfrastructureError::DeserializationFailed)?;
         let stream = self.event_store.stream_aggregate_events(agg_id, Sequence::new(0));
 
-        let mut events = Vec::new();
+        // モダンプラクティス: 初期キャパシティを確保
+        let mut events = Vec::with_capacity(16);
         for event_result in stream.iter() {
             let stored_event = event_result?;
             let event: JournalEntryEvent = serde_json::from_slice(&stored_event.payload)

@@ -23,7 +23,8 @@ pub struct JournalEntrySearchProjection {
 impl JournalEntrySearchProjection {
     /// 新しいProjectionインスタンスを作成
     pub fn new() -> Self {
-        Self { entries: Vec::new() }
+        // モダンプラクティス: 初期キャパシティを確保
+        Self { entries: Vec::with_capacity(100) }
     }
 
     /// エントリーリストを取得

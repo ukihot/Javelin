@@ -41,7 +41,8 @@ impl EventStream {
 
     /// Iteratorとして消費
     pub fn iter(self) -> EventStreamIterator {
-        EventStreamIterator { stream: self, buffer: Vec::new(), exhausted: false }
+        // モダンプラクティス: 初期キャパシティを確保
+        EventStreamIterator { stream: self, buffer: Vec::with_capacity(16), exhausted: false }
     }
 
     /// バッチ読み込み（内部用）
@@ -57,7 +58,8 @@ impl EventStream {
             .open_ro_cursor(db)
             .map_err(|e| InfrastructureError::LmdbError(e.to_string()))?;
 
-        let mut events = Vec::new();
+        // モダンプラクティス: 初期キャパシティを確保
+        let mut events = Vec::with_capacity(limit);
         let start_key = from_seq.to_be_bytes();
 
         use lmdb_sys as ffi;

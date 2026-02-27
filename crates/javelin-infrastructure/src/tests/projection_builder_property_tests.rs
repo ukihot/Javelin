@@ -48,6 +48,7 @@ mod tests {
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(async {
                 let temp_dir = TempDir::new().unwrap();
+                // アンチパターン修正: EventStoreとProjectionDbは別ディレクトリに配置
                 let event_store_path = temp_dir.path().join("events");
                 let projection_db_path = temp_dir.path().join("projections");
 
@@ -95,6 +96,7 @@ mod tests {
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(async {
                 let temp_dir = TempDir::new().unwrap();
+                // アンチパターン修正: EventStoreとProjectionDbは別ディレクトリに配置
                 let event_store_path = temp_dir.path().join("events");
                 let projection_db_path = temp_dir.path().join("projections");
 
@@ -143,9 +145,14 @@ mod tests {
             println!("[test] serial_projection_builder_write: removing dir: {:?}", &path);
             let _ = std::fs::remove_dir_all(&path);
             println!("[test] serial_projection_builder_write: removed dir");
-            let event_store = Arc::new(EventStore::new(&path).await.unwrap());
+
+            // アンチパターン修正: EventStoreとProjectionDbは別ディレクトリに配置
+            let event_store_path = path.join("events");
+            let projection_db_path = path.join("projections");
+
+            let event_store = Arc::new(EventStore::new(&event_store_path).await.unwrap());
             println!("[test] serial_projection_builder_write: created EventStore");
-            let projection_db = Arc::new(ProjectionDb::new(&path).await.unwrap());
+            let projection_db = Arc::new(ProjectionDb::new(&projection_db_path).await.unwrap());
             println!("[test] serial_projection_builder_write: created ProjectionDb");
 
             let builder =
@@ -171,7 +178,12 @@ mod tests {
             );
             let _ = std::fs::remove_dir_all(&path);
             println!("[test] serial_projection_builder_read: path={:?}", &path);
-            let event_store = Arc::new(EventStore::new(&path).await.unwrap());
+
+            // アンチパターン修正: EventStoreとProjectionDbは別ディレクトリに配置
+            let event_store_path = path.join("events");
+            let projection_db_path = path.join("projections");
+
+            let event_store = Arc::new(EventStore::new(&event_store_path).await.unwrap());
             println!("[test] serial_projection_builder_read: created EventStore");
             println!("[test] serial_projection_builder_read: path exists={} ", path.exists());
             if path.exists() {
@@ -186,7 +198,7 @@ mod tests {
                     }
                 }
             }
-            let projection_db = Arc::new(ProjectionDb::new(&path).await.unwrap());
+            let projection_db = Arc::new(ProjectionDb::new(&projection_db_path).await.unwrap());
             println!("[test] serial_projection_builder_read: created ProjectionDb");
             let builder =
                 ProjectionBuilderImpl::new(Arc::clone(&projection_db), Arc::clone(&event_store));

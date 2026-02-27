@@ -92,7 +92,8 @@ impl JournalEntryProjectionWorker {
         }
 
         // Projectionを保存
-        let mut updates = Vec::new();
+        // モダンプラクティス: projections数で初期キャパシティを確保
+        let mut updates = Vec::with_capacity(projections.len());
         for (entry_id, projection) in projections {
             use crate::projection_trait::ToReadModel;
             let read_model = projection.to_read_model();

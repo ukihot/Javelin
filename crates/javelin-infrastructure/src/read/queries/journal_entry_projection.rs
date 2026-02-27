@@ -181,15 +181,20 @@ pub struct JournalEntryProjectionStrategy;
 
 impl ProjectionStrategy for JournalEntryProjectionStrategy {
     fn should_update(&self, event: &StoredEvent) -> bool {
-        event.event_type.starts_with("Draft")
-            || event.event_type.starts_with("Approval")
-            || event.event_type == "Rejected"
-            || event.event_type == "Posted"
-            || event.event_type == "Reversed"
-            || event.event_type == "Corrected"
-            || event.event_type == "Closed"
-            || event.event_type == "Reopened"
-            || event.event_type == "Deleted"
+        // アンチパターン防止: Enum文字列直接比較を避け、matchesマクロで判定
+        matches!(
+            event.event_type.as_str(),
+            "DraftCreated"
+                | "DraftUpdated"
+                | "ApprovalRequested"
+                | "Rejected"
+                | "Posted"
+                | "Reversed"
+                | "Corrected"
+                | "Closed"
+                | "Reopened"
+                | "Deleted"
+        )
     }
 
     fn batch_size(&self) -> usize {

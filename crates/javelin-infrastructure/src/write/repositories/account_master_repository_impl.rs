@@ -146,7 +146,8 @@ impl AccountMasterRepository for AccountMasterRepositoryImpl {
         let result = tokio::task::spawn_blocking(move || {
             let txn = env.begin_ro_txn()?;
             let mut cursor = txn.open_ro_cursor(db)?;
-            let mut accounts = Vec::new();
+            // モダンプラクティス: 初期キャパシティを確保（勘定科目は数十〜数百件）
+            let mut accounts = Vec::with_capacity(100);
 
             for (_key, value) in cursor.iter() {
                 let stored: StoredAccountMaster = serde_json::from_slice(value)?;

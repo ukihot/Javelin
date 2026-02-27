@@ -118,7 +118,8 @@ impl CompanyMasterRepository for CompanyMasterRepositoryImpl {
         let result = tokio::task::spawn_blocking(move || {
             let txn = env.begin_ro_txn()?;
             let mut cursor = txn.open_ro_cursor(db)?;
-            let mut companies = Vec::new();
+            // モダンプラクティス: 初期キャパシティを確保（会社マスタは少数）
+            let mut companies = Vec::with_capacity(10);
 
             for (_key, value) in cursor.iter() {
                 let stored: StoredCompanyMaster = serde_json::from_slice(value)?;

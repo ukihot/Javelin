@@ -55,7 +55,8 @@ impl<S: ProjectionStrategy> ProjectionWorker<S> {
         let stream = self.event_store.stream_events(from_sequence);
         let batch_size = self.strategy.batch_size();
 
-        let mut batch = Vec::new();
+        // モダンプラクティス: バッチサイズで初期キャパシティを確保
+        let mut batch = Vec::with_capacity(batch_size);
         let mut last_sequence = from_sequence;
 
         for event_result in stream.iter() {
@@ -90,7 +91,8 @@ impl<S: ProjectionStrategy> ProjectionWorker<S> {
         events: &[StoredEvent],
         last_sequence: Sequence,
     ) -> InfrastructureResult<()> {
-        let mut updates = Vec::new();
+        // モダンプラクティス: イベント数で初期キャパシティを確保
+        let mut updates = Vec::with_capacity(events.len());
 
         for event in events {
             // ここでイベントをProjectionに変換
@@ -146,7 +148,8 @@ impl<S: ProjectionStrategy> ProjectionWorker<S> {
         streams: Vec<Sequence>,
     ) -> InfrastructureResult<()> {
         // 複数のストリームを chain で合成
-        let mut combined_events = Vec::new();
+        // モダンプラクティス: 初期キャパシティを確保
+        let mut combined_events = Vec::with_capacity(streams.len() * 100);
 
         for start_seq in streams {
             let stream = self.event_store.stream_events(start_seq);
@@ -156,7 +159,8 @@ impl<S: ProjectionStrategy> ProjectionWorker<S> {
         }
 
         // 合成されたイベントを処理
-        let mut batch = Vec::new();
+        let batch_size = self.strategy.batch_size();
+        let mut batch = Vec::with_capacity(batch_size);
         let mut last_sequence = Sequence::new(0);
 
         for event in combined_events {
