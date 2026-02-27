@@ -3,11 +3,11 @@
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
 
     use javelin_domain::{
         financial_close::journal_entry::events::JournalEntryEvent,
-        repositories::{JournalEntryRepository, MockJournalEntryRepository, RepositoryBase},
+        repositories::MockJournalEntryRepository,
     };
     use tokio::sync::mpsc;
 

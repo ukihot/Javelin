@@ -3,35 +3,13 @@
 
 use ratatui::Frame;
 
-use crate::views::{
-    components::{ListItemData, ListSelector},
-    layouts::MenuLayout,
+use crate::{
+    navigation::Route,
+    views::{
+        components::{ListItemData, ListSelector},
+        layouts::MenuLayout,
+    },
 };
-
-/// ViewType enum (temporary, for compatibility)
-///
-/// This enum is kept temporarily to maintain compatibility.
-/// In the future, HomePage should be refactored to return Route directly.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ViewType {
-    Home,
-    JournalEntry,
-    Search,
-    Ledger,
-    LedgerConsolidation,
-    ClosingPreparation,
-    ClosingLock,
-    TrialBalance,
-    NoteDraft,
-    AccountAdjustment,
-    IfrsValuation,
-    FinancialStatement,
-    AccountMasterManagement,
-    SubsidiaryAccountMasterManagement,
-    UserSettingsManagement,
-    DataImport,
-    DataExport,
-}
 
 /// メニュータイプ
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,24 +90,24 @@ impl HomePage {
         }
     }
 
-    /// 選択された項目に対応するビューを取得
-    pub fn get_selected_view(&self) -> Option<ViewType> {
+    /// 選択された項目に対応するルートを取得
+    pub fn get_selected_route(&self) -> Option<Route> {
         match self.active_menu {
             MenuType::Business => {
                 self.business_menu_selector.selected_index().and_then(|idx| match idx {
-                    0 => Some(ViewType::JournalEntry),        // A. Primary Records
-                    1 => Some(ViewType::Ledger),              // B. Ledger Management
-                    2 => Some(ViewType::LedgerConsolidation), // C. Fixed Assets
-                    3 => Some(ViewType::ClosingPreparation),  // D. Monthly Closing
-                    4 => Some(ViewType::FinancialStatement),  // E. Financial Statements
-                    5 => Some(ViewType::IfrsValuation),       // F. Management Accounting
-                    6 => Some(ViewType::AccountAdjustment),   // G. Judgment Log
+                    0 => Some(Route::PrimaryRecordsMenu),
+                    1 => Some(Route::LedgerMenu),
+                    2 => Some(Route::FixedAssetsMenu),
+                    3 => Some(Route::ClosingMenu),
+                    4 => Some(Route::FinancialStatementsMenu),
+                    5 => Some(Route::ManagementAccountingMenu),
+                    6 => Some(Route::JudgmentLogList),
                     _ => None,
                 })
             }
             MenuType::System => {
                 self.system_menu_selector.selected_index().and_then(|idx| match idx {
-                    0 => Some(ViewType::AccountMasterManagement), // H. Master Management
+                    0 => Some(Route::MasterManagementMenu),
                     _ => None,
                 })
             }

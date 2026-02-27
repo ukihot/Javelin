@@ -17,7 +17,6 @@ impl LedgerMenuPageState {
     pub fn new() -> Self {
         let menu_items = vec![
             ("Ledger Aggregation Execution", "元帳集約処理実行"),
-            ("Ledger Aggregation History", "元帳集約実行履歴"),
             ("General Ledger", "総勘定元帳"),
             ("AR Ledger", "売掛金補助元帳"),
             ("AP Ledger", "買掛金補助元帳"),
@@ -64,10 +63,9 @@ impl PageState for LedgerMenuPageState {
                     KeyCode::Enter => {
                         let route = match self.page.selected_index() {
                             0 => Route::LedgerAggregationExecution, // B-02: Execution
-                            1 => Route::LedgerConsolidation,        // Legacy: History view
-                            2 => Route::GeneralLedger,              // B-03
-                            3 => Route::ArLedger,                   // B-05
-                            4 => Route::ApLedger,                   // B-07
+                            1 => Route::GeneralLedger,              // B-03
+                            2 => Route::ArLedger,                   // B-05
+                            3 => Route::ApLedger,                   // B-07
                             _ => continue,
                         };
                         return Ok(NavAction::Go(route));

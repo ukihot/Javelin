@@ -3,21 +3,18 @@
 
 use std::sync::Arc;
 
-use javelin_adapter::{
-    HomePageState, PageState, PresenterRegistry, Route, SearchPageState, navigation::Controllers,
-};
+use javelin_adapter::{HomePageState, PageState, PresenterRegistry, Route};
 
-use crate::app_error::{AppError, AppResult};
+use crate::app_error::AppResult;
 
 /// PageStateの解決を担当
 pub struct PageStateResolver {
     presenter_registry: Arc<PresenterRegistry>,
-    controllers: Arc<Controllers>,
 }
 
 impl PageStateResolver {
-    pub fn new(presenter_registry: Arc<PresenterRegistry>, controllers: Arc<Controllers>) -> Self {
-        Self { presenter_registry, controllers }
+    pub fn new(presenter_registry: Arc<PresenterRegistry>) -> Self {
+        Self { presenter_registry }
     }
 
     /// ルートからPageStateを解決
@@ -25,6 +22,24 @@ impl PageStateResolver {
         match route {
             // ========== TOP ==========
             Route::Home => Ok(Box::new(HomePageState::new())),
+            Route::MaintenanceHome => {
+                Ok(Box::new(javelin_adapter::MaintenanceHomePageState::new()))
+            }
+            Route::MaintenanceMenu => {
+                Ok(Box::new(javelin_adapter::MaintenanceMenuPageState::new()))
+            }
+            Route::MaintenanceRebuildProjections => {
+                Ok(Box::new(javelin_adapter::StubPageState::new(
+                    Route::MaintenanceRebuildProjections,
+                    "Maintenance: Rebuild Projections",
+                    "Trigger projection rebuild",
+                )))
+            }
+            Route::MaintenanceCleanEventStore => Ok(Box::new(javelin_adapter::StubPageState::new(
+                Route::MaintenanceCleanEventStore,
+                "Maintenance: Clean Event Store",
+                "Purge/compact event store",
+            ))),
 
             // ========== A. Primary Records ==========
             Route::PrimaryRecordsMenu => {
@@ -33,9 +48,11 @@ impl PageStateResolver {
             Route::JournalEntry => Ok(Box::new(javelin_adapter::JournalEntryPageState::new(
                 Arc::clone(&self.presenter_registry),
             ))),
-            Route::JournalList => {
-                Ok(Box::new(SearchPageState::new(Arc::clone(&self.presenter_registry))))
-            }
+            Route::JournalList => Ok(Box::new(javelin_adapter::StubPageState::new(
+                Route::JournalList,
+                "A-03: Journal List",
+                "仕訳一覧画面",
+            ))),
             Route::JournalDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
                 Route::JournalDetail,
                 "A-04: Journal Detail",
@@ -59,11 +76,21 @@ impl PageStateResolver {
 
             // ========== B. Ledger Management ==========
             Route::LedgerMenu => Ok(Box::new(javelin_adapter::LedgerMenuPageState::new())),
-            Route::LedgerAggregationExecution => {
-                Ok(Box::new(javelin_adapter::LedgerConsolidationExecutionPageState::new()))
-            }
-            Route::GeneralLedger => Ok(Box::new(javelin_adapter::LedgerPageState::new())),
-            Route::AccountDetail => Ok(Box::new(javelin_adapter::LedgerDetailPageState::new())),
+            Route::LedgerAggregationExecution => Ok(Box::new(javelin_adapter::StubPageState::new(
+                Route::LedgerAggregationExecution,
+                "B-02: Ledger Aggregation Execution",
+                "元帳集計実行画面",
+            ))),
+            Route::GeneralLedger => Ok(Box::new(javelin_adapter::StubPageState::new(
+                Route::GeneralLedger,
+                "B-03: General Ledger",
+                "総勘定元帳画面",
+            ))),
+            Route::AccountDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
+                Route::AccountDetail,
+                "B-04: Account Detail",
+                "勘定科目明細画面",
+            ))),
             Route::ArLedger => Ok(Box::new(javelin_adapter::StubPageState::new(
                 Route::ArLedger,
                 "B-05: AR Ledger",
@@ -145,9 +172,11 @@ impl PageStateResolver {
                 "D-03: Closing Preparation Result",
                 "締準備処理結果画面",
             ))),
-            Route::ClosingLockExecution => {
-                Ok(Box::new(javelin_adapter::ClosingLockPageState::new()))
-            }
+            Route::ClosingLockExecution => Ok(Box::new(javelin_adapter::StubPageState::new(
+                Route::ClosingLockExecution,
+                "D-04: Closing Lock Execution",
+                "締ロック実行画面",
+            ))),
             Route::TrialBalanceGenerationExecution => {
                 Ok(Box::new(javelin_adapter::StubPageState::new(
                     Route::TrialBalanceGenerationExecution,
@@ -326,49 +355,6 @@ impl PageStateResolver {
                 "H-04: Business Partners",
                 "取引先マスタ画面",
             ))),
-
-            // ========== Legacy Routes (deprecated) ==========
-            Route::Search => {
-                Ok(Box::new(SearchPageState::new(Arc::clone(&self.presenter_registry))))
-            }
-            Route::Ledger => Ok(Box::new(javelin_adapter::LedgerPageState::new())),
-            Route::LedgerDetail => Ok(Box::new(javelin_adapter::LedgerDetailPageState::new())),
-            Route::LedgerConsolidation => {
-                Ok(Box::new(javelin_adapter::LedgerConsolidationPageState::new(&self.controllers)))
-            }
-            Route::LedgerConsolidationExecution => {
-                Ok(Box::new(javelin_adapter::LedgerConsolidationExecutionPageState::new()))
-            }
-            Route::ClosingPreparation => {
-                Ok(Box::new(javelin_adapter::ClosingPreparationPageState::new(&self.controllers)))
-            }
-            Route::ClosingLock => Ok(Box::new(javelin_adapter::ClosingLockPageState::new())),
-            Route::AccountAdjustment => {
-                Ok(Box::new(javelin_adapter::AccountAdjustmentPageState::new(&self.controllers)))
-            }
-            Route::NoteDraft => Ok(Box::new(javelin_adapter::NoteDraftPageState::new())),
-            Route::IfrsValuation => {
-                Ok(Box::new(javelin_adapter::IfrsValuationPageState::new(&self.controllers)))
-            }
-            Route::FinancialStatement => {
-                Ok(Box::new(javelin_adapter::FinancialStatementPageState::new(&self.controllers)))
-            }
-            Route::AccountMaster => Ok(Box::new(javelin_adapter::AccountMasterPageState::new(
-                Arc::clone(&self.presenter_registry),
-            ))),
-            Route::SubsidiaryAccountMaster => {
-                Ok(Box::new(javelin_adapter::SubsidiaryAccountMasterPageState::new(Arc::clone(
-                    &self.presenter_registry,
-                ))))
-            }
-            Route::ApplicationSettings => {
-                Ok(Box::new(javelin_adapter::ApplicationSettingsPageState::new(Arc::clone(
-                    &self.presenter_registry,
-                ))))
-            }
-            Route::DataImport | Route::DataExport => {
-                Err(AppError::NotImplemented("Legacy route no longer supported".to_string()))
-            }
         }
     }
 }

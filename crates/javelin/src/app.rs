@@ -4,8 +4,8 @@
 use std::sync::Arc;
 
 use javelin_adapter::{
-    HomePageState, NavigationStack, PresenterRegistry, navigation::Controllers,
-    views::terminal_manager::TerminalManager,
+    HomePageState, MaintenanceHomePageState, NavigationStack, PresenterRegistry,
+    navigation::Controllers, views::terminal_manager::TerminalManager,
 };
 use tokio::sync::mpsc;
 
@@ -19,6 +19,7 @@ pub struct Application {
     resolver: PageStateResolver,
     // インフラエラー通知用
     infra_error_receiver: mpsc::UnboundedReceiver<String>,
+    initial_route: javelin_adapter::navigation::Route,
 }
 
 /// 様々な依存オブジェクトをまとめた引数構造体
@@ -27,16 +28,14 @@ pub struct ApplicationConfig {
     pub presenter_registry: Arc<PresenterRegistry>,
     pub terminal_manager: TerminalManager,
     pub infra_error_receiver: mpsc::UnboundedReceiver<String>,
+    pub initial_route: javelin_adapter::navigation::Route,
 }
 
 impl Application {
     /// 新しいApplicationを作成
     pub fn new(config: ApplicationConfig) -> Self {
         let controllers_arc = Arc::new(config.controllers);
-        let resolver = PageStateResolver::new(
-            Arc::clone(&config.presenter_registry),
-            Arc::clone(&controllers_arc),
-        );
+        let resolver = PageStateResolver::new(Arc::clone(&config.presenter_registry));
 
         Self {
             nav_stack: NavigationStack::new(),
@@ -44,6 +43,7 @@ impl Application {
             terminal_manager: config.terminal_manager,
             resolver,
             infra_error_receiver: config.infra_error_receiver,
+            initial_route: config.initial_route,
         }
     }
 
@@ -56,8 +56,19 @@ impl Application {
         println!("\n✓ すべてのコンポーネントが正常に初期化されました");
         println!("  メインメニューを起動します...\n");
 
-        // Push home page as initial screen
-        self.nav_stack.push(Box::new(HomePageState::new()));
+        // Push initial page based on startup mode
+        match self.initial_route {
+            javelin_adapter::navigation::Route::Home => {
+                self.nav_stack.push(Box::new(HomePageState::new()));
+            }
+            javelin_adapter::navigation::Route::MaintenanceHome => {
+                self.nav_stack.push(Box::new(MaintenanceHomePageState::new()));
+            }
+            _ => {
+                // default to Home for any other route
+                self.nav_stack.push(Box::new(HomePageState::new()));
+            }
+        }
 
         // Main navigation loop
         loop {

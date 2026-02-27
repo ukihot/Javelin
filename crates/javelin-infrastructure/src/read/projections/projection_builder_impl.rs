@@ -84,14 +84,10 @@ impl ProjectionBuilderImpl {
 
     /// 仕訳一覧Projectionを更新
     ///
-    /// Task 4.1で実装
-    ///
     /// イベント種別に応じて仕訳一覧Projectionを更新：
     /// - DraftCreated: 新規エントリを追加
     /// - Approved: ステータスを更新
     /// - Deleted: エントリを削除
-    ///
-    /// 要件: 2.3, 2.4, 2.5
     async fn update_journal_entry_list_projection(
         &self,
         event: &StoredEvent,
@@ -307,11 +303,7 @@ impl ProjectionBuilderImpl {
 
     /// 元帳Projectionを更新
     ///
-    /// Task 4.2で実装
-    ///
     /// Approvedイベント時に元帳に転記し、勘定科目別の残高を更新する。
-    ///
-    /// 要件: 2.6
     async fn update_ledger_projection(&self, event: &StoredEvent) -> ApplicationResult<()> {
         use serde_json::Value;
 
@@ -397,11 +389,7 @@ impl ProjectionBuilderImpl {
 
     /// 試算表Projectionを更新
     ///
-    /// Task 4.3で実装
-    ///
     /// 元帳Projectionから試算表を生成し、借貸合計を計算する。
-    ///
-    /// 要件: 2.7
     async fn update_trial_balance_projection(&self, event: &StoredEvent) -> ApplicationResult<()> {
         use serde_json::Value;
 

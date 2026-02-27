@@ -1,5 +1,4 @@
 // Integration tests for navigation flow
-// Task 4.5: Write integration tests for navigation flow
 
 #[cfg(test)]
 mod tests {
@@ -7,7 +6,7 @@ mod tests {
 
     use crate::{
         navigation::{NavAction, NavigationStack, PresenterRegistry, Route},
-        page_states::{HomePageState, SearchPageState},
+        page_states::{HomePageState, JournalEntryPageState},
     };
 
     // Mock PageState for testing
@@ -92,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_forward_navigation_flow() {
-        // Test Home → Search navigation
+        // Test Home → JournalEntry navigation
         let mut stack = NavigationStack::new();
         let registry = Arc::new(PresenterRegistry::new());
 
@@ -101,10 +100,10 @@ mod tests {
         stack.push(home);
         assert_eq!(stack.current().unwrap().route(), Route::Home);
 
-        // Navigate to search
-        let search = Box::new(SearchPageState::new(Arc::clone(&registry)));
-        stack.push(search);
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
+        // Navigate to journal entry
+        let je = Box::new(JournalEntryPageState::new(Arc::clone(&registry)));
+        stack.push(je);
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
 
         // Stack should have 2 pages
         assert!(!stack.is_empty());
@@ -112,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_back_navigation_flow() {
-        // Test Home → Search → Back → Home
+        // Test Home → JournalEntry → Back → Home
         let mut stack = NavigationStack::new();
         let registry = Arc::new(PresenterRegistry::new());
 
@@ -120,10 +119,10 @@ mod tests {
         let home = Box::new(HomePageState::new());
         stack.push(home);
 
-        // Navigate to search
-        let search = Box::new(SearchPageState::new(Arc::clone(&registry)));
-        stack.push(search);
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
+        // Navigate to journal entry
+        let je = Box::new(JournalEntryPageState::new(Arc::clone(&registry)));
+        stack.push(je);
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
 
         // Navigate back
         stack.pop();
@@ -132,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_nested_navigation() {
-        // Test Home → Search → JournalEntry → Back → Back → Home
+        // Test simple nested navigation with journal entries
         let mut stack = NavigationStack::new();
         let registry = Arc::new(PresenterRegistry::new());
 
@@ -141,19 +140,19 @@ mod tests {
         stack.push(home);
         assert_eq!(stack.current().unwrap().route(), Route::Home);
 
-        // Home → Search
-        let search = Box::new(SearchPageState::new(Arc::clone(&registry)));
-        stack.push(search);
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-
-        // Search → JournalEntry (simulated with mock)
-        let je = Box::new(MockPageState::new(Route::JournalEntry, NavAction::None));
-        stack.push(je);
+        // Home → JournalEntry
+        let je1 = Box::new(JournalEntryPageState::new(Arc::clone(&registry)));
+        stack.push(je1);
         assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
 
-        // Back to Search
+        // JournalEntry → another JournalEntry
+        let je2 = Box::new(MockPageState::new(Route::JournalEntry, NavAction::None));
+        stack.push(je2);
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
+
+        // Back to first JE
         stack.pop();
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
 
         // Back to Home
         stack.pop();
@@ -165,7 +164,7 @@ mod tests {
         // Test multiple forward navigations without going back
         let mut stack = NavigationStack::new();
 
-        let routes = vec![Route::Home, Route::Search, Route::JournalEntry, Route::Ledger];
+        let routes = vec![Route::Home, Route::JournalEntry, Route::LedgerMenu];
 
         for route in &routes {
             let page = Box::new(MockPageState::new(route.clone(), NavAction::None));
@@ -173,7 +172,7 @@ mod tests {
         }
 
         // Current should be the last pushed
-        assert_eq!(stack.current().unwrap().route(), Route::Ledger);
+        assert_eq!(stack.current().unwrap().route(), Route::LedgerMenu);
 
         // Pop back through all pages
         for route in routes.iter().rev().skip(1) {

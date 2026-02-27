@@ -177,13 +177,8 @@ mod tests {
             if path.exists() {
                 match std::fs::read_dir(&path) {
                     Ok(entries) => {
-                        for e in entries {
-                            if let Ok(e) = e {
-                                println!(
-                                    "[test] serial_projection_builder_read: entry={:?}",
-                                    e.path()
-                                );
-                            }
+                        for e in entries.flatten() {
+                            println!("[test] serial_projection_builder_read: entry={:?}", e.path());
                         }
                     }
                     Err(err) => {

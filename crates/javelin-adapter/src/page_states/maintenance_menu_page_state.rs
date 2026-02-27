@@ -1,4 +1,4 @@
-// ClosingMenuPageState - D-01: Monthly Closing Menu (Close Calendar)
+// MaintenanceMenuPageState - menu for maintenance-mode operations
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::DefaultTerminal;
@@ -9,35 +9,30 @@ use crate::{
     views::pages::MenuPage,
 };
 
-pub struct ClosingMenuPageState {
+/// Maintenance menu with a couple of placeholder actions
+pub struct MaintenanceMenuPageState {
     page: MenuPage,
 }
 
-impl ClosingMenuPageState {
+impl MaintenanceMenuPageState {
     pub fn new() -> Self {
         let menu_items = vec![
-            ("Closing Preparation Execution", "締準備処理実行"),
-            ("Closing Lock", "締日固定処理実行"),
-            ("Trial Balance", "試算表表示"),
-            ("Account Adjustment Execution", "勘定補正処理実行"),
-            ("Valuation Execution", "評価処理実行"),
-            ("Notes Draft", "注記草案表示"),
-            ("Financial Statement Generation", "財務諸表生成実行"),
+            ("Rebuild projections", "再構築プロジェクション"),
+            ("Clean event store", "イベントストアクリーニング"),
         ];
-
-        Self { page: MenuPage::new("D. Monthly Closing (Close Calendar)", &menu_items) }
+        Self { page: MenuPage::new("Maintenance Menu", &menu_items) }
     }
 }
 
-impl Default for ClosingMenuPageState {
+impl Default for MaintenanceMenuPageState {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl PageState for ClosingMenuPageState {
+impl PageState for MaintenanceMenuPageState {
     fn route(&self) -> Route {
-        Route::ClosingMenu
+        Route::MaintenanceMenu
     }
 
     fn run(
@@ -65,13 +60,8 @@ impl PageState for ClosingMenuPageState {
                     KeyCode::Char('k') | KeyCode::Up => self.page.select_previous(),
                     KeyCode::Enter => {
                         let route = match self.page.selected_index() {
-                            0 => Route::ClosingPreparationExecution,           // D-02
-                            1 => Route::ClosingLockExecution,                  // D-04
-                            2 => Route::TrialBalance,                          // D-06
-                            3 => Route::AccountAdjustmentExecution,            // D-07
-                            4 => Route::ValuationExecution,                    // D-09
-                            5 => Route::NotesDraft,                            // D-12
-                            6 => Route::FinancialStatementGenerationExecution, // D-13
+                            0 => Route::MaintenanceRebuildProjections,
+                            1 => Route::MaintenanceCleanEventStore,
                             _ => continue,
                         };
                         return Ok(NavAction::Go(route));

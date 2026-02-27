@@ -1,6 +1,4 @@
 // Property tests for navigation properties
-// Task 12.3: Write property tests for navigation properties
-// Validates Properties 3, 8, 9, 13-23 from the design document
 
 #[cfg(test)]
 mod tests {
@@ -9,7 +7,7 @@ mod tests {
     use crate::{
         PageState,
         navigation::{NavAction, NavigationStack, PresenterRegistry, Route},
-        page_states::{HomePageState, SearchPageState},
+        page_states::HomePageState,
     };
 
     // Mock PageState for testing
@@ -63,7 +61,7 @@ mod tests {
         stack.push(page1);
 
         // Navigate away (push another page)
-        let page2 = Box::new(MockPageState::new(Route::Search));
+        let page2 = Box::new(MockPageState::new(Route::JournalEntry));
         stack.push(page2);
 
         // Navigate back
@@ -85,11 +83,11 @@ mod tests {
 
         let registry = Arc::new(PresenterRegistry::new());
 
-        // Create only 2 active screens (Home and Search)
+        // Create only 2 active screens (Home and JournalEntry)
         let _home = HomePageState::new();
-        let _search = SearchPageState::new(Arc::clone(&registry));
+        let _je = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
 
-        // Resource usage (presenter count) should be 2 (only SearchPageState registers two
+        // Resource usage (presenter count) should be 2 (only JournalEntryPageState registers two
         // presenters)
         assert_eq!(registry.total_count(), 2);
 
@@ -109,7 +107,7 @@ mod tests {
             let route = if i % 2 == 0 {
                 Route::Home
             } else {
-                Route::Search
+                Route::JournalEntry
             };
             let page = Box::new(MockPageState::new(route));
             stack.push(page);
@@ -133,13 +131,13 @@ mod tests {
         // This is tested implicitly by the navigation loop in Application::run()
         // Here we verify that all NavAction variants are valid
 
-        let _go = NavAction::Go(Route::Search);
+        let _go = NavAction::Go(Route::JournalEntry);
         let _back = NavAction::Back;
         let _none = NavAction::None;
 
         // All three variants should be constructible and usable
         match _go {
-            NavAction::Go(Route::Search) => {}
+            NavAction::Go(Route::JournalEntry) => {}
             _ => panic!("Expected Go variant"),
         }
 
@@ -168,11 +166,11 @@ mod tests {
 
         // Verify that PageState trait doesn't expose stack manipulation
         let registry = Arc::new(PresenterRegistry::new());
-        let page = SearchPageState::new(Arc::clone(&registry));
+        let page = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
 
         // The only way to express navigation is through the return value
         // (This test verifies the API design, not runtime behavior)
-        assert_eq!(page.route(), Route::Search);
+        assert_eq!(page.route(), Route::JournalEntry);
     }
 
     #[test]
@@ -184,17 +182,17 @@ mod tests {
 
         let registry = Arc::new(PresenterRegistry::new());
 
-        // Create two search page instances
-        let page1 = SearchPageState::new(Arc::clone(&registry));
-        let page2 = SearchPageState::new(Arc::clone(&registry));
+        // Create two journal entry page instances
+        let page1 = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
+        let page2 = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
 
         // Each page has a unique ID
         let id1 = page1.route();
         let id2 = page2.route();
 
-        // Both are Search routes but different instances
-        assert_eq!(id1, Route::Search);
-        assert_eq!(id2, Route::Search);
+        // Both are JournalEntry routes but different instances
+        assert_eq!(id1, Route::JournalEntry);
+        assert_eq!(id2, Route::JournalEntry);
 
         // The presenter registry ensures data goes to the correct instance
         // by using unique UUIDs for each page instance
@@ -212,7 +210,7 @@ mod tests {
 
         // Verify that all PageState implementations return NavAction
         let registry = Arc::new(PresenterRegistry::new());
-        let _search = SearchPageState::new(Arc::clone(&registry));
+        let _je = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
         let _home = HomePageState::new();
 
         // The type system ensures all screens return NavAction
@@ -234,7 +232,7 @@ mod tests {
         let registry = Arc::new(PresenterRegistry::new());
 
         // Screens are created without knowledge of the stack
-        let page = Box::new(SearchPageState::new(Arc::clone(&registry)));
+        let page = Box::new(crate::page_states::JournalEntryPageState::new(Arc::clone(&registry)));
 
         // Only the Application layer can push/pop
         stack.push(page);
@@ -273,7 +271,7 @@ mod tests {
         assert_eq!(registry.total_count(), 0);
 
         // Create a screen that requires a presenter
-        let _page = SearchPageState::new(Arc::clone(&registry));
+        let _page = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
 
         // Presenter should be registered immediately
         assert_eq!(registry.total_count(), 2);
@@ -288,7 +286,7 @@ mod tests {
         let registry = Arc::new(PresenterRegistry::new());
 
         {
-            let _page = SearchPageState::new(Arc::clone(&registry));
+            let _je = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
             assert_eq!(registry.total_count(), 2);
 
             // page goes out of scope here
@@ -308,9 +306,9 @@ mod tests {
 
         // Simulate repeated navigation cycles
         for _ in 0..100 {
-            // Create and destroy a search page
+            // Create and destroy a journal entry page
             {
-                let _page = SearchPageState::new(Arc::clone(&registry));
+                let _page = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
                 assert_eq!(registry.total_count(), 2);
             }
 
@@ -331,7 +329,7 @@ mod tests {
         for _ in 0..50 {
             // Cycle 1: Home → Search → Back
             {
-                let _search = SearchPageState::new(Arc::clone(&registry));
+                let _je = crate::page_states::JournalEntryPageState::new(Arc::clone(&registry));
                 assert_eq!(registry.total_count(), 2);
             }
             assert_eq!(registry.total_count(), 0);
@@ -358,7 +356,7 @@ mod tests {
 
         // Build up a deep stack
         stack.push(Box::new(HomePageState::new()));
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
+        stack.push(Box::new(crate::page_states::JournalEntryPageState::new(Arc::clone(&registry))));
         stack.push(Box::new(crate::page_states::JournalEntryPageState::new(Arc::clone(&registry))));
 
         // Should have 4 presenters (2 from Search, 2 from JournalEntry)

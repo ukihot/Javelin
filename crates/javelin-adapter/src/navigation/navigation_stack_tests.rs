@@ -63,7 +63,7 @@ mod tests {
 
         // Push three pages
         let page1 = Box::new(MockPageState::new(Route::Home));
-        let page2 = Box::new(MockPageState::new(Route::Search));
+        let page2 = Box::new(MockPageState::new(Route::PrimaryRecordsMenu));
         let page3 = Box::new(MockPageState::new(Route::JournalEntry));
 
         stack.push(page1);
@@ -78,7 +78,7 @@ mod tests {
         assert_eq!(popped3.route(), Route::JournalEntry);
 
         let popped2 = stack.pop().unwrap();
-        assert_eq!(popped2.route(), Route::Search);
+        assert_eq!(popped2.route(), Route::PrimaryRecordsMenu);
 
         let popped1 = stack.pop().unwrap();
         assert_eq!(popped1.route(), Route::Home);
@@ -96,9 +96,9 @@ mod tests {
     fn property_back_navigation_returns_to_previous_screen() {
         let mut stack = NavigationStack::new();
 
-        // Push Home -> Search -> JournalEntry
+        // Push Home -> PrimaryRecordsMenu -> JournalEntry
         stack.push(Box::new(MockPageState::new(Route::Home)));
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        stack.push(Box::new(MockPageState::new(Route::PrimaryRecordsMenu)));
         stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
 
         // Current is JournalEntry
@@ -107,10 +107,10 @@ mod tests {
         // Pop JournalEntry
         stack.pop();
 
-        // Current should now be Search (previous screen)
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
+        // Current should now be PrimaryRecordsMenu (previous screen)
+        assert_eq!(stack.current().unwrap().route(), Route::PrimaryRecordsMenu);
 
-        // Pop Search
+        // Pop PrimaryRecordsMenu
         stack.pop();
 
         // Current should now be Home (original screen)
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(*pause_count.lock().unwrap(), 0);
 
         // Push another page (navigate away)
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        stack.push(Box::new(MockPageState::new(Route::PrimaryRecordsMenu)));
 
         // on_pause() should have been called on the first page
         assert_eq!(*pause_count.lock().unwrap(), 1);
@@ -162,8 +162,8 @@ mod tests {
         // Initially, resume should not have been called
         assert_eq!(*resume_count.lock().unwrap(), 0);
 
-        // Push another page
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        // Push another page (JournalEntry)
+        stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
 
         // Resume should still not have been called
         assert_eq!(*resume_count.lock().unwrap(), 0);
@@ -189,20 +189,20 @@ mod tests {
 
         stack.push(page1);
 
-        // Cycle 1: Push and pop
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        // Cycle 1: Push and pop a JournalEntry
+        stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
         assert_eq!(*pause_count.lock().unwrap(), 1);
         stack.pop();
         assert_eq!(*resume_count.lock().unwrap(), 1);
 
-        // Cycle 2: Push and pop again
+        // Cycle 2: Push and pop another JournalEntry
         stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
         assert_eq!(*pause_count.lock().unwrap(), 2);
         stack.pop();
         assert_eq!(*resume_count.lock().unwrap(), 2);
 
-        // Cycle 3: Push and pop again
-        stack.push(Box::new(MockPageState::new(Route::Ledger)));
+        // Cycle 3: push home to ensure transition works
+        stack.push(Box::new(MockPageState::new(Route::Home)));
         assert_eq!(*pause_count.lock().unwrap(), 3);
         stack.pop();
         assert_eq!(*resume_count.lock().unwrap(), 3);

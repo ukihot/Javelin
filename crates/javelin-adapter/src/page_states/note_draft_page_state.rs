@@ -21,7 +21,8 @@ impl NoteDraftPageState {
 
 impl PageState for NoteDraftPageState {
     fn route(&self) -> Route {
-        Route::NoteDraft
+        // new route name for notes draft screen
+        Route::NotesDraft
     }
 
     fn run(

@@ -111,7 +111,8 @@ impl AccountMasterPageState {
 
 impl PageState for AccountMasterPageState {
     fn route(&self) -> Route {
-        Route::AccountMaster
+        // now reached via chart-of-accounts route
+        Route::ChartOfAccounts
     }
 
     fn run(

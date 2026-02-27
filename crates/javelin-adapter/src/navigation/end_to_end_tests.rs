@@ -1,6 +1,4 @@
 // End-to-end integration tests for navigation system
-// Task 12.1: Write end-to-end integration tests
-// Tests complete navigation flows and state preservation
 
 #[cfg(test)]
 mod tests {
@@ -8,29 +6,39 @@ mod tests {
 
     use crate::{
         navigation::{NavigationStack, PresenterRegistry, Route},
-        page_states::{HomePageState, JournalEntryPageState, LedgerPageState, SearchPageState},
+        page_states::{
+            HomePageState, JournalEntryPageState, StubPageState,
+            maintenance_home_page_state::MaintenanceHomePageState,
+            maintenance_menu_page_state::MaintenanceMenuPageState,
+        },
     };
 
     #[test]
-    fn test_complete_navigation_flow_home_search_back() {
-        // Test: Home → Search → Back → Home
+    fn test_maintenance_mode_navigation() {
+        // Test that maintenance mode stack begins at MaintenanceHome and can go to menu
         let mut stack = NavigationStack::new();
-        let registry = Arc::new(PresenterRegistry::new());
+        stack.push(Box::new(MaintenanceHomePageState::new()));
+        assert_eq!(stack.current().unwrap().route(), Route::MaintenanceHome);
 
-        // Start at Home
-        stack.push(Box::new(HomePageState::new()));
-        assert_eq!(stack.current().unwrap().route(), Route::Home);
-        assert_eq!(registry.total_count(), 0);
+        // simulate Enter -> MaintenanceMenu
+        stack.push(Box::new(MaintenanceMenuPageState::new()));
+        assert_eq!(stack.current().unwrap().route(), Route::MaintenanceMenu);
 
-        // Navigate to Search
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-        assert_eq!(registry.total_count(), 2); // SearchPageState registers 2 presenters
+        // choose first item
+        stack.push(Box::new(StubPageState::new(
+            Route::MaintenanceRebuildProjections,
+            "Maintenance: Rebuild Projections",
+            "Trigger projection rebuild",
+        )));
+        assert_eq!(stack.current().unwrap().route(), Route::MaintenanceRebuildProjections);
 
-        // Navigate back to Home
+        // back to menu
         stack.pop();
-        assert_eq!(stack.current().unwrap().route(), Route::Home);
-        assert_eq!(registry.total_count(), 0); // Search presenters cleaned up
+        assert_eq!(stack.current().unwrap().route(), Route::MaintenanceMenu);
+
+        // back to home
+        stack.pop();
+        assert_eq!(stack.current().unwrap().route(), Route::MaintenanceHome);
     }
 
     #[test]
@@ -42,21 +50,22 @@ mod tests {
         // Start at Home
         stack.push(Box::new(HomePageState::new()));
         assert_eq!(stack.current().unwrap().route(), Route::Home);
+        assert_eq!(registry.total_count(), 0);
 
         // Navigate to JournalEntry
         stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
         assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
-        assert_eq!(registry.total_count(), 2); // AccountMaster + JournalEntry presenters
+        assert_eq!(registry.total_count(), 2); // JournalEntry registers 2 presenters
 
         // Navigate back to Home
         stack.pop();
         assert_eq!(stack.current().unwrap().route(), Route::Home);
-        assert_eq!(registry.total_count(), 0); // Both presenters cleaned up
+        assert_eq!(registry.total_count(), 0); // presenters cleaned up
     }
 
     #[test]
     fn test_nested_navigation_three_levels() {
-        // Test: Home → Search → JournalEntry → Back → Back → Home
+        // Test: Home → JournalEntry → JournalEntry → Back → Back → Home
         let mut stack = NavigationStack::new();
         let registry = Arc::new(PresenterRegistry::new());
 
@@ -64,68 +73,68 @@ mod tests {
         stack.push(Box::new(HomePageState::new()));
         assert_eq!(stack.current().unwrap().route(), Route::Home);
 
-        // Level 2: Search
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-        assert_eq!(registry.total_count(), 2); // SearchPageState registers 2 presenters
-
-        // Level 3: JournalEntry
+        // Level 2: JournalEntry
         stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
         assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
-        assert_eq!(registry.total_count(), 4); // 2 Search + 2 JournalEntry
+        assert_eq!(registry.total_count(), 2); // JournalEntry registers 2 presenters
 
-        // Back to Search
+        // Level 3: another JournalEntry
+        stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
+        assert_eq!(registry.total_count(), 4); // two JournalEntry instances
+
+        // Back to first JournalEntry
         stack.pop();
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-        assert_eq!(registry.total_count(), 2); // JournalEntry presenters cleaned up
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
+        assert_eq!(registry.total_count(), 2); // one JournalEntry cleaned up
 
         // Back to Home
         stack.pop();
         assert_eq!(stack.current().unwrap().route(), Route::Home);
-        assert_eq!(registry.total_count(), 0); // Search presenter cleaned up
+        assert_eq!(registry.total_count(), 0); // JournalEntry presenter cleaned up
     }
 
     #[test]
     fn test_nested_navigation_four_levels() {
-        // Test: Home → Search → JournalEntry → Ledger → Back → Back → Back → Home
+        // Test: Home → JournalEntry → JournalEntry → LedgerMenu → Back → Back → Back → Home
         let mut stack = NavigationStack::new();
         let registry = Arc::new(PresenterRegistry::new());
 
         // Build up the stack
         stack.push(Box::new(HomePageState::new()));
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
         stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
-        stack.push(Box::new(LedgerPageState::new()));
+        stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
+        stack.push(Box::new(StubPageState::new(Route::LedgerMenu, "Ledger Menu", "元帳メニュー")));
 
-        assert_eq!(stack.current().unwrap().route(), Route::Ledger);
-        assert_eq!(registry.total_count(), 4); // Search (2) + JournalEntry (2)
+        assert_eq!(stack.current().unwrap().route(), Route::LedgerMenu);
+        assert_eq!(registry.total_count(), 4); // two JournalEntry instances
 
         // Navigate back through all levels
-        stack.pop(); // Ledger → JournalEntry
+        stack.pop(); // LedgerMenu → JournalEntry
         assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
 
-        stack.pop(); // JournalEntry → Search
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-        assert_eq!(registry.total_count(), 2); // SearchPageState registers 2 presenters
+        stack.pop(); // JournalEntry → JournalEntry
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
+        assert_eq!(registry.total_count(), 2); // one JournalEntry remains
 
-        stack.pop(); // Search → Home
+        stack.pop(); // JournalEntry → Home
         assert_eq!(stack.current().unwrap().route(), Route::Home);
         assert_eq!(registry.total_count(), 0);
     }
 
     #[test]
     fn test_complex_navigation_pattern() {
-        // Test: Home → Search → Back → JournalEntry → Back → Search → Back → Home
+        // Test: Home → JournalEntry → Back → JournalEntry → Back → JournalEntry → Back → Home
         let mut stack = NavigationStack::new();
         let registry = Arc::new(PresenterRegistry::new());
 
         // Start at Home
         stack.push(Box::new(HomePageState::new()));
 
-        // Home → Search
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-        assert_eq!(registry.total_count(), 2); // SearchPageState registers 2 presenters
+        // Home → JournalEntry
+        stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
+        assert_eq!(registry.total_count(), 2); // JournalEntry registers 2 presenters
 
         // Search → Back → Home
         stack.pop();
@@ -142,10 +151,10 @@ mod tests {
         assert_eq!(stack.current().unwrap().route(), Route::Home);
         assert_eq!(registry.total_count(), 0);
 
-        // Home → Search (again)
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-        assert_eq!(registry.total_count(), 2); // SearchPageState registers 2 presenters
+        // Home → JournalEntry (again)
+        stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
+        assert_eq!(registry.total_count(), 2); // JournalEntry registers 2 presenters
 
         // Search → Back → Home
         stack.pop();
@@ -155,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_state_preservation_across_navigation() {
-        // Test that state is preserved when navigating back
+        // Test that state is preserved when navigating back (using journal entries)
         let mut stack = NavigationStack::new();
         let registry = Arc::new(PresenterRegistry::new());
 
@@ -163,19 +172,19 @@ mod tests {
         let home = Box::new(HomePageState::new());
         stack.push(home);
 
-        // Navigate to Search
-        let search = Box::new(SearchPageState::new(Arc::clone(&registry)));
-        stack.push(search);
-
         // Navigate to JournalEntry
+        let je1 = Box::new(JournalEntryPageState::new(Arc::clone(&registry)));
+        stack.push(je1);
+
+        // Navigate to another JournalEntry
         let je = Box::new(JournalEntryPageState::new(Arc::clone(&registry)));
         stack.push(je);
 
-        // Navigate back to Search
+        // Navigate back to previous JE
         stack.pop();
 
-        // The Search page should still be there (state preserved)
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
+        // The JournalEntry page should still be there (state preserved)
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
 
         // Navigate back to Home
         stack.pop();
@@ -186,25 +195,25 @@ mod tests {
 
     #[test]
     fn test_multiple_instances_of_same_screen_type() {
-        // Test: Home → Search1 → Search2 → Back → Back → Home
+        // Test: Home → JE1 → JE2 → Back → Back → Home
         let mut stack = NavigationStack::new();
         let registry = Arc::new(PresenterRegistry::new());
 
         stack.push(Box::new(HomePageState::new()));
 
-        // First Search instance
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-        assert_eq!(registry.total_count(), 2); // SearchPageState registers 2 presenters
+        // First JournalEntry instance
+        stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
+        assert_eq!(registry.total_count(), 2); // JournalEntry registers 2 presenters
 
-        // Second Search instance
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
-        assert_eq!(registry.total_count(), 4); // Two separate instances (2 + 2)
+        // Second JournalEntry instance
+        stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
+        assert_eq!(registry.total_count(), 4); // Two separate instances
 
-        // Back to first Search
+        // Back to first JournalEntry
         stack.pop();
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
         assert_eq!(registry.total_count(), 2); // Second instance cleaned up
 
         // Back to Home
@@ -222,25 +231,28 @@ mod tests {
         // Build a deep stack
         let routes = vec![
             Route::Home,
-            Route::Search,
             Route::JournalEntry,
-            Route::Ledger,
-            Route::Search,
             Route::JournalEntry,
-            Route::Search,
-            Route::Ledger,
-            Route::Search,
+            Route::LedgerMenu,
+            Route::JournalEntry,
+            Route::JournalEntry,
+            Route::JournalEntry,
+            Route::LedgerMenu,
+            Route::JournalEntry,
             Route::JournalEntry,
         ];
 
         for route in &routes {
             match route {
                 Route::Home => stack.push(Box::new(HomePageState::new())),
-                Route::Search => stack.push(Box::new(SearchPageState::new(Arc::clone(&registry)))),
                 Route::JournalEntry => {
                     stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))))
                 }
-                Route::Ledger => stack.push(Box::new(LedgerPageState::new())),
+                Route::LedgerMenu => stack.push(Box::new(StubPageState::new(
+                    Route::LedgerMenu,
+                    "Ledger Menu",
+                    "元帳メニュー",
+                ))),
                 _ => {}
             }
         }
@@ -271,23 +283,23 @@ mod tests {
         stack.push(Box::new(HomePageState::new()));
         assert_eq!(registry.total_count(), 0);
 
-        // Search: 2 presenters (SearchPresenter + AccountMasterPresenter)
-        stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
+        // JournalEntry: 2 presenters
+        stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
         assert_eq!(registry.total_count(), 2);
 
         // JournalEntry: 2 presenters
         stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
         assert_eq!(registry.total_count(), 4); // 2 + 2
 
-        // Ledger: 0 presenters
-        stack.push(Box::new(LedgerPageState::new()));
+        // LedgerMenu: 0 presenters
+        stack.push(Box::new(StubPageState::new(Route::LedgerMenu, "Ledger Menu", "元帳メニュー")));
         assert_eq!(registry.total_count(), 4); // Still 2 + 2
 
         // Back to JournalEntry
         stack.pop();
         assert_eq!(registry.total_count(), 4);
 
-        // Back to Search
+        // Back to JournalEntry
         stack.pop();
         assert_eq!(registry.total_count(), 2);
 
@@ -321,10 +333,10 @@ mod tests {
         for _ in 0..100 {
             let mut stack = NavigationStack::new();
 
-            // Home → Search
+            // Home → JournalEntry
             stack.push(Box::new(HomePageState::new()));
-            stack.push(Box::new(SearchPageState::new(Arc::clone(&registry))));
-            assert_eq!(registry.total_count(), 2); // SearchPageState registers 2 presenters
+            stack.push(Box::new(JournalEntryPageState::new(Arc::clone(&registry))));
+            assert_eq!(registry.total_count(), 2); // JournalEntry registers 2 presenters
 
             // Search → Back
             stack.pop();

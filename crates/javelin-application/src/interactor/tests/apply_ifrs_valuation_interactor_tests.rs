@@ -7,8 +7,7 @@ mod tests {
 
     use chrono;
     use javelin_domain::{
-        financial_close::closing_events::ClosingEvent,
-        repositories::{MockClosingRepository, RepositoryBase},
+        financial_close::closing_events::ClosingEvent, repositories::MockClosingRepository,
     };
 
     use crate::{

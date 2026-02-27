@@ -111,7 +111,7 @@ impl SubsidiaryAccountMasterPageState {
 
 impl PageState for SubsidiaryAccountMasterPageState {
     fn route(&self) -> Route {
-        Route::SubsidiaryAccountMaster
+        Route::SubsidiaryAccounts
     }
 
     fn run(

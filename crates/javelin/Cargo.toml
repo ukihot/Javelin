@@ -17,6 +17,7 @@ javelin-infrastructure = { workspace = true }
 javelin-adapter = { workspace = true }
 
 # External dependencies
+clap = { version = "^4", features = ["derive"] }
 thiserror = { workspace = true }
 color-eyre = { workspace = true }
 tokio = { workspace = true }

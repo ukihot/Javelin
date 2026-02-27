@@ -137,7 +137,7 @@ mod tests {
         let mut stack = NavigationStack::new();
 
         stack.push(Box::new(MockPageState::new(Route::Home)));
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
         stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
 
         assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
@@ -146,7 +146,7 @@ mod tests {
         assert_eq!(popped3.route(), Route::JournalEntry);
 
         let popped2 = stack.pop().unwrap();
-        assert_eq!(popped2.route(), Route::Search);
+        assert_eq!(popped2.route(), Route::JournalEntry);
 
         let popped1 = stack.pop().unwrap();
         assert_eq!(popped1.route(), Route::Home);
@@ -161,12 +161,12 @@ mod tests {
         let mut stack = NavigationStack::new();
 
         stack.push(Box::new(MockPageState::new(Route::Home)));
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
         stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
 
         assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
         stack.pop();
-        assert_eq!(stack.current().unwrap().route(), Route::Search);
+        assert_eq!(stack.current().unwrap().route(), Route::JournalEntry);
         stack.pop();
         assert_eq!(stack.current().unwrap().route(), Route::Home);
     }
@@ -182,7 +182,7 @@ mod tests {
         stack.push(page1);
         assert_eq!(*pause_count.lock().unwrap(), 0);
 
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
         assert_eq!(*pause_count.lock().unwrap(), 1);
 
         stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
@@ -200,7 +200,7 @@ mod tests {
         stack.push(page1);
         assert_eq!(*resume_count.lock().unwrap(), 0);
 
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
         assert_eq!(*resume_count.lock().unwrap(), 0);
 
         stack.pop();
@@ -218,7 +218,7 @@ mod tests {
 
         stack.push(page1);
 
-        stack.push(Box::new(MockPageState::new(Route::Search)));
+        stack.push(Box::new(MockPageState::new(Route::JournalEntry)));
         assert_eq!(*pause_count.lock().unwrap(), 1);
         stack.pop();
         assert_eq!(*resume_count.lock().unwrap(), 1);

@@ -3,21 +3,30 @@
 
 use std::path::PathBuf;
 
+use javelin_adapter::views::terminal_manager::TerminalManager;
+
 use crate::{
-    app::Application,
-    app_error::AppResult,
+    app::{Application, ApplicationConfig},
+    app_error::{AppError::InitializationFailed, AppResult},
     app_setup::{setup_controllers, setup_infrastructure},
 };
 
 /// アプリケーションビルダー
 pub struct ApplicationBuilder {
     data_dir: Option<PathBuf>,
+    initial_route: Option<javelin_adapter::navigation::Route>,
 }
 
 impl ApplicationBuilder {
     /// 新規ビルダーを作成
     pub fn new() -> Self {
-        Self { data_dir: None }
+        Self { data_dir: None, initial_route: None }
+    }
+
+    /// Set initial route (used to select mode-specific top page)
+    pub fn with_initial_route(mut self, route: javelin_adapter::navigation::Route) -> Self {
+        self.initial_route = Some(route);
+        self
     }
 
     /// データディレクトリを設定
@@ -49,16 +58,22 @@ impl ApplicationBuilder {
         .await?;
 
         // TerminalManagerの作成
-        let terminal_manager = javelin_adapter::views::terminal_manager::TerminalManager::new()
-            .map_err(|e| crate::app_error::AppError::InitializationFailed(Box::new(e)))?;
+        let terminal_manager =
+            TerminalManager::new().map_err(|e| InitializationFailed(Box::new(e)))?;
 
         // Applicationの構築
-        let config = crate::app::ApplicationConfig {
+        let config = ApplicationConfig {
             controllers: controller_components.controllers,
             presenter_registry: controller_components.presenter_registry,
             terminal_manager,
             infra_error_receiver: infra.infra_error_receiver,
+            initial_route: javelin_adapter::navigation::Route::Home,
         };
+
+        let initial_route = self.initial_route.unwrap_or(javelin_adapter::navigation::Route::Home);
+
+        let mut config = config;
+        config.initial_route = initial_route;
 
         Ok(Application::new(config))
     }

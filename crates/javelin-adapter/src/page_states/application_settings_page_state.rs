@@ -61,7 +61,8 @@ impl ApplicationSettingsPageState {
 
 impl PageState for ApplicationSettingsPageState {
     fn route(&self) -> Route {
-        Route::ApplicationSettings
+        // repurposed as period management in current navigation
+        Route::PeriodManagement
     }
 
     fn run(

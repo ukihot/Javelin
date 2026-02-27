@@ -72,6 +72,14 @@ pub enum Route {
     // ========== TOP ==========
     /// TOP: Dashboard - Main entry point
     Home,
+    /// TOP: Maintenance - Maintenance mode entry point
+    MaintenanceHome,
+    /// Maintenance menu (child of MaintenanceHome)
+    MaintenanceMenu,
+    /// Rebuild projections action
+    MaintenanceRebuildProjections,
+    /// Clean event store
+    MaintenanceCleanEventStore,
 
     // ========== A. Primary Records ==========
     /// A-01: Primary Records Menu
@@ -226,38 +234,4 @@ pub enum Route {
     SubsidiaryAccounts,
     /// H-04: Business Partners (VIEW/EXEC)
     BusinessPartners,
-
-    // ========== Legacy Routes (to be removed) ==========
-    /// @deprecated Use JournalList instead
-    Search,
-    /// @deprecated Use GeneralLedger instead
-    Ledger,
-    /// @deprecated Use AccountDetail instead
-    LedgerDetail,
-    /// @deprecated Use ClosingPreparationExecution instead
-    ClosingPreparation,
-    /// @deprecated Use ClosingLockExecution instead
-    ClosingLock,
-    /// @deprecated Use NotesDraft instead
-    NoteDraft,
-    /// @deprecated Use AccountAdjustmentExecution instead
-    AccountAdjustment,
-    /// @deprecated Use ValuationExecution instead
-    IfrsValuation,
-    /// @deprecated Use FinancialStatementGenerationExecution instead
-    FinancialStatement,
-    /// @deprecated Use ChartOfAccounts instead
-    AccountMaster,
-    /// @deprecated Use SubsidiaryAccounts instead
-    SubsidiaryAccountMaster,
-    /// @deprecated Use PeriodManagement instead
-    ApplicationSettings,
-    /// @deprecated No longer used
-    DataImport,
-    /// @deprecated No longer used
-    DataExport,
-    /// @deprecated No longer used
-    LedgerConsolidation,
-    /// @deprecated No longer used
-    LedgerConsolidationExecution,
 }
