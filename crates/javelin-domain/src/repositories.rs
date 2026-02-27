@@ -9,7 +9,6 @@ pub mod company_master_repository;
 pub mod journal_entry_repository;
 pub mod repository_base;
 pub mod subsidiary_account_master_repository;
-pub mod system_master_repository;
 
 pub use account_master_repository::*;
 pub use application_settings_repository::*;
@@ -20,4 +19,3 @@ pub use repository_base::*;
 // テスト用のモックを再エクスポート
 pub use repository_base::{MockClosingRepository, MockJournalEntryRepository};
 pub use subsidiary_account_master_repository::*;
-pub use system_master_repository::*;
