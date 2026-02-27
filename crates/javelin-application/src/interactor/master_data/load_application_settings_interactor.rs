@@ -8,13 +8,13 @@ use crate::{
     error::ApplicationResult,
     input_ports::LoadApplicationSettingsInputPort,
     output_ports::ApplicationSettingsOutputPort,
-    query_service::master_data_loader::MasterDataLoaderService,
+    query_service::ApplicationSettingsMasterQueryService,
 };
 
 /// アプリケーション設定取得Interactor
 pub struct LoadApplicationSettingsInteractor<Q, O>
 where
-    Q: MasterDataLoaderService,
+    Q: ApplicationSettingsMasterQueryService,
     O: ApplicationSettingsOutputPort,
 {
     query_service: std::sync::Arc<Q>,
@@ -23,7 +23,7 @@ where
 
 impl<Q, O> LoadApplicationSettingsInteractor<Q, O>
 where
-    Q: MasterDataLoaderService,
+    Q: ApplicationSettingsMasterQueryService,
     O: ApplicationSettingsOutputPort,
 {
     pub fn new(query_service: std::sync::Arc<Q>, output_port: O) -> Self {
@@ -34,29 +34,35 @@ where
 #[allow(async_fn_in_trait)]
 impl<Q, O> LoadApplicationSettingsInputPort for LoadApplicationSettingsInteractor<Q, O>
 where
-    Q: MasterDataLoaderService,
+    Q: ApplicationSettingsMasterQueryService,
     O: ApplicationSettingsOutputPort,
 {
     async fn execute(
         &self,
         _request: LoadApplicationSettingsRequest,
     ) -> ApplicationResult<LoadApplicationSettingsResponse> {
-        // マスタデータを取得
-        let master_data = self.query_service.load_master_data().await?;
+        // QueryServiceから設定を取得
+        let settings = self.query_service.get().await?.ok_or_else(|| {
+            crate::error::ApplicationError::QueryExecutionFailed(
+                "アプリケーション設定が見つかりません".to_string(),
+            )
+        })?;
 
         // DTOに変換
         let user_options = UserOptionsDto {
-            default_company_code: master_data.user_options.default_company_code,
-            language: master_data.user_options.language,
-            decimal_places: master_data.user_options.decimal_places,
-            date_format: master_data.user_options.date_format,
+            default_company_code: settings
+                .default_company_code()
+                .map(|code| code.value().to_string()),
+            language: settings.language().value().to_string(),
+            decimal_places: settings.decimal_places().value(),
+            date_format: settings.date_format().value().to_string(),
         };
 
         let system_settings = SystemSettingsDto {
-            fiscal_year_start_month: master_data.system_settings.fiscal_year_start_month,
-            closing_day: master_data.system_settings.closing_day,
-            auto_backup_enabled: master_data.system_settings.auto_backup_enabled,
-            backup_retention_days: master_data.system_settings.backup_retention_days,
+            fiscal_year_start_month: settings.fiscal_year_start_month().value(),
+            closing_day: settings.closing_day().value(),
+            auto_backup_enabled: settings.auto_backup_enabled(),
+            backup_retention_days: settings.backup_retention_days().value(),
         };
 
         let response = LoadApplicationSettingsResponse { user_options, system_settings };

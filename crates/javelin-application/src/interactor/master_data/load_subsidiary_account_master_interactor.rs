@@ -2,8 +2,6 @@
 
 use std::sync::Arc;
 
-use javelin_domain::repositories::SubsidiaryAccountMasterRepository;
-
 use crate::{
     dtos::{
         request::LoadSubsidiaryAccountMasterRequest,
@@ -12,44 +10,43 @@ use crate::{
     error::ApplicationResult,
     input_ports::LoadSubsidiaryAccountMasterInputPort,
     output_ports::SubsidiaryAccountMasterOutputPort,
+    query_service::SubsidiaryAccountMasterQueryService,
 };
 
 /// 補助科目マスタ取得Interactor
-pub struct LoadSubsidiaryAccountMasterInteractor<R, O>
+///
+/// CQRS原則: 読み取りはQueryServiceを使用
+pub struct LoadSubsidiaryAccountMasterInteractor<Q, O>
 where
-    R: SubsidiaryAccountMasterRepository,
+    Q: SubsidiaryAccountMasterQueryService,
     O: SubsidiaryAccountMasterOutputPort,
 {
-    repository: Arc<R>,
+    query_service: Arc<Q>,
     output_port: O,
 }
 
-impl<R, O> LoadSubsidiaryAccountMasterInteractor<R, O>
+impl<Q, O> LoadSubsidiaryAccountMasterInteractor<Q, O>
 where
-    R: SubsidiaryAccountMasterRepository,
+    Q: SubsidiaryAccountMasterQueryService,
     O: SubsidiaryAccountMasterOutputPort,
 {
-    pub fn new(repository: Arc<R>, output_port: O) -> Self {
-        Self { repository, output_port }
+    pub fn new(query_service: Arc<Q>, output_port: O) -> Self {
+        Self { query_service, output_port }
     }
 }
 
 #[allow(async_fn_in_trait)]
-impl<R, O> LoadSubsidiaryAccountMasterInputPort for LoadSubsidiaryAccountMasterInteractor<R, O>
+impl<Q, O> LoadSubsidiaryAccountMasterInputPort for LoadSubsidiaryAccountMasterInteractor<Q, O>
 where
-    R: SubsidiaryAccountMasterRepository,
+    Q: SubsidiaryAccountMasterQueryService,
     O: SubsidiaryAccountMasterOutputPort,
 {
     async fn execute(
         &self,
         request: LoadSubsidiaryAccountMasterRequest,
     ) -> ApplicationResult<LoadSubsidiaryAccountMasterResponse> {
-        // リポジトリから全件取得
-        let accounts = self
-            .repository
-            .find_all()
-            .await
-            .map_err(|e| crate::error::ApplicationError::QueryExecutionFailed(e.to_string()))?;
+        // QueryServiceから全件取得
+        let accounts = self.query_service.get_all().await?;
 
         // フィルタリング
         let mut items: Vec<SubsidiaryAccountMasterItem> = accounts

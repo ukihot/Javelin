@@ -79,6 +79,7 @@ impl CompanyMasterRepositoryImpl {
         }
     }
 
+    #[allow(dead_code)]
     fn from_stored(stored: &StoredCompanyMaster) -> DomainResult<CompanyMaster> {
         let code = CompanyCode::new(&stored.code)?;
         let name = CompanyName::new(&stored.name)?;
@@ -87,55 +88,6 @@ impl CompanyMasterRepositoryImpl {
 }
 
 impl CompanyMasterRepository for CompanyMasterRepositoryImpl {
-    async fn find_by_code(&self, code: &CompanyCode) -> DomainResult<Option<CompanyMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-        let key = code.value().to_string();
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            match txn.get(db, &key) {
-                Ok(value) => {
-                    let stored: StoredCompanyMaster = serde_json::from_slice(value)?;
-                    let company = Self::from_stored(&stored)?;
-                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(Some(company))
-                }
-                Err(lmdb::Error::NotFound) => Ok(None),
-                Err(e) => Err(e.into()),
-            }
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
-    async fn find_all(&self) -> DomainResult<Vec<CompanyMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            let mut cursor = txn.open_ro_cursor(db)?;
-            // モダンプラクティス: 初期キャパシティを確保（会社マスタは少数）
-            let mut companies = Vec::with_capacity(10);
-
-            for (_key, value) in cursor.iter() {
-                let stored: StoredCompanyMaster = serde_json::from_slice(value)?;
-                let company = Self::from_stored(&stored)?;
-                companies.push(company);
-            }
-
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(companies)
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
     async fn save(&self, company_master: &CompanyMaster) -> DomainResult<()> {
         let stored = Self::to_stored(company_master);
         let value = serde_json::to_vec(&stored)

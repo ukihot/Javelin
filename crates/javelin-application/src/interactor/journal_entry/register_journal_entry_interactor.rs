@@ -49,16 +49,36 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
 {
     async fn execute(&self, request: RegisterJournalEntryRequest) -> ApplicationResult<()> {
         // 1. 入力バリデーション - 取引日付のパース
-        let transaction_date =
-            match NaiveDate::parse_from_str(&request.transaction_date, "%Y-%m-%d") {
+        // YYYYMMDD形式とYYYY-MM-DD形式の両方に対応
+        let date_str = &request.transaction_date;
+        let transaction_date = if date_str.contains('-') {
+            // YYYY-MM-DD形式
+            match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
                 Ok(date) => date,
                 Err(e) => {
-                    let error_msg =
-                        format!("日付形式が不正です: {} (エラー: {})", request.transaction_date, e);
+                    let error_msg = format!("日付形式が不正です: {} (エラー: {})", date_str, e);
                     self.output_port.notify_error(error_msg.clone()).await;
                     return Err(ApplicationError::ValidationFailed(vec![error_msg]));
                 }
-            };
+            }
+        } else if date_str.len() == 8 {
+            // YYYYMMDD形式
+            match NaiveDate::parse_from_str(date_str, "%Y%m%d") {
+                Ok(date) => date,
+                Err(e) => {
+                    let error_msg = format!("日付形式が不正です: {} (エラー: {})", date_str, e);
+                    self.output_port.notify_error(error_msg.clone()).await;
+                    return Err(ApplicationError::ValidationFailed(vec![error_msg]));
+                }
+            }
+        } else {
+            let error_msg = format!(
+                "日付形式が不正です: {} (YYYY-MM-DD または YYYYMMDD 形式で入力してください)",
+                date_str
+            );
+            self.output_port.notify_error(error_msg.clone()).await;
+            return Err(ApplicationError::ValidationFailed(vec![error_msg]));
+        };
 
         let transaction_date = match TransactionDate::new(transaction_date) {
             Ok(date) => date,

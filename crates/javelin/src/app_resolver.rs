@@ -48,10 +48,8 @@ impl PageStateResolver {
             Route::JournalEntry => Ok(Box::new(javelin_adapter::JournalEntryPageState::new(
                 Arc::clone(&self.presenter_registry),
             ))),
-            Route::JournalList => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::JournalList,
-                "A-03: Journal List",
-                "仕訳一覧画面",
+            Route::JournalList => Ok(Box::new(javelin_adapter::JournalListPageState::new(
+                Arc::clone(&self.presenter_registry),
             ))),
             Route::JournalDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
                 Route::JournalDetail,

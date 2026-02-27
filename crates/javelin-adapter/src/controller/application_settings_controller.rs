@@ -6,22 +6,19 @@ use javelin_application::{
     dtos::{request::LoadApplicationSettingsRequest, response::LoadApplicationSettingsResponse},
     input_ports::LoadApplicationSettingsInputPort,
     interactor::master_data::LoadApplicationSettingsInteractor,
+    query_service::ApplicationSettingsMasterQueryService,
 };
-use javelin_infrastructure::read::master_data::MasterDataLoaderImpl;
 
 use crate::navigation::PresenterRegistry;
 
 /// アプリケーション設定コントローラ
-pub struct ApplicationSettingsController {
-    query_service: Arc<MasterDataLoaderImpl>,
+pub struct ApplicationSettingsController<Q: ApplicationSettingsMasterQueryService> {
+    query_service: Arc<Q>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl ApplicationSettingsController {
-    pub fn new(
-        query_service: Arc<MasterDataLoaderImpl>,
-        presenter_registry: Arc<PresenterRegistry>,
-    ) -> Self {
+impl<Q: ApplicationSettingsMasterQueryService> ApplicationSettingsController<Q> {
+    pub fn new(query_service: Arc<Q>, presenter_registry: Arc<PresenterRegistry>) -> Self {
         Self { query_service, presenter_registry }
     }
 

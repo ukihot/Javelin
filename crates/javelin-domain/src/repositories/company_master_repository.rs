@@ -6,14 +6,11 @@ use crate::{
 };
 
 /// 会社マスタリポジトリトレイト
+///
+/// CQRS原則: Repositoryはイベント永続化のみを担当
+/// 読み取りはQueryServiceを使用すること
 #[allow(async_fn_in_trait)]
 pub trait CompanyMasterRepository: Send + Sync {
-    /// 会社マスタを取得
-    async fn find_by_code(&self, code: &CompanyCode) -> DomainResult<Option<CompanyMaster>>;
-
-    /// すべての会社マスタを取得
-    async fn find_all(&self) -> DomainResult<Vec<CompanyMaster>>;
-
     /// 会社マスタを保存
     async fn save(&self, company_master: &CompanyMaster) -> DomainResult<()>;
 

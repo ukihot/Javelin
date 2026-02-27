@@ -8,7 +8,7 @@ pub mod write;
 
 // 内部のみ: read/write 配下および tests が crate::* を参照するため
 pub(crate) use shared::{error, storage_metrics, types};
-pub(crate) use write::{event_store, event_store::event_stream, repositories};
+pub(crate) use write::{event_store, event_store::event_stream};
 
 // Test modules
 #[cfg(test)]

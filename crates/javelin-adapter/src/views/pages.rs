@@ -1,33 +1,32 @@
 // Pages - ページ単位のビュー
-// 責務: 各画面の実装
+// Organized by route hierarchy for better maintainability
 
-// Generic components
+// Generic/Shared components
+pub mod home_page;
 pub mod menu_page;
 
-// Specific pages
-pub mod account_adjustment_execution_page;
-pub mod account_master_page;
-pub mod application_settings_page;
-pub mod closing_page;
-pub mod closing_preparation_execution_page;
-pub mod financial_statement_execution_page;
-pub mod home_page;
-pub mod ifrs_valuation_execution_page;
-pub mod journal_entry_form_page;
-pub mod note_draft_page;
-pub mod subsidiary_account_master_page;
+// Route hierarchy modules
+pub mod closing;
+pub mod closing_preparation;
+pub mod financial_statements;
+pub mod fixed_assets;
+pub mod master_management;
+pub mod primary_records;
 
-// Generic component exports
-// Specific page exports
-pub use account_adjustment_execution_page::*;
-pub use account_master_page::*;
-pub use application_settings_page::*;
-pub use closing_page::*;
-pub use closing_preparation_execution_page::*;
-pub use financial_statement_execution_page::*;
+// Re-exports for backward compatibility (explicit to avoid ambiguous glob re-exports)
+// Closing
+pub use closing::ClosingPage;
+// Closing Preparation
+pub use closing_preparation::ClosingPreparationExecutionPage;
+// Financial Statements
+pub use financial_statements::{FinancialStatementExecutionPage, NoteDraftPage};
+// Fixed Assets
+pub use fixed_assets::{AccountAdjustmentExecutionPage, IfrsValuationExecutionPage};
 pub use home_page::*;
-pub use ifrs_valuation_execution_page::*;
-pub use journal_entry_form_page::*;
+// Master Management
+pub use master_management::{
+    AccountMasterPage, ApplicationSettingsPage, SubsidiaryAccountMasterPage,
+};
 pub use menu_page::MenuPage;
-pub use note_draft_page::*;
-pub use subsidiary_account_master_page::*;
+// Primary Records
+pub use primary_records::JournalEntryFormPage;

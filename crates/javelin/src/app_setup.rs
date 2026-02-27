@@ -20,7 +20,6 @@ use javelin_application::{
         GenerateTrialBalanceInteractor, LockClosingPeriodInteractor, PrepareClosingInteractor,
     },
     projection_builder::ProjectionBuilder,
-    query_service::MasterDataLoaderService,
 };
 use javelin_infrastructure::{
     read::{
@@ -28,12 +27,8 @@ use javelin_infrastructure::{
         infrastructure::{ProjectionBuilderImpl, ProjectionDb},
         journal_entry::JournalEntrySearchQueryServiceImpl,
         ledger::LedgerQueryServiceImpl,
-        master_data::MasterDataLoaderImpl,
     },
-    write::{
-        event_store::{ClosingEventStore, EventStore},
-        repositories::SubsidiaryAccountMasterRepositoryImpl,
-    },
+    write::event_store::{ClosingEventStore, EventStore},
 };
 use tokio::sync::mpsc;
 
@@ -44,7 +39,6 @@ pub struct InfrastructureComponents {
     pub event_store: Arc<EventStore>,
     pub projection_db: Arc<ProjectionDb>,
     pub projection_builder: Arc<ProjectionBuilderImpl>,
-    pub master_data_loader: Arc<MasterDataLoaderImpl>,
     pub infra_error_receiver: mpsc::UnboundedReceiver<String>,
 }
 
@@ -85,26 +79,10 @@ pub async fn setup_infrastructure(data_dir: &Path) -> AppResult<InfrastructureCo
     // Projection再構築チェック
     check_and_rebuild_projections(&event_store, &projection_db, &projection_builder).await?;
 
-    // マスタデータローダー
-    let master_db_path = data_dir.join("master_data");
-    let master_data_loader = Arc::new(
-        MasterDataLoaderImpl::new(&master_db_path)
-            .await
-            .map_err(AppError::InitializationFailed)?,
-    );
-
-    // 初期データロード確認
-    let master_data = master_data_loader.load_master_data().await?;
-    println!("✓ Master data loaded successfully");
-    println!("  - Accounts: {}", master_data.accounts.len());
-    println!("  - Companies: {}", master_data.companies.len());
-    println!("  - Language: {}", master_data.user_options.language);
-
     Ok(InfrastructureComponents {
         event_store,
         projection_db,
         projection_builder,
-        master_data_loader,
         infra_error_receiver,
     })
 }
@@ -139,10 +117,9 @@ async fn check_and_rebuild_projections(
 
 /// コントローラをセットアップ
 pub async fn setup_controllers(
-    data_dir: &Path,
+    _data_dir: &Path,
     event_store: Arc<EventStore>,
     projection_db: Arc<ProjectionDb>,
-    master_data_loader: Arc<MasterDataLoaderImpl>,
 ) -> AppResult<ControllerComponents> {
     // LedgerPresenterチャネル
     let (trial_balance_tx, _trial_balance_rx) = {
@@ -160,32 +137,46 @@ pub async fn setup_controllers(
     let batch_history_query_service =
         Arc::new(BatchHistoryQueryServiceImpl::new(Arc::clone(&projection_db)));
 
+    // 個別マスタQueryService構築
+    let account_master_query_service = Arc::new(
+        javelin_infrastructure::read::account_master::AccountMasterQueryServiceImpl::new(
+            Arc::clone(&projection_db),
+        ),
+    );
+    let company_master_query_service = Arc::new(
+        javelin_infrastructure::read::company_master::CompanyMasterQueryServiceImpl::new(
+            Arc::clone(&projection_db),
+        ),
+    );
+    let application_settings_master_query_service = Arc::new(
+        javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl::new(
+            Arc::clone(&projection_db),
+        ),
+    );
+    let subsidiary_account_master_query_service = Arc::new(
+        javelin_infrastructure::read::subsidiary_account_master::SubsidiaryAccountMasterQueryServiceImpl::new(
+            Arc::clone(&projection_db),
+        ),
+    );
+
     // PresenterRegistry
     let presenter_registry = Arc::new(PresenterRegistry::new());
 
-    // マスタリポジトリの作成（補助科目のみ個別に必要）
-    let master_db_path = data_dir.join("master_data");
-    let subsidiary_account_master_repository = Arc::new(
-        SubsidiaryAccountMasterRepositoryImpl::new(&master_db_path.join("subsidiary_accounts"))
-            .await
-            .map_err(AppError::InitializationFailed)?,
-    );
-
-    // マスタコントローラ構築（master_data_loaderとpresenter_registryを使用）
+    // マスタコントローラ構築（個別QueryServiceを使用）
     let account_master_controller = Arc::new(AccountMasterController::new(
-        Arc::clone(&master_data_loader),
+        Arc::clone(&account_master_query_service),
         Arc::clone(&presenter_registry),
     ));
     let application_settings_controller = Arc::new(ApplicationSettingsController::new(
-        Arc::clone(&master_data_loader),
+        Arc::clone(&application_settings_master_query_service),
         Arc::clone(&presenter_registry),
     ));
     let company_master_controller = Arc::new(CompanyMasterController::new(
-        Arc::clone(&master_data_loader),
+        Arc::clone(&company_master_query_service),
         Arc::clone(&presenter_registry),
     ));
     let subsidiary_account_master_controller = Arc::new(SubsidiaryAccountMasterController::new(
-        Arc::clone(&subsidiary_account_master_repository),
+        Arc::clone(&subsidiary_account_master_query_service),
         Arc::clone(&presenter_registry),
     ));
 

@@ -50,13 +50,9 @@ impl ApplicationBuilder {
         let infra = setup_infrastructure(&data_dir).await?;
 
         // コントローラのセットアップ
-        let controller_components = setup_controllers(
-            &data_dir,
-            infra.event_store.clone(),
-            infra.projection_db.clone(),
-            infra.master_data_loader.clone(),
-        )
-        .await?;
+        let controller_components =
+            setup_controllers(&data_dir, infra.event_store.clone(), infra.projection_db.clone())
+                .await?;
 
         // TerminalManagerの作成
         let terminal_manager =

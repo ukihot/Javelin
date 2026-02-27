@@ -107,6 +107,7 @@ impl AccountMasterRepositoryImpl {
         }
     }
 
+    #[allow(dead_code)]
     fn from_stored(stored: &StoredAccountMaster) -> DomainResult<AccountMaster> {
         let code = AccountCode::new(&stored.code)?;
         let name = AccountName::new(&stored.name)?;
@@ -115,55 +116,6 @@ impl AccountMasterRepositoryImpl {
 }
 
 impl AccountMasterRepository for AccountMasterRepositoryImpl {
-    async fn find_by_code(&self, code: &AccountCode) -> DomainResult<Option<AccountMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-        let key = code.value().to_string();
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            match txn.get(db, &key) {
-                Ok(value) => {
-                    let stored: StoredAccountMaster = serde_json::from_slice(value)?;
-                    let account = Self::from_stored(&stored)?;
-                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(Some(account))
-                }
-                Err(lmdb::Error::NotFound) => Ok(None),
-                Err(e) => Err(e.into()),
-            }
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
-    async fn find_all(&self) -> DomainResult<Vec<AccountMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            let mut cursor = txn.open_ro_cursor(db)?;
-            // モダンプラクティス: 初期キャパシティを確保（勘定科目は数十〜数百件）
-            let mut accounts = Vec::with_capacity(100);
-
-            for (_key, value) in cursor.iter() {
-                let stored: StoredAccountMaster = serde_json::from_slice(value)?;
-                let account = Self::from_stored(&stored)?;
-                accounts.push(account);
-            }
-
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(accounts)
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
     async fn save(&self, account_master: &AccountMaster) -> DomainResult<()> {
         let stored = Self::to_stored(account_master);
         let value = serde_json::to_vec(&stored)

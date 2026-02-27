@@ -6,8 +6,8 @@ use javelin_application::{
     dtos::{request::LoadAccountMasterRequest, response::LoadAccountMasterResponse},
     input_ports::LoadAccountMasterInputPort,
     interactor::master_data::LoadAccountMasterInteractor,
+    query_service::AccountMasterQueryService,
 };
-use javelin_infrastructure::read::master_data::MasterDataLoaderImpl;
 
 use crate::navigation::PresenterRegistry;
 
@@ -15,16 +15,13 @@ use crate::navigation::PresenterRegistry;
 ///
 /// 型パラメータを削除し、具体的な型を直接保持することで
 /// 他のControllerと統一したパターンに変更
-pub struct AccountMasterController {
-    query_service: Arc<MasterDataLoaderImpl>,
+pub struct AccountMasterController<Q: AccountMasterQueryService> {
+    query_service: Arc<Q>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl AccountMasterController {
-    pub fn new(
-        query_service: Arc<MasterDataLoaderImpl>,
-        presenter_registry: Arc<PresenterRegistry>,
-    ) -> Self {
+impl<Q: AccountMasterQueryService> AccountMasterController<Q> {
+    pub fn new(query_service: Arc<Q>, presenter_registry: Arc<PresenterRegistry>) -> Self {
         Self { query_service, presenter_registry }
     }
 

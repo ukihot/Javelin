@@ -9,17 +9,25 @@ use crate::controller::{
     SearchController, SubsidiaryAccountMasterController,
 };
 
-/// Type alias for AccountMasterController (no generics needed)
-pub type AccountMasterControllerType = AccountMasterController;
+/// Type alias for AccountMasterController with concrete QueryService
+pub type AccountMasterControllerType = AccountMasterController<
+    javelin_infrastructure::read::account_master::AccountMasterQueryServiceImpl,
+>;
 
-/// Type alias for ApplicationSettingsController (no generics needed)
-pub type ApplicationSettingsControllerType = ApplicationSettingsController;
+/// Type alias for ApplicationSettingsController with concrete QueryService
+pub type ApplicationSettingsControllerType = ApplicationSettingsController<
+    javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl,
+>;
 
-/// Type alias for CompanyMasterController (no generics needed)
-pub type CompanyMasterControllerType = CompanyMasterController;
+/// Type alias for CompanyMasterController with concrete QueryService
+pub type CompanyMasterControllerType = CompanyMasterController<
+    javelin_infrastructure::read::company_master::CompanyMasterQueryServiceImpl,
+>;
 
-/// Type alias for SubsidiaryAccountMasterController (no generics needed)
-pub type SubsidiaryAccountMasterControllerType = SubsidiaryAccountMasterController;
+/// Type alias for SubsidiaryAccountMasterController with concrete QueryService
+pub type SubsidiaryAccountMasterControllerType = SubsidiaryAccountMasterController<
+    javelin_infrastructure::read::subsidiary_account_master::SubsidiaryAccountMasterQueryServiceImpl,
+>;
 
 /// Type alias for JournalEntryController (no generics needed)
 pub type JournalEntryControllerType = JournalEntryController;

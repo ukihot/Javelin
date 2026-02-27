@@ -7,10 +7,7 @@ use super::{
     system_settings::{BackupRetentionDays, ClosingDay, FiscalYearStartMonth, SystemSettings},
     user_settings::{DateFormat, DecimalPlaces, Language, UserSettings},
 };
-use crate::{
-    entity::EntityId, error::DomainResult,
-    repositories::system_master_repository::SystemMasterRepository, value_object::ValueObject,
-};
+use crate::{error::DomainResult, value_object::ValueObject};
 
 /// システムマスタサービス
 pub struct SystemMasterService;
@@ -131,33 +128,13 @@ impl SystemMasterService {
         system_master.validate()
     }
 
-    /// リポジトリを使用してデフォルトのシステムマスタを取得または作成
-    pub async fn get_or_create_default_system_master<R: SystemMasterRepository>(
-        repository: &R,
-    ) -> DomainResult<SystemMaster> {
-        if let Some(system_master) = repository.find_default().await? {
-            Ok(system_master)
-        } else {
-            let default_system_master = Self::create_default_system_master();
-            repository.save(&default_system_master).await?;
-            Ok(default_system_master)
-        }
-    }
-
     /// 勘定科目マスタを追加
-    pub async fn add_account_master<R: SystemMasterRepository>(
-        repository: &R,
-        system_master_id: &SystemMasterId,
+    ///
+    /// CQRS原則: システムマスタはQueryServiceから取得して渡すこと
+    pub fn add_account_master(
+        system_master: &mut SystemMaster,
         account_master: AccountMaster,
     ) -> DomainResult<()> {
-        let mut system_master =
-            repository.find_by_id(system_master_id).await?.ok_or_else(|| {
-                crate::error::DomainError::NotFound(format!(
-                    "システムマスタが見つかりません: {}",
-                    system_master_id.value()
-                ))
-            })?;
-
         Self::validate_account_master(&account_master)?;
 
         // 重複チェック
@@ -171,23 +148,16 @@ impl SystemMasterService {
         system_master.add_account_master(account_master);
         system_master.validate()?;
 
-        repository.save(&system_master).await
+        Ok(())
     }
 
     /// 会社マスタを追加
-    pub async fn add_company_master<R: SystemMasterRepository>(
-        repository: &R,
-        system_master_id: &SystemMasterId,
+    ///
+    /// CQRS原則: システムマスタはQueryServiceから取得して渡すこと
+    pub fn add_company_master(
+        system_master: &mut SystemMaster,
         company_master: CompanyMaster,
     ) -> DomainResult<()> {
-        let mut system_master =
-            repository.find_by_id(system_master_id).await?.ok_or_else(|| {
-                crate::error::DomainError::NotFound(format!(
-                    "システムマスタが見つかりません: {}",
-                    system_master_id.value()
-                ))
-            })?;
-
         Self::validate_company_master(&company_master)?;
 
         // 重複チェック
@@ -203,6 +173,6 @@ impl SystemMasterService {
         system_master.update_company_masters(company_masters);
         system_master.validate()?;
 
-        repository.save(&system_master).await
+        Ok(())
     }
 }

@@ -1,4 +1,4 @@
-# Javelin - 月次決算確報作成システム
+# Javelin - 月次決算確報管理システム
 
 Clean Architecture + Event Sourcing + CQRS による主計部業務バッチシステム
 
@@ -55,7 +55,6 @@ cargo run -- --maintenance
 ### 技術仕様
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - システムアーキテクチャ、設計原則、層別仕様
-- **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** - 開発ガイド、Rustプラクティス、実装ガイド
 
 ---
 
@@ -71,7 +70,6 @@ javelin/
 │   └── javelin-infrastructure/ # Infrastructure層（EventStore、Projection）
 ├── ARCHITECTURE.md           # アーキテクチャドキュメント
 ├── BUSINESS_REQUIREMENTS.md  # 業務要件定義
-├── DEVELOPMENT_GUIDE.md      # 開発ガイド
 ├── Cargo.toml
 └── README.md
 ```
@@ -150,26 +148,6 @@ cargo clippy
 | アーキテクチャ | Clean Architecture + Event Sourcing + CQRS |
 | エラーハンドリング | thiserror + anyhow |
 | テスト | cargo test |
-
----
-
-## ライセンス
-
-[ライセンス情報を記載]
-
----
-
-## 貢献
-
-[貢献ガイドラインを記載]
-
----
-
-## 関連リンク
-
-- [IFRS Foundation](https://www.ifrs.org/)
-- [Rust Programming Language](https://www.rust-lang.org/)
-- [ratatui](https://ratatui.rs/)
 
 ---
 

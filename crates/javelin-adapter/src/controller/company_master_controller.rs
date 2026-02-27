@@ -6,22 +6,19 @@ use javelin_application::{
     dtos::{request::LoadCompanyMasterRequest, response::LoadCompanyMasterResponse},
     input_ports::LoadCompanyMasterInputPort,
     interactor::master_data::LoadCompanyMasterInteractor,
+    query_service::CompanyMasterQueryService,
 };
-use javelin_infrastructure::read::master_data::MasterDataLoaderImpl;
 
 use crate::navigation::PresenterRegistry;
 
 /// 会社マスタコントローラ
-pub struct CompanyMasterController {
-    query_service: Arc<MasterDataLoaderImpl>,
+pub struct CompanyMasterController<Q: CompanyMasterQueryService> {
+    query_service: Arc<Q>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl CompanyMasterController {
-    pub fn new(
-        query_service: Arc<MasterDataLoaderImpl>,
-        presenter_registry: Arc<PresenterRegistry>,
-    ) -> Self {
+impl<Q: CompanyMasterQueryService> CompanyMasterController<Q> {
+    pub fn new(query_service: Arc<Q>, presenter_registry: Arc<PresenterRegistry>) -> Self {
         Self { query_service, presenter_registry }
     }
 

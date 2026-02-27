@@ -5,13 +5,13 @@ use crate::{
     error::ApplicationResult,
     input_ports::LoadAccountMasterInputPort,
     output_ports::AccountMasterOutputPort,
-    query_service::master_data_loader::MasterDataLoaderService,
+    query_service::AccountMasterQueryService,
 };
 
 /// 勘定科目マスタ取得Interactor
 pub struct LoadAccountMasterInteractor<Q, O>
 where
-    Q: MasterDataLoaderService,
+    Q: AccountMasterQueryService,
     O: AccountMasterOutputPort,
 {
     query_service: std::sync::Arc<Q>,
@@ -20,7 +20,7 @@ where
 
 impl<Q, O> LoadAccountMasterInteractor<Q, O>
 where
-    Q: MasterDataLoaderService,
+    Q: AccountMasterQueryService,
     O: AccountMasterOutputPort,
 {
     pub fn new(query_service: std::sync::Arc<Q>, output_port: O) -> Self {
@@ -31,44 +31,43 @@ where
 #[allow(async_fn_in_trait)]
 impl<Q, O> LoadAccountMasterInputPort for LoadAccountMasterInteractor<Q, O>
 where
-    Q: MasterDataLoaderService,
+    Q: AccountMasterQueryService,
     O: AccountMasterOutputPort,
 {
     async fn execute(
         &self,
         request: LoadAccountMasterRequest,
     ) -> ApplicationResult<LoadAccountMasterResponse> {
-        // マスタデータを取得
-        let master_data = self.query_service.load_master_data().await?;
+        // QueryServiceから全件取得
+        let accounts = self.query_service.get_all().await?;
 
         // フィルタリング
-        let mut accounts: Vec<AccountMasterItem> = master_data
-            .accounts
+        let mut filtered_accounts: Vec<AccountMasterItem> = accounts
             .into_iter()
             .filter(|acc| {
                 // アクティブフィルタ
-                if request.active_only && !acc.is_active {
+                if request.active_only && !acc.is_active() {
                     return false;
                 }
                 // テキストフィルタ
                 if let Some(ref filter) = request.filter {
                     let filter_lower = filter.to_lowercase();
-                    return acc.code.to_lowercase().contains(&filter_lower)
-                        || acc.name.to_lowercase().contains(&filter_lower);
+                    return acc.code().value().to_lowercase().contains(&filter_lower)
+                        || acc.name().value().to_lowercase().contains(&filter_lower);
                 }
                 true
             })
             .map(|acc| AccountMasterItem {
-                code: acc.code,
-                name: acc.name,
-                account_type: format!("{:?}", acc.account_type),
+                code: acc.code().value().to_string(),
+                name: acc.name().value().to_string(),
+                account_type: format!("{:?}", acc.account_type()),
             })
             .collect();
 
         // コード順にソート
-        accounts.sort_by(|a, b| a.code.cmp(&b.code));
+        filtered_accounts.sort_by(|a, b| a.code.cmp(&b.code));
 
-        let response = LoadAccountMasterResponse { accounts };
+        let response = LoadAccountMasterResponse { accounts: filtered_accounts };
 
         // Output Portに通知
         self.output_port.present_account_master(&response).await;

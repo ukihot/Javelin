@@ -47,7 +47,7 @@ impl ApplicationSettingsRepositoryImpl {
     }
 
     async fn initialize_defaults(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if self.find().await?.is_none() {
+        if self.check_exists().await?.is_none() {
             let defaults = ApplicationSettings::new(
                 Some(CompanyCode::new("0001").unwrap()),
                 Language::new("ja").unwrap(),
@@ -61,6 +61,31 @@ impl ApplicationSettingsRepositoryImpl {
             self.save(&defaults).await?;
         }
         Ok(())
+    }
+
+    /// Private helper method to check if settings exist (for initialization only)
+    async fn check_exists(&self) -> DomainResult<Option<ApplicationSettings>> {
+        let env = Arc::clone(&self.env);
+        let db = self.db;
+        let key = "default";
+
+        let result = tokio::task::spawn_blocking(move || {
+            let txn = env.begin_ro_txn()?;
+            match txn.get(db, &key) {
+                Ok(value) => {
+                    let stored: StoredApplicationSettings = serde_json::from_slice(value)?;
+                    let settings = Self::from_stored(&stored)?;
+                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(Some(settings))
+                }
+                Err(lmdb::Error::NotFound) => Ok(None),
+                Err(e) => Err(e.into()),
+            }
+        })
+        .await
+        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
+        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+
+        Ok(result)
     }
 
     fn to_stored(settings: &ApplicationSettings) -> StoredApplicationSettings {
@@ -101,30 +126,6 @@ impl ApplicationSettingsRepositoryImpl {
 }
 
 impl ApplicationSettingsRepository for ApplicationSettingsRepositoryImpl {
-    async fn find(&self) -> DomainResult<Option<ApplicationSettings>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-        let key = "default";
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            match txn.get(db, &key) {
-                Ok(value) => {
-                    let stored: StoredApplicationSettings = serde_json::from_slice(value)?;
-                    let settings = Self::from_stored(&stored)?;
-                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(Some(settings))
-                }
-                Err(lmdb::Error::NotFound) => Ok(None),
-                Err(e) => Err(e.into()),
-            }
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
     async fn save(&self, settings: &ApplicationSettings) -> DomainResult<()> {
         let stored = Self::to_stored(settings);
         let value = serde_json::to_vec(&stored)

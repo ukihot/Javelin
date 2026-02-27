@@ -89,6 +89,7 @@ impl SubsidiaryAccountMasterRepositoryImpl {
         }
     }
 
+    #[allow(dead_code)]
     fn from_stored(
         stored: &StoredSubsidiaryAccountMaster,
     ) -> DomainResult<SubsidiaryAccountMaster> {
@@ -100,89 +101,6 @@ impl SubsidiaryAccountMasterRepositoryImpl {
 }
 
 impl SubsidiaryAccountMasterRepository for SubsidiaryAccountMasterRepositoryImpl {
-    async fn find_by_code(
-        &self,
-        code: &SubsidiaryAccountCode,
-    ) -> DomainResult<Option<SubsidiaryAccountMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-        let key = code.value().to_string();
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            match txn.get(db, &key) {
-                Ok(value) => {
-                    let stored: StoredSubsidiaryAccountMaster = serde_json::from_slice(value)?;
-                    let account = Self::from_stored(&stored)?;
-                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(Some(account))
-                }
-                Err(lmdb::Error::NotFound) => Ok(None),
-                Err(e) => Err(e.into()),
-            }
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
-    async fn find_all(&self) -> DomainResult<Vec<SubsidiaryAccountMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            let mut cursor = txn.open_ro_cursor(db)?;
-            // モダンプラクティス: 初期キャパシティを確保（補助科目は数十〜数百件）
-            let mut accounts = Vec::with_capacity(100);
-
-            for (_key, value) in cursor.iter() {
-                let stored: StoredSubsidiaryAccountMaster = serde_json::from_slice(value)?;
-                let account = Self::from_stored(&stored)?;
-                accounts.push(account);
-            }
-
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(accounts)
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
-    async fn find_by_parent_account(
-        &self,
-        parent_code: &AccountCode,
-    ) -> DomainResult<Vec<SubsidiaryAccountMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-        let parent_key = parent_code.value().to_string();
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            let mut cursor = txn.open_ro_cursor(db)?;
-            // モダンプラクティス: 初期キャパシティを確保（親勘定科目配下は少数）
-            let mut accounts = Vec::with_capacity(20);
-
-            for (_key, value) in cursor.iter() {
-                let stored: StoredSubsidiaryAccountMaster = serde_json::from_slice(value)?;
-                if stored.parent_account_code == parent_key {
-                    let account = Self::from_stored(&stored)?;
-                    accounts.push(account);
-                }
-            }
-
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(accounts)
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
     async fn save(&self, account_master: &SubsidiaryAccountMaster) -> DomainResult<()> {
         let stored = Self::to_stored(account_master);
         let value = serde_json::to_vec(&stored)

@@ -160,6 +160,7 @@ impl SystemMasterRepositoryImpl {
     }
 
     /// 保存用データからドメインオブジェクトに変換
+    #[allow(dead_code)]
     fn from_stored(stored: &StoredSystemMaster) -> DomainResult<SystemMaster> {
         let account_masters = stored
             .account_masters
@@ -223,30 +224,6 @@ impl SystemMasterRepositoryImpl {
     }
 }
 impl SystemMasterRepository for SystemMasterRepositoryImpl {
-    async fn find_by_id(&self, id: &SystemMasterId) -> DomainResult<Option<SystemMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-        let key = id.value().to_string();
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            match txn.get(db, &key) {
-                Ok(value) => {
-                    let stored: StoredSystemMaster = serde_json::from_slice(value)?;
-                    let system_master = Self::from_stored(&stored)?;
-                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(Some(system_master))
-                }
-                Err(lmdb::Error::NotFound) => Ok(None),
-                Err(e) => Err(e.into()),
-            }
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
     async fn save(&self, system_master: &SystemMaster) -> DomainResult<()> {
         let stored = Self::to_stored(system_master);
         let value = serde_json::to_vec(&stored)
@@ -269,42 +246,6 @@ impl SystemMasterRepository for SystemMasterRepositoryImpl {
         Ok(())
     }
 
-    async fn find_default(&self) -> DomainResult<Option<SystemMaster>> {
-        self.find_by_id(&SystemMasterId::new("default")).await
-    }
-
-    async fn find_all(&self) -> DomainResult<Vec<SystemMaster>> {
-        let env = Arc::clone(&self.env);
-        let db = self.db;
-
-        let result = tokio::task::spawn_blocking(move || {
-            let txn = env.begin_ro_txn()?;
-            let mut cursor = txn.open_ro_cursor(db)?;
-            // モダンプラクティス: 初期キャパシティを確保（システムマスタは少数）
-            let mut system_masters = Vec::with_capacity(5);
-
-            for (key, value) in cursor.iter() {
-                let _key_str = std::str::from_utf8(key)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-
-                let stored: StoredSystemMaster = serde_json::from_slice(value)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-
-                let system_master = Self::from_stored(&stored)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-
-                system_masters.push(system_master);
-            }
-
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(system_masters)
-        })
-        .await
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(result)
-    }
-
     async fn delete(&self, id: &SystemMasterId) -> DomainResult<()> {
         let env = Arc::clone(&self.env);
         let db = self.db;
@@ -321,162 +262,5 @@ impl SystemMasterRepository for SystemMasterRepositoryImpl {
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use tempfile::TempDir;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_save_and_find_by_id() {
-        let temp_dir = TempDir::new().expect("Failed to create temp directory");
-        let db_path = temp_dir.path().join("system_masters");
-
-        let repository = SystemMasterRepositoryImpl::new(&db_path).await.unwrap();
-
-        let system_master = SystemMasterService::create_default_system_master();
-        repository.save(&system_master).await.unwrap();
-
-        let found = repository.find_by_id(system_master.id()).await.unwrap();
-        assert!(found.is_some());
-        let found_system_master = found.unwrap();
-
-        assert_eq!(found_system_master.id().value(), "default");
-        assert_eq!(found_system_master.account_masters().len(), 6);
-        assert_eq!(found_system_master.company_masters().len(), 2);
-    }
-
-    #[tokio::test]
-    async fn test_find_default() {
-        let temp_dir = TempDir::new().expect("Failed to create temp directory");
-        let db_path = temp_dir.path().join("system_masters");
-
-        let repository = SystemMasterRepositoryImpl::new(&db_path).await.unwrap();
-
-        let found = repository.find_default().await.unwrap();
-        assert!(found.is_some());
-        let system_master = found.unwrap();
-
-        assert_eq!(system_master.id().value(), "default");
-        assert!(!system_master.account_masters().is_empty());
-        assert!(!system_master.company_masters().is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_find_all() {
-        let temp_dir = TempDir::new().expect("Failed to create temp directory");
-        let db_path = temp_dir.path().join("system_masters");
-
-        let repository = SystemMasterRepositoryImpl::new(&db_path).await.unwrap();
-
-        // 追加のシステムマスタを作成
-        let custom_system_master = {
-            let account_masters = vec![AccountMaster::new(
-                AccountCode::new("6000").unwrap(),
-                AccountName::new("雑費").unwrap(),
-                AccountType::Expense,
-                true,
-            )];
-
-            let company_masters = vec![CompanyMaster::new(
-                CompanyCode::new("0003").unwrap(),
-                CompanyName::new("支社B").unwrap(),
-                true,
-            )];
-
-            let user_settings = UserSettings::new(
-                Some(CompanyCode::new("0003").unwrap()),
-                Language::new("en").unwrap(),
-                DecimalPlaces::new(2).unwrap(),
-                DateFormat::new("MM/DD/YYYY").unwrap(),
-            );
-
-            let system_settings = SystemSettings::new(
-                FiscalYearStartMonth::new(1).unwrap(),
-                ClosingDay::new(15).unwrap(),
-                false,
-                BackupRetentionDays::new(30).unwrap(),
-            );
-
-            SystemMaster::new(
-                SystemMasterId::new("custom"),
-                account_masters,
-                company_masters,
-                user_settings,
-                system_settings,
-            )
-        };
-
-        repository.save(&custom_system_master).await.unwrap();
-
-        let all_system_masters = repository.find_all().await.unwrap();
-        assert_eq!(all_system_masters.len(), 2); // default + custom
-
-        let has_default = all_system_masters.iter().any(|sm| sm.id().value() == "default");
-        let has_custom = all_system_masters.iter().any(|sm| sm.id().value() == "custom");
-
-        assert!(has_default);
-        assert!(has_custom);
-    }
-
-    #[tokio::test]
-    async fn test_delete() {
-        let temp_dir = TempDir::new().expect("Failed to create temp directory");
-        let db_path = temp_dir.path().join("system_masters");
-
-        let repository = SystemMasterRepositoryImpl::new(&db_path).await.unwrap();
-
-        let custom_system_master = {
-            let account_masters = vec![AccountMaster::new(
-                AccountCode::new("6000").unwrap(),
-                AccountName::new("雑費").unwrap(),
-                AccountType::Expense,
-                true,
-            )];
-
-            let company_masters = vec![CompanyMaster::new(
-                CompanyCode::new("0003").unwrap(),
-                CompanyName::new("支社B").unwrap(),
-                true,
-            )];
-
-            let user_settings = UserSettings::new(
-                Some(CompanyCode::new("0003").unwrap()),
-                Language::new("en").unwrap(),
-                DecimalPlaces::new(2).unwrap(),
-                DateFormat::new("MM/DD/YYYY").unwrap(),
-            );
-
-            let system_settings = SystemSettings::new(
-                FiscalYearStartMonth::new(1).unwrap(),
-                ClosingDay::new(15).unwrap(),
-                false,
-                BackupRetentionDays::new(30).unwrap(),
-            );
-
-            SystemMaster::new(
-                SystemMasterId::new("custom"),
-                account_masters,
-                company_masters,
-                user_settings,
-                system_settings,
-            )
-        };
-
-        repository.save(&custom_system_master).await.unwrap();
-
-        // 削除前は存在する
-        let found = repository.find_by_id(&SystemMasterId::new("custom")).await.unwrap();
-        assert!(found.is_some());
-
-        // 削除
-        repository.delete(&SystemMasterId::new("custom")).await.unwrap();
-
-        // 削除後は存在しない
-        let found = repository.find_by_id(&SystemMasterId::new("custom")).await.unwrap();
-        assert!(found.is_none());
     }
 }

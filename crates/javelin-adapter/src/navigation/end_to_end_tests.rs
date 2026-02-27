@@ -5,12 +5,9 @@ mod tests {
     use std::sync::Arc;
 
     use crate::{
+        MaintenanceHomePageState, MaintenanceMenuPageState,
         navigation::{NavigationStack, PresenterRegistry, Route},
-        page_states::{
-            HomePageState, JournalEntryPageState, StubPageState,
-            maintenance_home_page_state::MaintenanceHomePageState,
-            maintenance_menu_page_state::MaintenanceMenuPageState,
-        },
+        page_states::{HomePageState, JournalEntryPageState, StubPageState},
     };
 
     #[test]

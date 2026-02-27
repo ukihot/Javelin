@@ -8,23 +8,22 @@ use javelin_application::{
     },
     input_ports::LoadSubsidiaryAccountMasterInputPort,
     interactor::master_data::LoadSubsidiaryAccountMasterInteractor,
+    query_service::SubsidiaryAccountMasterQueryService,
 };
-use javelin_infrastructure::write::repositories::SubsidiaryAccountMasterRepositoryImpl;
 
 use crate::navigation::PresenterRegistry;
 
 /// 補助科目マスタコントローラ
-pub struct SubsidiaryAccountMasterController {
-    repository: Arc<SubsidiaryAccountMasterRepositoryImpl>,
+///
+/// CQRS原則: 読み取りはQueryServiceを使用
+pub struct SubsidiaryAccountMasterController<Q: SubsidiaryAccountMasterQueryService> {
+    query_service: Arc<Q>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl SubsidiaryAccountMasterController {
-    pub fn new(
-        repository: Arc<SubsidiaryAccountMasterRepositoryImpl>,
-        presenter_registry: Arc<PresenterRegistry>,
-    ) -> Self {
-        Self { repository, presenter_registry }
+impl<Q: SubsidiaryAccountMasterQueryService> SubsidiaryAccountMasterController<Q> {
+    pub fn new(query_service: Arc<Q>, presenter_registry: Arc<PresenterRegistry>) -> Self {
+        Self { query_service, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
@@ -48,7 +47,7 @@ impl SubsidiaryAccountMasterController {
 
             // このページ専用のInteractorを動的に作成
             let interactor = LoadSubsidiaryAccountMasterInteractor::new(
-                Arc::clone(&self.repository),
+                Arc::clone(&self.query_service),
                 subsidiary_account_master_presenter,
             );
 
