@@ -73,16 +73,10 @@ impl PageStateResolver {
 
             // ========== B. Ledger Management ==========
             Route::LedgerMenu => Ok(Box::new(javelin_adapter::LedgerMenuPageState::new())),
-            Route::LedgerAggregationExecution => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::LedgerAggregationExecution,
-                "B-02: Ledger Aggregation Execution",
-                "元帳集計実行画面",
-            ))),
-            Route::GeneralLedger => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::GeneralLedger,
-                "B-03: General Ledger",
-                "総勘定元帳画面",
-            ))),
+            Route::LedgerAggregationExecution => {
+                Ok(Box::new(javelin_adapter::LedgerAggregationExecutionPageState::new()))
+            }
+            Route::GeneralLedger => Ok(Box::new(javelin_adapter::GeneralLedgerPageState::new())),
             Route::AccountDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
                 Route::AccountDetail,
                 "B-04: Account Detail",
@@ -169,17 +163,11 @@ impl PageStateResolver {
                 "D-03: Closing Preparation Result",
                 "締準備処理結果画面",
             ))),
-            Route::ClosingLockExecution => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::ClosingLockExecution,
-                "D-04: Closing Lock Execution",
-                "締ロック実行画面",
-            ))),
+            Route::ClosingLockExecution => {
+                Ok(Box::new(javelin_adapter::ClosingLockExecutionPageState::new()))
+            }
             Route::TrialBalanceGenerationExecution => {
-                Ok(Box::new(javelin_adapter::StubPageState::new(
-                    Route::TrialBalanceGenerationExecution,
-                    "D-05: Trial Balance Generation Execution",
-                    "試算表生成実行画面",
-                )))
+                Ok(Box::new(javelin_adapter::TrialBalanceGenerationExecutionPageState::new()))
             }
             Route::TrialBalance => Ok(Box::new(javelin_adapter::TrialBalancePageState::new())),
             Route::AccountAdjustmentExecution => {

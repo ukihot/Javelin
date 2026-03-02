@@ -25,16 +25,19 @@ pub mod notes_menu_page_state;
 
 // Re-exports for backward compatibility
 pub use closing::{
-    AccountAdjustmentExecutionPageState, ClosingMenuPageState,
+    AccountAdjustmentExecutionPageState, ClosingLockExecutionPageState, ClosingMenuPageState,
     ClosingPreparationExecutionPageState, ComprehensiveFinancialStatementsPageState,
-    LedgerConsistencyVerificationPageState, MaterialityEvaluationPageState, TrialBalancePageState,
+    LedgerConsistencyVerificationPageState, MaterialityEvaluationPageState,
+    TrialBalanceGenerationExecutionPageState, TrialBalancePageState,
 };
 pub use financial_statements::{
     FinancialStatementExecutionPageState, FinancialStatementsMenuPageState, NoteDraftPageState,
     NotesMenuPageState,
 };
 pub use fixed_assets::{FixedAssetsMenuPageState, IfrsValuationExecutionPageState};
-pub use ledger::LedgerMenuPageState;
+pub use ledger::{
+    GeneralLedgerPageState, LedgerAggregationExecutionPageState, LedgerMenuPageState,
+};
 pub use maintenance::{MaintenanceHomePageState, MaintenanceMenuPageState};
 pub use management_accounting::ManagementAccountingMenuPageState;
 pub use master_management::{
