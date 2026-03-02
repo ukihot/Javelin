@@ -220,15 +220,17 @@ impl ProjectionDb {
             let prefix_bytes = prefix.as_bytes();
 
             // プレフィックスから開始して効率的にスキャン
-            for (key_bytes, value_bytes) in cursor.iter_from(prefix_bytes) {
-                // プレフィックスに一致しなくなったら終了（ソート順を利用）
-                if !key_bytes.starts_with(prefix_bytes) {
+            // 空のデータベースの場合、iter()は何も返さない
+            for (key_bytes, value_bytes) in cursor.iter() {
+                // プレフィックスに一致するキーのみ処理
+                if key_bytes.starts_with(prefix_bytes) {
+                    let key = String::from_utf8_lossy(key_bytes).to_string();
+                    let value = value_bytes.to_vec();
+                    results.push((key, value));
+                } else if !results.is_empty() {
+                    // プレフィックスに一致しなくなり、既に結果がある場合は終了
                     break;
                 }
-
-                let key = String::from_utf8_lossy(key_bytes).to_string();
-                let value = value_bytes.to_vec();
-                results.push((key, value));
             }
 
             Ok::<Vec<(String, Vec<u8>)>, InfrastructureError>(results)

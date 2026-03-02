@@ -11,6 +11,7 @@ thiserror = { workspace = true }
 chrono = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { workspace = true }
 
 # `mockall` is needed by consumers of the domain mocks, so expose it as a
 # normal dependency rather than a dev-dependency.

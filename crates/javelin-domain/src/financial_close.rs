@@ -4,8 +4,11 @@
 pub mod accounting_period;
 pub mod closing_events;
 pub mod company;
+pub mod fixed_assets;
+pub mod foreign_currency;
 pub mod journal_entry;
 pub mod ledger;
+pub mod revenue_recognition;
 pub mod valuation_service;
 pub mod values;
 

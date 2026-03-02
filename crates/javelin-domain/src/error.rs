@@ -41,6 +41,107 @@ pub enum DomainError {
     #[error("[D-4002] Repository error: {0}")]
     RepositoryError(String),
 
+    // Fixed Assets errors (D-5xxx)
+    #[error("[D-5001] Invalid asset category")]
+    InvalidAssetCategory,
+
+    #[error("[D-5002] Invalid measurement model")]
+    InvalidMeasurementModel,
+
+    #[error("[D-5003] Invalid depreciation method")]
+    InvalidDepreciationMethod,
+
+    #[error("[D-5004] Invalid useful life")]
+    InvalidUsefulLife,
+
+    #[error("[D-5005] Invalid asset status")]
+    InvalidAssetStatus,
+
+    #[error("[D-5006] Invalid acquisition date")]
+    InvalidAcquisitionDate,
+
+    #[error("[D-5007] Invalid asset name")]
+    InvalidAssetName,
+
+    #[error("[D-5008] Invalid acquisition cost")]
+    InvalidAcquisitionCost,
+
+    #[error("[D-5009] Invalid component name")]
+    InvalidComponentName,
+
+    #[error("[D-5010] Invalid component cost")]
+    InvalidComponentCost,
+
+    #[error("[D-5011] Invalid residual value")]
+    InvalidResidualValue,
+
+    #[error("[D-5012] Duplicate component")]
+    DuplicateComponent,
+
+    #[error("[D-5013] Revaluation not allowed for cost model")]
+    RevaluationNotAllowed,
+
+    #[error("[D-5014] Invalid revaluation amount")]
+    InvalidRevaluationAmount,
+
+    #[error("[D-5015] Invalid impairment loss")]
+    InvalidImpairmentLoss,
+
+    #[error("[D-5016] Invalid impairment reversal")]
+    InvalidImpairmentReversal,
+
+    #[error("[D-5017] Excessive impairment reversal")]
+    ExcessiveImpairmentReversal,
+
+    #[error("[D-5018] Cannot change disposed asset status")]
+    CannotChangeDisposedAssetStatus,
+
+    #[error("[D-5019] Invalid depreciation amount")]
+    InvalidDepreciationAmount,
+
+    #[error("[D-5020] Excessive depreciation")]
+    ExcessiveDepreciation,
+
+    #[error(
+        "[D-5021] Ledger inconsistency: asset carrying amount {asset_carrying_amount}, ledger balance {ledger_balance}"
+    )]
+    LedgerInconsistency { asset_carrying_amount: i64, ledger_balance: i64 },
+
+    #[error("[D-5022] Unsupported depreciation method")]
+    UnsupportedDepreciationMethod,
+
+    #[error("[D-5023] Invalid discount rate")]
+    InvalidDiscountRate,
+
+    #[error("[D-5024] Invalid recoverable amount")]
+    InvalidRecoverableAmount,
+
+    // Revenue Recognition errors (D-6xxx)
+    #[error("[D-6001] Invalid contract")]
+    InvalidContract,
+
+    #[error("[D-6002] Invalid performance obligation")]
+    InvalidPerformanceObligation,
+
+    #[error("[D-6003] Invalid transaction price")]
+    InvalidTransactionPrice,
+
+    #[error("[D-6004] Invalid standalone selling price")]
+    InvalidStandaloneSellingPrice,
+
+    #[error("[D-6005] Invalid revenue recognition pattern")]
+    InvalidRevenueRecognitionPattern,
+
+    // Foreign Currency errors (D-7xxx)
+    #[error("[D-7001] Invalid functional currency")]
+    InvalidFunctionalCurrency,
+
+    #[error("[D-7002] Invalid exchange rate")]
+    InvalidExchangeRate,
+
+    #[error("[D-7003] Invalid monetary classification")]
+    InvalidMonetaryClassification,
+
     #[error("[D-9999] Unknown domain error: {0}")]
     Unknown(String),
 }
