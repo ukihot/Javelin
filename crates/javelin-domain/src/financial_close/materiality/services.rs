@@ -2,7 +2,9 @@
 
 use super::{
     entities::MaterialityJudgment,
-    values::{EstimateParameter, QualitativeFactor, QuantitativeThreshold, SensitivityAnalysisResult},
+    values::{
+        EstimateParameter, QualitativeFactor, QuantitativeThreshold, SensitivityAnalysisResult,
+    },
 };
 use crate::{
     common::Amount,
@@ -53,7 +55,8 @@ impl MaterialityService {
 
         // 各パラメータの感度分析を実施
         for (idx, param) in parameters.iter().enumerate() {
-            let mut base_values: Vec<Amount> = parameters.iter().map(|p| p.base_value().clone()).collect();
+            let base_values: Vec<Amount> =
+                parameters.iter().map(|p| p.base_value().clone()).collect();
             let mut upper_values = base_values.clone();
             let mut lower_values = base_values.clone();
 
@@ -186,10 +189,10 @@ mod tests {
 
     fn create_test_financials() -> (Amount, Amount, Amount, Amount) {
         (
-            Amount::from_i64(1_000_000_000), // 税引前利益10億円
+            Amount::from_i64(1_000_000_000),  // 税引前利益10億円
             Amount::from_i64(10_000_000_000), // 総資産100億円
-            Amount::from_i64(5_000_000_000), // 売上高50億円
-            Amount::from_i64(3_000_000_000), // 純資産30億円
+            Amount::from_i64(5_000_000_000),  // 売上高50億円
+            Amount::from_i64(3_000_000_000),  // 純資産30億円
         )
     }
 
@@ -243,11 +246,12 @@ mod tests {
             let discount_rate = &values[0];
             let growth_rate = &values[1];
             let base = Amount::from_i64(100_000_000);
-            &(&base * discount_rate) * growth_rate / &Amount::from_i64(100)
+            &(&base * discount_rate) * growth_rate / Amount::from_i64(100)
         };
 
         let (pretax_income, total_assets, revenue, equity) = create_test_financials();
-        let threshold = QuantitativeThreshold::new(&pretax_income, &total_assets, &revenue, &equity);
+        let threshold =
+            QuantitativeThreshold::new(&pretax_income, &total_assets, &revenue, &equity);
 
         let judgment = MaterialityService::judge_estimate_with_sensitivity(
             params,
@@ -400,17 +404,16 @@ mod tests {
         let severity2 = MaterialityService::assess_qualitative_severity(&factors2);
         assert_eq!(severity2, 90); // 50 + 40
 
-        let factors3 = vec![
-            QualitativeFactor::LegalViolation,
-            QualitativeFactor::GoingConcernUncertainty,
-        ];
+        let factors3 =
+            vec![QualitativeFactor::LegalViolation, QualitativeFactor::GoingConcernUncertainty];
         let severity3 = MaterialityService::assess_qualitative_severity(&factors3);
         assert_eq!(severity3, 185); // 90 + 95
     }
 
     #[test]
     fn test_verify_estimate_judgment_consistency() {
-        let params = vec![EstimateParameter::new("割引率".to_string(), Amount::from_i64(1000)).unwrap()];
+        let params =
+            vec![EstimateParameter::new("割引率".to_string(), Amount::from_i64(1000)).unwrap()];
 
         let judgment = MaterialityJudgment::new_estimate(
             params,

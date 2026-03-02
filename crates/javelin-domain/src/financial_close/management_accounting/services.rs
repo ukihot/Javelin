@@ -1,10 +1,14 @@
 // 管理会計のドメインサービス
 
-use crate::{common::Amount, error::{DomainError, DomainResult}};
+use std::str::FromStr;
 
 use super::{
-    entities::{BusinessConditionReport, DepartmentMargin, ManagementAccountingConversion},
+    entities::{BusinessConditionReport, ManagementAccountingConversion},
     values::ConversionType,
+};
+use crate::{
+    common::Amount,
+    error::{DomainError, DomainResult},
 };
 
 /// 管理会計ドメインサービス
@@ -48,7 +52,10 @@ impl ManagementAccountingService {
     }
 
     /// 限界利益計算
-    pub fn calculate_contribution_margin(sales: &Amount, variable_costs: &Amount) -> DomainResult<Amount> {
+    pub fn calculate_contribution_margin(
+        sales: &Amount,
+        variable_costs: &Amount,
+    ) -> DomainResult<Amount> {
         if sales.is_negative() || variable_costs.is_negative() {
             return Err(DomainError::InvalidManagementAccounting);
         }
@@ -77,7 +84,10 @@ impl ManagementAccountingService {
     }
 
     /// 安全余裕率計算
-    pub fn calculate_safety_margin_rate(sales: &Amount, break_even_sales: &Amount) -> DomainResult<f64> {
+    pub fn calculate_safety_margin_rate(
+        sales: &Amount,
+        break_even_sales: &Amount,
+    ) -> DomainResult<f64> {
         if sales.is_negative() || break_even_sales.is_negative() {
             return Err(DomainError::InvalidManagementAccounting);
         }
@@ -86,8 +96,9 @@ impl ManagementAccountingService {
             return Ok(0.0);
         }
 
-        let diff = sales.value() - break_even_sales.value();
-        let rate = (diff / sales.value()).to_f64().unwrap_or(0.0) * 100.0;
+        let diff = sales - break_even_sales;
+        let rate_amount = &diff / sales;
+        let rate = rate_amount.to_f64().unwrap_or(0.0) * 100.0;
         Ok(rate)
     }
 
@@ -111,8 +122,11 @@ impl ManagementAccountingService {
 
         let mut result = Vec::new();
         for (department, ratio) in allocation_ratios {
-            let allocated = common_costs.value() * ratio;
-            result.push((department.clone(), Amount::from(allocated)));
+            // Convert ratio to Amount for multiplication
+            let ratio_str = format!("{}", ratio);
+            let ratio_amount = Amount::from_str(&ratio_str).unwrap_or_else(|_| Amount::zero());
+            let allocated = common_costs * &ratio_amount;
+            result.push((department.clone(), allocated));
         }
 
         Ok(result)
@@ -139,7 +153,8 @@ impl ManagementAccountingService {
             return Err(DomainError::InvalidManagementAccounting);
         }
 
-        let roi = (department_profit.value() / department_assets.value()).to_f64().unwrap_or(0.0) * 100.0;
+        let roi_amount = department_profit / department_assets;
+        let roi = roi_amount.to_f64().unwrap_or(0.0) * 100.0;
         Ok(roi)
     }
 
@@ -174,7 +189,9 @@ impl ManagementAccountingService {
 
         // 部門別限界利益の合計は全社限界利益と一致すべき（共通費配賦前）
         // ただし、部門に配賦されない共通費がある場合は差異が生じる
-        if !report.department_margins().is_empty() && total_dept_margin > *report.contribution_margin() {
+        if !report.department_margins().is_empty()
+            && total_dept_margin > *report.contribution_margin()
+        {
             return Err(DomainError::InvalidManagementAccounting);
         }
 
@@ -316,8 +333,10 @@ mod tests {
     fn test_allocate_common_costs_invalid_ratio() {
         let ratios = vec![("D001".to_string(), 0.6), ("D002".to_string(), 0.3)];
 
-        let result =
-            ManagementAccountingService::allocate_common_costs(&Amount::from_i64(1_000_000), &ratios);
+        let result = ManagementAccountingService::allocate_common_costs(
+            &Amount::from_i64(1_000_000),
+            &ratios,
+        );
 
         assert!(result.is_err());
     }

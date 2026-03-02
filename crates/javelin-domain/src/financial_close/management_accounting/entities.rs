@@ -3,13 +3,12 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::values::{ConversionLogicId, ConversionType};
 use crate::{
     common::Amount,
-    entity::{Entity, EntityId},
+    entity::Entity,
     error::{DomainError, DomainResult},
 };
-
-use super::values::{ConversionLogicId, ConversionType};
 
 /// 業況表
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,8 +70,9 @@ impl BusinessConditionReport {
         };
 
         let safety_margin_rate = if !sales.is_zero() {
-            let diff = sales.value() - break_even_sales.value();
-            (diff / sales.value()).to_f64().unwrap_or(0.0) * 100.0
+            let diff = &sales - &break_even_sales;
+            let rate = &diff / &sales;
+            rate.to_f64().unwrap_or(0.0) * 100.0
         } else {
             0.0
         };
@@ -146,7 +146,8 @@ impl BusinessConditionReport {
         if self.sales.is_zero() {
             0.0
         } else {
-            (self.contribution_margin.value() / self.sales.value()).to_f64().unwrap_or(0.0) * 100.0
+            let rate = &self.contribution_margin / &self.sales;
+            rate.to_f64().unwrap_or(0.0) * 100.0
         }
     }
 
@@ -155,7 +156,8 @@ impl BusinessConditionReport {
         if self.sales.is_zero() {
             0.0
         } else {
-            (self.operating_profit.value() / self.sales.value()).to_f64().unwrap_or(0.0) * 100.0
+            let rate = &self.operating_profit / &self.sales;
+            rate.to_f64().unwrap_or(0.0) * 100.0
         }
     }
 }
@@ -216,7 +218,8 @@ impl DepartmentMargin {
         if self.sales.is_zero() {
             0.0
         } else {
-            (self.contribution_margin.value() / self.sales.value()).to_f64().unwrap_or(0.0) * 100.0
+            let rate = &self.contribution_margin / &self.sales;
+            rate.to_f64().unwrap_or(0.0) * 100.0
         }
     }
 }
@@ -356,10 +359,6 @@ impl Entity for ManagementAccountingConversion {
     fn id(&self) -> &Self::Id {
         &self.id
     }
-
-    fn version(&self) -> u64 {
-        self.version
-    }
 }
 
 #[cfg(test)]
@@ -368,13 +367,15 @@ mod tests {
 
     #[test]
     fn test_business_condition_report_creation() {
-        let dept_margins = vec![DepartmentMargin::new(
-            "D001".to_string(),
-            "営業部".to_string(),
-            Amount::from_i64(10_000_000),
-            Amount::from_i64(6_000_000),
-        )
-        .unwrap()];
+        let dept_margins = vec![
+            DepartmentMargin::new(
+                "D001".to_string(),
+                "営業部".to_string(),
+                Amount::from_i64(10_000_000),
+                Amount::from_i64(6_000_000),
+            )
+            .unwrap(),
+        ];
 
         let report = BusinessConditionReport::new(
             "2024-01".to_string(),

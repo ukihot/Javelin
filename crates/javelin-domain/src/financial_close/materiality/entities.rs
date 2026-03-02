@@ -70,7 +70,10 @@ impl MaterialityJudgment {
     ) -> DomainResult<Self> {
         let is_material = threshold.is_material(amount);
         let (requires_adjustment, approval_level) = if is_material {
-            (true, Self::determine_approval_level_by_amount(amount, threshold.lowest_threshold()))
+            (
+                true,
+                Self::determine_approval_level_by_amount(amount, threshold.lowest_threshold()),
+            )
         } else {
             (false, ApprovalLevel::Staff)
         };
@@ -87,7 +90,10 @@ impl MaterialityJudgment {
             qualitative_factors: Vec::new(),
             estimate_parameters: Vec::new(),
             sensitivity_results: Vec::new(),
-            judgment_basis: format!("金額的重要性判定: {}", if is_material { "重要" } else { "非重要" }),
+            judgment_basis: format!(
+                "金額的重要性判定: {}",
+                if is_material { "重要" } else { "非重要" }
+            ),
             judged_by,
             approved_by: None,
             approval_date: None,
@@ -160,7 +166,10 @@ impl MaterialityJudgment {
     }
 
     /// 感度分析結果を追加
-    pub fn add_sensitivity_result(&mut self, result: SensitivityAnalysisResult) -> DomainResult<()> {
+    pub fn add_sensitivity_result(
+        &mut self,
+        result: SensitivityAnalysisResult,
+    ) -> DomainResult<()> {
         if self.materiality_type != MaterialityType::Estimate {
             return Err(DomainError::InvalidMateriality);
         }
@@ -183,20 +192,17 @@ impl MaterialityJudgment {
         }
 
         // 最大影響額を確認
-        let max_impact = self
-            .sensitivity_results
-            .iter()
-            .map(|r| r.max_impact())
-            .max()
-            .unwrap();
+        let max_impact = self.sensitivity_results.iter().map(|r| r.max_impact()).max().unwrap();
 
         let is_material = quantitative_threshold.is_material(max_impact);
         self.requires_adjustment = is_material;
         self.requires_approval = is_material;
 
         if is_material {
-            self.approval_level =
-                Self::determine_approval_level_by_amount(max_impact, quantitative_threshold.lowest_threshold());
+            self.approval_level = Self::determine_approval_level_by_amount(
+                max_impact,
+                quantitative_threshold.lowest_threshold(),
+            );
             self.judgment_basis = format!("見積重要性判定: 重要（最大影響額: {}）", max_impact);
         } else {
             self.approval_level = ApprovalLevel::Manager;
@@ -320,10 +326,10 @@ mod tests {
 
     fn create_test_threshold() -> QuantitativeThreshold {
         QuantitativeThreshold::new(
-            &Amount::from_i64(1_000_000_000), // 税引前利益10億円
+            &Amount::from_i64(1_000_000_000),  // 税引前利益10億円
             &Amount::from_i64(10_000_000_000), // 総資産100億円
-            &Amount::from_i64(5_000_000_000), // 売上高50億円
-            &Amount::from_i64(3_000_000_000), // 純資産30億円
+            &Amount::from_i64(5_000_000_000),  // 売上高50億円
+            &Amount::from_i64(3_000_000_000),  // 純資産30億円
         )
     }
 
@@ -417,7 +423,8 @@ mod tests {
 
     #[test]
     fn test_estimate_judgment_with_sensitivity() {
-        let params = vec![EstimateParameter::new("割引率".to_string(), Amount::from_i64(1000)).unwrap()];
+        let params =
+            vec![EstimateParameter::new("割引率".to_string(), Amount::from_i64(1000)).unwrap()];
 
         let mut judgment = MaterialityJudgment::new_estimate(
             params,
@@ -450,7 +457,9 @@ mod tests {
 
     #[test]
     fn test_estimate_judgment_material_impact() {
-        let params = vec![EstimateParameter::new("為替レート".to_string(), Amount::from_i64(15000)).unwrap()];
+        let params = vec![
+            EstimateParameter::new("為替レート".to_string(), Amount::from_i64(15000)).unwrap(),
+        ];
 
         let mut judgment = MaterialityJudgment::new_estimate(
             params,

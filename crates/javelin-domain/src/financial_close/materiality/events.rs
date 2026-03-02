@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     entities::ApprovalLevel,
-    values::{MaterialityJudgmentId, MaterialityType, QualitativeFactor, SensitivityAnalysisResult},
+    values::{MaterialityJudgmentId, QualitativeFactor, SensitivityAnalysisResult},
 };
 use crate::{common::Amount, event::DomainEvent};
 
@@ -19,13 +19,11 @@ pub struct MaterialityJudgmentEvent {
 }
 
 impl MaterialityJudgmentEvent {
-    pub fn new(judgment_id: MaterialityJudgmentId, event_type: MaterialityJudgmentEventType) -> Self {
-        Self {
-            judgment_id,
-            event_type,
-            occurred_at: Utc::now(),
-            version: 1,
-        }
+    pub fn new(
+        judgment_id: MaterialityJudgmentId,
+        event_type: MaterialityJudgmentEventType,
+    ) -> Self {
+        Self { judgment_id, event_type, occurred_at: Utc::now(), version: 1 }
     }
 
     pub fn with_version(
@@ -33,20 +31,19 @@ impl MaterialityJudgmentEvent {
         event_type: MaterialityJudgmentEventType,
         version: u64,
     ) -> Self {
-        Self {
-            judgment_id,
-            event_type,
-            occurred_at: Utc::now(),
-            version,
-        }
+        Self { judgment_id, event_type, occurred_at: Utc::now(), version }
     }
 }
 
 impl DomainEvent for MaterialityJudgmentEvent {
     fn event_type(&self) -> &str {
         match &self.event_type {
-            MaterialityJudgmentEventType::QuantitativeJudgmentMade { .. } => "QuantitativeJudgmentMade",
-            MaterialityJudgmentEventType::QualitativeJudgmentMade { .. } => "QualitativeJudgmentMade",
+            MaterialityJudgmentEventType::QuantitativeJudgmentMade { .. } => {
+                "QuantitativeJudgmentMade"
+            }
+            MaterialityJudgmentEventType::QualitativeJudgmentMade { .. } => {
+                "QualitativeJudgmentMade"
+            }
             MaterialityJudgmentEventType::EstimateJudgmentMade { .. } => "EstimateJudgmentMade",
             MaterialityJudgmentEventType::SensitivityAnalysisCompleted { .. } => {
                 "SensitivityAnalysisCompleted"
@@ -77,17 +74,11 @@ pub enum MaterialityJudgmentEventType {
         approval_level: ApprovalLevel,
     },
     /// 質的重要性判定実施
-    QualitativeJudgmentMade {
-        factors: Vec<QualitativeFactor>,
-        approval_level: ApprovalLevel,
-    },
+    QualitativeJudgmentMade { factors: Vec<QualitativeFactor>, approval_level: ApprovalLevel },
     /// 見積重要性判定実施
     EstimateJudgmentMade { parameter_count: usize },
     /// 感度分析完了
-    SensitivityAnalysisCompleted {
-        results: Vec<SensitivityAnalysisResult>,
-        max_impact: Amount,
-    },
+    SensitivityAnalysisCompleted { results: Vec<SensitivityAnalysisResult>, max_impact: Amount },
     /// 重要性評価完了
     MaterialityEvaluated { is_material: bool, requires_approval: bool },
     /// 判定承認

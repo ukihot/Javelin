@@ -108,10 +108,10 @@ impl QuantitativeThreshold {
         equity: &Amount,
     ) -> Self {
         // 各指標の閾値を計算
-        let pretax_income_threshold = pretax_income * &Amount::from_i64(5) / &Amount::from_i64(100);
-        let total_assets_threshold = total_assets * &Amount::from_i64(5) / &Amount::from_i64(1000);
-        let revenue_threshold = revenue * &Amount::from_i64(5) / &Amount::from_i64(1000);
-        let equity_threshold = equity * &Amount::from_i64(1) / &Amount::from_i64(100);
+        let pretax_income_threshold = pretax_income * &Amount::from_i64(5) / Amount::from_i64(100);
+        let total_assets_threshold = total_assets * &Amount::from_i64(5) / Amount::from_i64(1000);
+        let revenue_threshold = revenue * &Amount::from_i64(5) / Amount::from_i64(1000);
+        let equity_threshold = equity * &Amount::from_i64(1) / Amount::from_i64(100);
 
         Self {
             pretax_income_threshold,
@@ -251,23 +251,19 @@ impl EstimateParameter {
             return Err(DomainError::InvalidMateriality);
         }
 
-        Ok(Self {
-            name,
-            base_value,
-            variation_rate,
-        })
+        Ok(Self { name, base_value, variation_rate })
     }
 
     /// 上限値を計算
     pub fn upper_bound(&self) -> Amount {
         let multiplier = Amount::from_i64(100 + self.variation_rate as i64);
-        &self.base_value * &multiplier / &Amount::from_i64(100)
+        &self.base_value * &multiplier / Amount::from_i64(100)
     }
 
     /// 下限値を計算
     pub fn lower_bound(&self) -> Amount {
         let multiplier = Amount::from_i64(100 - self.variation_rate as i64);
-        &self.base_value * &multiplier / &Amount::from_i64(100)
+        &self.base_value * &multiplier / Amount::from_i64(100)
     }
 
     pub fn name(&self) -> &str {
@@ -325,13 +321,7 @@ impl SensitivityAnalysisResult {
             lower_impact
         };
 
-        Self {
-            parameter_name,
-            base_result,
-            upper_result,
-            lower_result,
-            max_impact,
-        }
+        Self { parameter_name, base_result, upper_result, lower_result, max_impact }
     }
 
     pub fn parameter_name(&self) -> &str {
@@ -372,10 +362,7 @@ mod tests {
             "Quantitative".parse::<MaterialityType>().unwrap(),
             MaterialityType::Quantitative
         );
-        assert_eq!(
-            "Qualitative".parse::<MaterialityType>().unwrap(),
-            MaterialityType::Qualitative
-        );
+        assert_eq!("Qualitative".parse::<MaterialityType>().unwrap(), MaterialityType::Qualitative);
         assert_eq!("Estimate".parse::<MaterialityType>().unwrap(), MaterialityType::Estimate);
         assert!("Invalid".parse::<MaterialityType>().is_err());
     }
@@ -387,7 +374,8 @@ mod tests {
         let revenue = Amount::from_i64(5_000_000_000); // 50億円
         let equity = Amount::from_i64(3_000_000_000); // 30億円
 
-        let threshold = QuantitativeThreshold::new(&pretax_income, &total_assets, &revenue, &equity);
+        let threshold =
+            QuantitativeThreshold::new(&pretax_income, &total_assets, &revenue, &equity);
 
         // 税引前利益の5% = 5,000万円
         assert_eq!(threshold.pretax_income_threshold().to_i64(), Some(50_000_000));
@@ -406,7 +394,8 @@ mod tests {
         let revenue = Amount::from_i64(5_000_000_000);
         let equity = Amount::from_i64(3_000_000_000);
 
-        let threshold = QuantitativeThreshold::new(&pretax_income, &total_assets, &revenue, &equity);
+        let threshold =
+            QuantitativeThreshold::new(&pretax_income, &total_assets, &revenue, &equity);
 
         // 最も低い閾値は売上高の0.5% = 2,500万円
         assert_eq!(threshold.lowest_threshold().to_i64(), Some(25_000_000));
@@ -419,7 +408,8 @@ mod tests {
         let revenue = Amount::from_i64(5_000_000_000);
         let equity = Amount::from_i64(3_000_000_000);
 
-        let threshold = QuantitativeThreshold::new(&pretax_income, &total_assets, &revenue, &equity);
+        let threshold =
+            QuantitativeThreshold::new(&pretax_income, &total_assets, &revenue, &equity);
 
         // 3,000万円は重要（最低閾値2,500万円を超える）
         assert!(threshold.is_material(&Amount::from_i64(30_000_000)));

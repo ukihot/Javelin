@@ -143,6 +143,8 @@ pub struct KpiThreshold {
     is_upper_limit: bool,
 }
 
+impl Eq for KpiThreshold {}
+
 impl KpiThreshold {
     pub fn new(
         indicator: KpiIndicator,
@@ -253,7 +255,7 @@ impl SafetyIndicator {
         score += (self.operating_cf_ratio.min(1.0) / 1.0) * 25.0;
 
         // 流動比率（最大25点）
-        score += ((self.current_ratio - 1.0).max(0.0).min(1.0) / 1.0) * 25.0;
+        score += (self.current_ratio - 1.0).clamp(0.0, 1.0) * 25.0;
 
         // 純有利子負債倍率（最大25点、低いほど良い）
         let debt_score = if self.net_debt_multiple <= 0.0 {
@@ -311,10 +313,10 @@ mod tests {
     #[test]
     fn test_safety_indicator_score() {
         let indicator = SafetyIndicator::new(
-            6.0,  // 6 months cash
-            0.8,  // 80% operating CF ratio
-            2.0,  // 200% current ratio
-            1.0,  // 1x net debt
+            6.0, // 6 months cash
+            0.8, // 80% operating CF ratio
+            2.0, // 200% current ratio
+            1.0, // 1x net debt
         );
 
         let score = indicator.calculate_safety_score();
@@ -324,10 +326,10 @@ mod tests {
     #[test]
     fn test_safety_indicator_low_score() {
         let indicator = SafetyIndicator::new(
-            1.0,  // 1 month cash
-            0.2,  // 20% operating CF ratio
-            0.8,  // 80% current ratio
-            5.0,  // 5x net debt
+            1.0, // 1 month cash
+            0.2, // 20% operating CF ratio
+            0.8, // 80% current ratio
+            5.0, // 5x net debt
         );
 
         let score = indicator.calculate_safety_score();

@@ -2,7 +2,6 @@
 
 use std::fmt;
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -169,7 +168,7 @@ impl CashFlowClassification {
 }
 
 /// 財務諸表項目
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FinancialStatementItem {
     /// 項目コード
     item_code: String,
@@ -190,7 +189,12 @@ pub struct FinancialStatementItem {
 }
 
 impl FinancialStatementItem {
-    pub fn new(item_code: String, item_name: String, amount: Amount, display_order: u32) -> DomainResult<Self> {
+    pub fn new(
+        item_code: String,
+        item_name: String,
+        amount: Amount,
+        display_order: u32,
+    ) -> DomainResult<Self> {
         if item_code.is_empty() {
             return Err(DomainError::InvalidAccountCode);
         }
@@ -207,7 +211,10 @@ impl FinancialStatementItem {
         })
     }
 
-    pub fn with_current_classification(mut self, classification: CurrentNonCurrentClassification) -> Self {
+    pub fn with_current_classification(
+        mut self,
+        classification: CurrentNonCurrentClassification,
+    ) -> Self {
         self.current_classification = Some(classification);
         self
     }
@@ -308,10 +315,7 @@ mod tests {
         .unwrap()
         .with_current_classification(CurrentNonCurrentClassification::Current);
 
-        assert_eq!(
-            item.current_classification(),
-            Some(&CurrentNonCurrentClassification::Current)
-        );
+        assert_eq!(item.current_classification(), Some(&CurrentNonCurrentClassification::Current));
     }
 
     #[test]

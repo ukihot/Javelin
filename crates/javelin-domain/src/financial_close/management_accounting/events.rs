@@ -3,9 +3,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{common::Amount, domain_event::DomainEvent, entity::EntityId};
-
 use super::values::{ConversionLogicId, ConversionType, KpiIndicator};
+use crate::{common::Amount, event::DomainEvent};
 
 /// 管理会計イベント
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,10 +40,6 @@ impl DomainEvent for ManagementAccountingEvent {
 
     fn aggregate_id(&self) -> &str {
         &self.aggregate_id
-    }
-
-    fn occurred_at(&self) -> DateTime<Utc> {
-        self.occurred_at
     }
 
     fn version(&self) -> u64 {

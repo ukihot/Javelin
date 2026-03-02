@@ -9,6 +9,4 @@ pub mod values;
 pub use entities::{BusinessConditionReport, ManagementAccountingConversion};
 pub use events::{ManagementAccountingEvent, ManagementAccountingEventType};
 pub use services::ManagementAccountingService;
-pub use values::{
-    ConversionLogicId, ConversionType, KpiIndicator, KpiThreshold, SafetyIndicator,
-};
+pub use values::{ConversionLogicId, ConversionType, KpiIndicator, KpiThreshold, SafetyIndicator};
