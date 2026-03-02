@@ -5,21 +5,25 @@ use std::sync::Arc;
 use javelin_application::{
     dtos::{request::LoadCompanyMasterRequest, response::LoadCompanyMasterResponse},
     input_ports::LoadCompanyMasterInputPort,
-    interactor::master_data::LoadCompanyMasterInteractor,
-    query_service::CompanyMasterQueryService,
 };
 
 use crate::navigation::PresenterRegistry;
 
 /// 会社マスタコントローラ
-pub struct CompanyMasterController<Q: CompanyMasterQueryService> {
-    query_service: Arc<Q>,
+pub struct CompanyMasterController<U>
+where
+    U: LoadCompanyMasterInputPort,
+{
+    load_use_case: Arc<U>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl<Q: CompanyMasterQueryService> CompanyMasterController<Q> {
-    pub fn new(query_service: Arc<Q>, presenter_registry: Arc<PresenterRegistry>) -> Self {
-        Self { query_service, presenter_registry }
+impl<U> CompanyMasterController<U>
+where
+    U: LoadCompanyMasterInputPort,
+{
+    pub fn new(load_use_case: Arc<U>, presenter_registry: Arc<PresenterRegistry>) -> Self {
+        Self { load_use_case, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
@@ -30,26 +34,10 @@ impl<Q: CompanyMasterQueryService> CompanyMasterController<Q> {
     /// 会社マスタを取得
     pub async fn handle_load_company_master(
         &self,
-        page_id: uuid::Uuid,
+        _page_id: uuid::Uuid,
         request: LoadCompanyMasterRequest,
     ) -> Result<LoadCompanyMasterResponse, String> {
-        // PresenterRegistryからpage_id用のPresenterを取得
-        if let Some(company_master_presenter_arc) =
-            self.presenter_registry.get_company_master_presenter(page_id)
-        {
-            // ArcからPresenterをclone
-            let company_master_presenter = (*company_master_presenter_arc).clone();
-
-            // このページ専用のInteractorを動的に作成
-            let interactor = LoadCompanyMasterInteractor::new(
-                Arc::clone(&self.query_service),
-                company_master_presenter,
-            );
-
-            // 実行
-            interactor.execute(request).await.map_err(|e| e.to_string())
-        } else {
-            Err(format!("CompanyMasterPresenter not found for page_id: {}", page_id))
-        }
+        // UseCaseに委譲
+        self.load_use_case.execute(request).await.map_err(|e| e.to_string())
     }
 }

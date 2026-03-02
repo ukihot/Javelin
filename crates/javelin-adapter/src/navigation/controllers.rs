@@ -5,10 +5,14 @@ use std::sync::Arc;
 
 use crate::{
     controller::{
-        AccountMasterController, ApplicationSettingsController, BatchHistoryController,
-        ClosingController, CompanyMasterController, JournalDetailController,
-        JournalEntryController, LedgerController, SearchController,
-        SubsidiaryAccountMasterController,
+        AccountMasterController, AdjustAccountsController, ApplicationSettingsController,
+        ApplyIfrsValuationController, BatchHistoryController, CompanyMasterController,
+        ConsolidateLedgerController, EvaluateMaterialityController,
+        GenerateComprehensiveFinancialStatementsController, GenerateFinancialStatementsController,
+        GenerateNoteDraftController, GenerateTrialBalanceController, JournalDetailController,
+        JournalEntryController, LedgerController, LockClosingPeriodController,
+        PrepareClosingController, SearchController, SubsidiaryAccountMasterController,
+        VerifyLedgerConsistencyController,
     },
     presenter::{
         ComprehensiveFinancialStatementsPresenter, LedgerConsistencyVerificationPresenter,
@@ -16,24 +20,36 @@ use crate::{
     },
 };
 
-/// Type alias for AccountMasterController with concrete QueryService
+/// Type alias for AccountMasterController with concrete UseCase
 pub type AccountMasterControllerType = AccountMasterController<
-    javelin_infrastructure::read::account_master::AccountMasterQueryServiceImpl,
+    javelin_application::interactor::LoadAccountMasterInteractor<
+        javelin_infrastructure::read::account_master::AccountMasterQueryServiceImpl,
+        crate::presenter::AccountMasterPresenter,
+    >,
 >;
 
-/// Type alias for ApplicationSettingsController with concrete QueryService
+/// Type alias for ApplicationSettingsController with concrete UseCase
 pub type ApplicationSettingsControllerType = ApplicationSettingsController<
-    javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl,
+    javelin_application::interactor::LoadApplicationSettingsInteractor<
+        javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl,
+        crate::presenter::ApplicationSettingsPresenter,
+    >,
 >;
 
-/// Type alias for CompanyMasterController with concrete QueryService
+/// Type alias for CompanyMasterController with concrete UseCase
 pub type CompanyMasterControllerType = CompanyMasterController<
-    javelin_infrastructure::read::company_master::CompanyMasterQueryServiceImpl,
+    javelin_application::interactor::LoadCompanyMasterInteractor<
+        javelin_infrastructure::read::company_master::CompanyMasterQueryServiceImpl,
+        crate::presenter::CompanyMasterPresenter,
+    >,
 >;
 
-/// Type alias for SubsidiaryAccountMasterController with concrete QueryService
+/// Type alias for SubsidiaryAccountMasterController with concrete UseCase
 pub type SubsidiaryAccountMasterControllerType = SubsidiaryAccountMasterController<
-    javelin_infrastructure::read::subsidiary_account_master::SubsidiaryAccountMasterQueryServiceImpl,
+    javelin_application::interactor::LoadSubsidiaryAccountMasterInteractor<
+        javelin_infrastructure::read::subsidiary_account_master::SubsidiaryAccountMasterQueryServiceImpl,
+        crate::presenter::SubsidiaryAccountMasterPresenter,
+    >,
 >;
 
 /// Type alias for JournalEntryController with concrete UseCase
@@ -53,14 +69,95 @@ pub type JournalDetailControllerType = JournalDetailController<
     >,
 >;
 
-/// Type alias for SearchController (no generics needed)
-pub type SearchControllerType = SearchController;
+/// Type alias for SearchController with concrete UseCase
+pub type SearchControllerType = SearchController<
+    javelin_application::interactor::SearchJournalEntryInteractor<
+        javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
+        crate::presenter::SearchPresenter,
+    >,
+>;
 
-/// Type alias for BatchHistoryController (no generics needed)
-pub type BatchHistoryControllerType = BatchHistoryController;
+/// Type alias for BatchHistoryController with concrete UseCase
+pub type BatchHistoryControllerType = BatchHistoryController<
+    javelin_application::interactor::GetBatchHistoryInteractor<
+        javelin_infrastructure::read::batch_history::BatchHistoryQueryServiceImpl,
+    >,
+>;
 
-/// Type alias for ClosingController (no generics needed after refactoring)
-pub type ClosingControllerType = ClosingController;
+/// Type alias for ConsolidateLedgerController with concrete UseCase
+pub type ConsolidateLedgerControllerType = ConsolidateLedgerController<
+    javelin_application::interactor::ConsolidateLedgerInteractor<
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+    >,
+>;
+
+/// Type alias for PrepareClosingController with concrete UseCase
+pub type PrepareClosingControllerType = PrepareClosingController<
+    javelin_application::interactor::PrepareClosingInteractor<
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+    >,
+>;
+
+/// Type alias for LockClosingPeriodController with concrete UseCase
+pub type LockClosingPeriodControllerType = LockClosingPeriodController<
+    javelin_application::interactor::LockClosingPeriodInteractor<
+        javelin_infrastructure::write::event_store::ClosingEventStore,
+    >,
+>;
+
+/// Type alias for GenerateTrialBalanceController with concrete UseCase
+pub type GenerateTrialBalanceControllerType = GenerateTrialBalanceController<
+    javelin_application::interactor::GenerateTrialBalanceInteractor<
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+    >,
+>;
+
+/// Type alias for GenerateNoteDraftController with concrete UseCase
+pub type GenerateNoteDraftControllerType = GenerateNoteDraftController<
+    javelin_application::interactor::GenerateNoteDraftInteractor<
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+    >,
+>;
+
+/// Type alias for AdjustAccountsController with concrete UseCase
+pub type AdjustAccountsControllerType = AdjustAccountsController<
+    javelin_application::interactor::AdjustAccountsInteractor<
+        javelin_infrastructure::write::event_store::ClosingEventStore,
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+    >,
+>;
+
+/// Type alias for ApplyIfrsValuationController with concrete UseCase
+pub type ApplyIfrsValuationControllerType = ApplyIfrsValuationController<
+    javelin_application::interactor::ApplyIfrsValuationInteractor<
+        javelin_infrastructure::write::event_store::ClosingEventStore,
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+        crate::presenter::LedgerPresenter,
+    >,
+>;
+
+/// Type alias for GenerateFinancialStatementsController with concrete UseCase
+pub type GenerateFinancialStatementsControllerType = GenerateFinancialStatementsController<
+    javelin_application::interactor::GenerateFinancialStatementsInteractor<
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+    >,
+>;
+
+/// Type alias for EvaluateMaterialityController with concrete UseCase
+pub type EvaluateMaterialityControllerType = EvaluateMaterialityController<
+    javelin_application::interactor::closing::EvaluateMaterialityInteractor,
+>;
+
+/// Type alias for VerifyLedgerConsistencyController with concrete UseCase
+pub type VerifyLedgerConsistencyControllerType = VerifyLedgerConsistencyController<
+    javelin_application::interactor::closing::VerifyLedgerConsistencyInteractor,
+>;
+
+/// Type alias for GenerateComprehensiveFinancialStatementsController with concrete UseCase
+pub type GenerateComprehensiveFinancialStatementsControllerType =
+    GenerateComprehensiveFinancialStatementsController<
+        javelin_application::interactor::closing::GenerateComprehensiveFinancialStatementsInteractor,
+    >;
 
 /// Type alias for LedgerController (no generics needed after refactoring)
 pub type LedgerControllerType = LedgerController;
@@ -77,7 +174,18 @@ pub struct Controllers {
     pub subsidiary_account_master: Arc<SubsidiaryAccountMasterControllerType>,
     pub journal_entry: Arc<JournalEntryControllerType>,
     pub journal_detail: Arc<JournalDetailControllerType>,
-    pub closing: Arc<ClosingControllerType>,
+    pub consolidate_ledger: Arc<ConsolidateLedgerControllerType>,
+    pub prepare_closing: Arc<PrepareClosingControllerType>,
+    pub lock_closing_period: Arc<LockClosingPeriodControllerType>,
+    pub generate_trial_balance: Arc<GenerateTrialBalanceControllerType>,
+    pub generate_note_draft: Arc<GenerateNoteDraftControllerType>,
+    pub adjust_accounts: Arc<AdjustAccountsControllerType>,
+    pub apply_ifrs_valuation: Arc<ApplyIfrsValuationControllerType>,
+    pub generate_financial_statements: Arc<GenerateFinancialStatementsControllerType>,
+    pub evaluate_materiality: Arc<EvaluateMaterialityControllerType>,
+    pub verify_ledger_consistency: Arc<VerifyLedgerConsistencyControllerType>,
+    pub generate_comprehensive_financial_statements:
+        Arc<GenerateComprehensiveFinancialStatementsControllerType>,
     pub ledger: Arc<LedgerControllerType>,
     pub search: Arc<SearchControllerType>,
     pub batch_history: Arc<BatchHistoryControllerType>,
@@ -97,7 +205,19 @@ impl Controllers {
         subsidiary_account_master: Arc<SubsidiaryAccountMasterControllerType>,
         journal_entry: Arc<JournalEntryControllerType>,
         journal_detail: Arc<JournalDetailControllerType>,
-        closing: Arc<ClosingControllerType>,
+        consolidate_ledger: Arc<ConsolidateLedgerControllerType>,
+        prepare_closing: Arc<PrepareClosingControllerType>,
+        lock_closing_period: Arc<LockClosingPeriodControllerType>,
+        generate_trial_balance: Arc<GenerateTrialBalanceControllerType>,
+        generate_note_draft: Arc<GenerateNoteDraftControllerType>,
+        adjust_accounts: Arc<AdjustAccountsControllerType>,
+        apply_ifrs_valuation: Arc<ApplyIfrsValuationControllerType>,
+        generate_financial_statements: Arc<GenerateFinancialStatementsControllerType>,
+        evaluate_materiality: Arc<EvaluateMaterialityControllerType>,
+        verify_ledger_consistency: Arc<VerifyLedgerConsistencyControllerType>,
+        generate_comprehensive_financial_statements: Arc<
+            GenerateComprehensiveFinancialStatementsControllerType,
+        >,
         ledger: Arc<LedgerControllerType>,
         search: Arc<SearchControllerType>,
         batch_history: Arc<BatchHistoryControllerType>,
@@ -114,7 +234,17 @@ impl Controllers {
             subsidiary_account_master,
             journal_entry,
             journal_detail,
-            closing,
+            consolidate_ledger,
+            prepare_closing,
+            lock_closing_period,
+            generate_trial_balance,
+            generate_note_draft,
+            adjust_accounts,
+            apply_ifrs_valuation,
+            generate_financial_statements,
+            evaluate_materiality,
+            verify_ledger_consistency,
+            generate_comprehensive_financial_statements,
             ledger,
             search,
             batch_history,

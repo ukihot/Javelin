@@ -51,7 +51,7 @@ impl MaterialityEvaluationPage {
         self.template.update_step(0, ProcessStepStatus::Running, 0);
 
         // 実際の処理はバックグラウンドで実行
-        let controller = controllers.closing.clone();
+        let controller = controllers.evaluate_materiality.clone();
         let presenter = controllers.materiality_evaluation_presenter.clone();
 
         tokio::spawn(async move {

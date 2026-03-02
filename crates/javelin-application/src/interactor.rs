@@ -2,10 +2,12 @@
 // 責務: ドメイン操作調整
 // 利用対象: Entity / ValueObject / DomainService / RepositoryTrait
 
+pub mod batch_history;
 pub mod closing;
 pub mod journal_entry;
 pub mod master_data;
 
+pub use batch_history::GetBatchHistoryInteractor;
 pub use closing::{
     AdjustAccountsInteractor, ApplyIfrsValuationInteractor, ConsolidateLedgerInteractor,
     GenerateFinancialStatementsInteractor, GenerateNoteDraftInteractor,

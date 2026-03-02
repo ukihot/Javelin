@@ -48,7 +48,7 @@ impl ComprehensiveFinancialStatementsPage {
         self.template.add_info("包括的財務諸表生成処理を開始します");
         self.template.update_step(0, ProcessStepStatus::Running, 0);
 
-        let controller = controllers.closing.clone();
+        let controller = controllers.generate_comprehensive_financial_statements.clone();
         let presenter = controllers.comprehensive_financial_statements_presenter.clone();
 
         tokio::spawn(async move {

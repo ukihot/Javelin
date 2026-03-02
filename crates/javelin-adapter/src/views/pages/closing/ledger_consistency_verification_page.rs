@@ -47,7 +47,7 @@ impl LedgerConsistencyVerificationPage {
         self.template.add_info("元帳整合性検証処理を開始します");
         self.template.update_step(0, ProcessStepStatus::Running, 0);
 
-        let controller = controllers.closing.clone();
+        let controller = controllers.verify_ledger_consistency.clone();
         let presenter = controllers.ledger_consistency_verification_presenter.clone();
 
         tokio::spawn(async move {

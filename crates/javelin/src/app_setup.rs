@@ -4,13 +4,7 @@
 use std::{path::Path, sync::Arc};
 
 use javelin_adapter::{
-    PresenterRegistry,
-    controller::{
-        AccountMasterController, ApplicationSettingsController, BatchHistoryController,
-        ClosingController, CompanyMasterController, LedgerController, SearchController,
-        SubsidiaryAccountMasterController,
-    },
-    navigation::Controllers,
+    PresenterRegistry, controller::LedgerController, navigation::Controllers,
     presenter::LedgerPresenter,
 };
 use javelin_application::{
@@ -269,23 +263,73 @@ pub async fn setup_controllers(
     // PresenterRegistry
     let presenter_registry = Arc::new(PresenterRegistry::new());
 
-    // マスタコントローラ構築（個別QueryServiceを使用）
-    let account_master_controller = Arc::new(AccountMasterController::new(
-        Arc::clone(&account_master_query_service),
-        Arc::clone(&presenter_registry),
-    ));
-    let application_settings_controller = Arc::new(ApplicationSettingsController::new(
-        Arc::clone(&application_settings_master_query_service),
-        Arc::clone(&presenter_registry),
-    ));
-    let company_master_controller = Arc::new(CompanyMasterController::new(
-        Arc::clone(&company_master_query_service),
-        Arc::clone(&presenter_registry),
-    ));
-    let subsidiary_account_master_controller = Arc::new(SubsidiaryAccountMasterController::new(
-        Arc::clone(&subsidiary_account_master_query_service),
-        Arc::clone(&presenter_registry),
-    ));
+    // ダミーPresenterを作成（実際のPresenterは各PageStateで作成される）
+    let (dummy_account_master_tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let dummy_account_master_presenter =
+        javelin_adapter::presenter::AccountMasterPresenter::new(dummy_account_master_tx);
+
+    let (dummy_application_settings_tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let dummy_application_settings_presenter =
+        javelin_adapter::presenter::ApplicationSettingsPresenter::new(
+            dummy_application_settings_tx,
+        );
+
+    let (dummy_company_master_tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let dummy_company_master_presenter =
+        javelin_adapter::presenter::CompanyMasterPresenter::new(dummy_company_master_tx);
+
+    let (dummy_subsidiary_account_master_tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let dummy_subsidiary_account_master_presenter =
+        javelin_adapter::presenter::SubsidiaryAccountMasterPresenter::new(
+            dummy_subsidiary_account_master_tx,
+        );
+
+    // マスタInteractor構築
+    let load_account_master_interactor =
+        Arc::new(javelin_application::interactor::LoadAccountMasterInteractor::new(
+            Arc::clone(&account_master_query_service),
+            dummy_account_master_presenter,
+        ));
+
+    let load_application_settings_interactor =
+        Arc::new(javelin_application::interactor::LoadApplicationSettingsInteractor::new(
+            Arc::clone(&application_settings_master_query_service),
+            dummy_application_settings_presenter,
+        ));
+
+    let load_company_master_interactor =
+        Arc::new(javelin_application::interactor::LoadCompanyMasterInteractor::new(
+            Arc::clone(&company_master_query_service),
+            dummy_company_master_presenter,
+        ));
+
+    let load_subsidiary_account_master_interactor =
+        Arc::new(javelin_application::interactor::LoadSubsidiaryAccountMasterInteractor::new(
+            Arc::clone(&subsidiary_account_master_query_service),
+            dummy_subsidiary_account_master_presenter,
+        ));
+
+    // マスタコントローラ構築
+    let account_master_controller =
+        Arc::new(javelin_adapter::controller::AccountMasterController::new(
+            load_account_master_interactor,
+            Arc::clone(&presenter_registry),
+        ));
+    let application_settings_controller =
+        Arc::new(javelin_adapter::controller::ApplicationSettingsController::new(
+            load_application_settings_interactor,
+            Arc::clone(&presenter_registry),
+        ));
+    let company_master_controller =
+        Arc::new(javelin_adapter::controller::CompanyMasterController::new(
+            load_company_master_interactor,
+            Arc::clone(&presenter_registry),
+        ));
+    let subsidiary_account_master_controller =
+        Arc::new(javelin_adapter::controller::SubsidiaryAccountMasterController::new(
+            load_subsidiary_account_master_interactor,
+            Arc::clone(&presenter_registry),
+        ));
 
     // 仕訳関連Interactor構築
     // ダミーPresenterを使用したInteractorを作成（実際のPresenterは各PageStateで作成される）
@@ -360,32 +404,87 @@ pub async fn setup_controllers(
     let generate_comprehensive_financial_statements_interactor =
         Arc::new(GenerateComprehensiveFinancialStatementsInteractor::new());
 
-    // ClosingController構築
-    let closing_controller = Arc::new(ClosingController::new(
-        consolidate_ledger_interactor,
-        prepare_closing_interactor,
-        lock_closing_period_interactor,
-        generate_trial_balance_interactor,
-        generate_note_draft_interactor,
-        adjust_accounts_interactor,
-        apply_ifrs_valuation_interactor,
-        generate_financial_statements_interactor,
-        evaluate_materiality_interactor,
-        verify_ledger_consistency_interactor,
-        generate_comprehensive_financial_statements_interactor,
+    // 11個の個別Closing Controller構築
+    let consolidate_ledger_controller =
+        Arc::new(javelin_adapter::controller::ConsolidateLedgerController::new(
+            consolidate_ledger_interactor,
+        ));
+    let prepare_closing_controller = Arc::new(
+        javelin_adapter::controller::PrepareClosingController::new(prepare_closing_interactor),
+    );
+    let lock_closing_period_controller =
+        Arc::new(javelin_adapter::controller::LockClosingPeriodController::new(
+            lock_closing_period_interactor,
+        ));
+    let generate_trial_balance_controller =
+        Arc::new(javelin_adapter::controller::GenerateTrialBalanceController::new(
+            generate_trial_balance_interactor,
+        ));
+    let generate_note_draft_controller =
+        Arc::new(javelin_adapter::controller::GenerateNoteDraftController::new(
+            generate_note_draft_interactor,
+        ));
+    let adjust_accounts_controller = Arc::new(
+        javelin_adapter::controller::AdjustAccountsController::new(adjust_accounts_interactor),
+    );
+    let apply_ifrs_valuation_controller =
+        Arc::new(javelin_adapter::controller::ApplyIfrsValuationController::new(
+            apply_ifrs_valuation_interactor,
+        ));
+    let generate_financial_statements_controller =
+        Arc::new(javelin_adapter::controller::GenerateFinancialStatementsController::new(
+            generate_financial_statements_interactor,
+        ));
+    let evaluate_materiality_controller =
+        Arc::new(javelin_adapter::controller::EvaluateMaterialityController::new(
+            evaluate_materiality_interactor,
+        ));
+    let verify_ledger_consistency_controller =
+        Arc::new(javelin_adapter::controller::VerifyLedgerConsistencyController::new(
+            verify_ledger_consistency_interactor,
+        ));
+    let generate_comprehensive_financial_statements_controller = Arc::new(
+        javelin_adapter::controller::GenerateComprehensiveFinancialStatementsController::new(
+            generate_comprehensive_financial_statements_interactor,
+        ),
+    );
+
+    // SearchInteractor構築
+    let (dummy_search_result_tx, _) = tokio::sync::mpsc::channel(100);
+    let (dummy_search_error_tx, _) = tokio::sync::mpsc::channel(100);
+    let (dummy_search_progress_tx, _) = tokio::sync::mpsc::channel(100);
+    let (dummy_search_execution_time_tx, _) = tokio::sync::mpsc::channel(100);
+    let dummy_search_presenter = Arc::new(javelin_adapter::presenter::SearchPresenter::new(
+        dummy_search_result_tx,
+        dummy_search_error_tx,
+        dummy_search_progress_tx,
+        dummy_search_execution_time_tx,
     ));
+
+    let search_journal_entry_interactor =
+        Arc::new(javelin_application::interactor::SearchJournalEntryInteractor::new(
+            Arc::clone(&search_query_service),
+            Arc::clone(&dummy_search_presenter),
+        ));
 
     // SearchController構築
-    let search_controller = Arc::new(SearchController::new(
-        Arc::clone(&search_query_service),
+    let search_controller = Arc::new(javelin_adapter::controller::SearchController::new(
+        search_journal_entry_interactor,
         Arc::clone(&presenter_registry),
     ));
 
+    // BatchHistoryInteractor構築
+    let get_batch_history_interactor =
+        Arc::new(javelin_application::interactor::GetBatchHistoryInteractor::new(Arc::clone(
+            &batch_history_query_service,
+        )));
+
     // BatchHistoryController構築
-    let batch_history_controller = Arc::new(BatchHistoryController::new(
-        Arc::clone(&batch_history_query_service),
-        Arc::clone(&presenter_registry),
-    ));
+    let batch_history_controller =
+        Arc::new(javelin_adapter::controller::BatchHistoryController::new(
+            get_batch_history_interactor,
+            Arc::clone(&presenter_registry),
+        ));
 
     // Phase 3 Presenters構築
     let (
@@ -432,7 +531,17 @@ pub async fn setup_controllers(
         subsidiary_account_master_controller,
         journal_entry_controller,
         journal_detail_controller,
-        closing_controller,
+        consolidate_ledger_controller,
+        prepare_closing_controller,
+        lock_closing_period_controller,
+        generate_trial_balance_controller,
+        generate_note_draft_controller,
+        adjust_accounts_controller,
+        apply_ifrs_valuation_controller,
+        generate_financial_statements_controller,
+        evaluate_materiality_controller,
+        verify_ledger_consistency_controller,
+        generate_comprehensive_financial_statements_controller,
         ledger_controller,
         search_controller,
         batch_history_controller,

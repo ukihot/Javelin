@@ -3,8 +3,9 @@
 
 use std::sync::Arc;
 
-use javelin_application::dtos::request::SearchCriteriaDto;
-use javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl;
+use javelin_application::{
+    dtos::request::SearchCriteriaDto, input_ports::SearchJournalEntryUseCase,
+};
 
 use crate::navigation::PresenterRegistry;
 
@@ -12,18 +13,21 @@ use crate::navigation::PresenterRegistry;
 ///
 /// 仕訳検索に関するすべての操作を受け付ける。
 /// ユースケースへの委譲のみを行い、ビジネスロジックは含まない。
-pub struct SearchController {
-    query_service: Arc<JournalEntrySearchQueryServiceImpl>,
+pub struct SearchController<S>
+where
+    S: SearchJournalEntryUseCase,
+{
+    search_use_case: Arc<S>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl SearchController {
+impl<S> SearchController<S>
+where
+    S: SearchJournalEntryUseCase,
+{
     /// 新しいコントローラインスタンスを作成
-    pub fn new(
-        query_service: Arc<JournalEntrySearchQueryServiceImpl>,
-        presenter_registry: Arc<PresenterRegistry>,
-    ) -> Self {
-        Self { query_service, presenter_registry }
+    pub fn new(search_use_case: Arc<S>, presenter_registry: Arc<PresenterRegistry>) -> Self {
+        Self { search_use_case, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
@@ -42,28 +46,10 @@ impl SearchController {
     /// * `Err(String)` - 検索失敗
     pub async fn handle_search(
         &self,
-        page_id: uuid::Uuid,
+        _page_id: uuid::Uuid,
         criteria: SearchCriteriaDto,
     ) -> Result<(), String> {
-        use javelin_application::input_ports::SearchJournalEntryUseCase;
-
-        // PresenterRegistryからpage_id用のPresenterを取得
-        if let Some(presenter_arc) = self.presenter_registry.get_search_presenter(page_id) {
-            // ArcからPresenterをclone
-            let presenter = (*presenter_arc).clone();
-
-            // このページ専用のInteractorを動的に作成
-            let interactor =
-                javelin_application::interactor::journal_entry::SearchJournalEntryInteractor::new(
-                    Arc::clone(&self.query_service),
-                    presenter.into(),
-                );
-
-            // 実行
-            interactor.execute(criteria).await.map_err(|e| e.to_string())?;
-            Ok(())
-        } else {
-            Err(format!("SearchPresenter not found for page_id: {}", page_id))
-        }
+        // UseCaseに委譲
+        self.search_use_case.execute(criteria).await.map_err(|e| e.to_string())
     }
 }

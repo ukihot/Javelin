@@ -3,27 +3,29 @@
 
 use std::sync::Arc;
 
-use javelin_application::query_service::{BatchHistoryQueryService, GetBatchHistoryQuery};
-use javelin_infrastructure::read::batch_history::BatchHistoryQueryServiceImpl;
+use javelin_application::input_ports::GetBatchHistoryUseCase;
 
 use crate::navigation::PresenterRegistry;
 
 /// バッチ履歴コントローラ
 ///
 /// バッチ実行履歴に関するすべての操作を受け付ける。
-/// クエリサービスへの委譲のみを行い、ビジネスロジックは含まない。
-pub struct BatchHistoryController {
-    query_service: Arc<BatchHistoryQueryServiceImpl>,
+/// ユースケースへの委譲のみを行い、ビジネスロジックは含まない。
+pub struct BatchHistoryController<U>
+where
+    U: GetBatchHistoryUseCase,
+{
+    get_history_use_case: Arc<U>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl BatchHistoryController {
+impl<U> BatchHistoryController<U>
+where
+    U: GetBatchHistoryUseCase,
+{
     /// 新しいコントローラインスタンスを作成
-    pub fn new(
-        query_service: Arc<BatchHistoryQueryServiceImpl>,
-        presenter_registry: Arc<PresenterRegistry>,
-    ) -> Self {
-        Self { query_service, presenter_registry }
+    pub fn new(get_history_use_case: Arc<U>, presenter_registry: Arc<PresenterRegistry>) -> Self {
+        Self { get_history_use_case, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
@@ -47,10 +49,8 @@ impl BatchHistoryController {
     ) -> Result<(), String> {
         // PresenterRegistryからpage_id用のPresenterを取得
         if let Some(presenter_arc) = self.presenter_registry.get_batch_history_presenter(page_id) {
-            let query = GetBatchHistoryQuery { batch_type, limit: Some(100) };
-
-            // クエリサービスを実行
-            match self.query_service.get_batch_history(query).await {
+            // UseCaseを実行
+            match self.get_history_use_case.execute(batch_type, Some(100)).await {
                 Ok(records) => {
                     if records.is_empty() {
                         presenter_arc.present_no_results();
