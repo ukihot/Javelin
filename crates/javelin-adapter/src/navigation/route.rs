@@ -168,6 +168,12 @@ pub enum Route {
     NotesDraft,
     /// D-13: Financial Statement Generation Execution (EXEC)
     FinancialStatementGenerationExecution,
+    /// D-14: Materiality Evaluation (EXEC)
+    MaterialityEvaluation,
+    /// D-15: Ledger Consistency Verification (EXEC)
+    LedgerConsistencyVerification,
+    /// D-16: Comprehensive Financial Statements Generation (EXEC)
+    ComprehensiveFinancialStatements,
 
     // ========== E. Financial Statements ==========
     /// E-01: Financial Statements Menu

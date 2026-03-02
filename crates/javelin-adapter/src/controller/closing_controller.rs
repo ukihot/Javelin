@@ -7,20 +7,28 @@ use javelin_application::{
     dtos::{
         AdjustAccountsRequest, AdjustAccountsResponse, ApplyIfrsValuationRequest,
         ApplyIfrsValuationResponse, ConsolidateLedgerRequest, ConsolidateLedgerResponse,
-        GenerateFinancialStatementsRequest, GenerateFinancialStatementsResponse,
-        GenerateNoteDraftRequest, GenerateNoteDraftResponse, GenerateTrialBalanceRequest,
-        GenerateTrialBalanceResponse, LockClosingPeriodRequest, LockClosingPeriodResponse,
-        PrepareClosingRequest, PrepareClosingResponse,
+        EvaluateMaterialityRequest, EvaluateMaterialityResponse,
+        GenerateComprehensiveFinancialStatementsRequest,
+        GenerateComprehensiveFinancialStatementsResponse, GenerateFinancialStatementsRequest,
+        GenerateFinancialStatementsResponse, GenerateNoteDraftRequest, GenerateNoteDraftResponse,
+        GenerateTrialBalanceRequest, GenerateTrialBalanceResponse, LockClosingPeriodRequest,
+        LockClosingPeriodResponse, PrepareClosingRequest, PrepareClosingResponse,
+        VerifyLedgerConsistencyRequest, VerifyLedgerConsistencyResponse,
     },
     input_ports::{
         AdjustAccountsUseCase, ApplyIfrsValuationUseCase, ConsolidateLedgerUseCase,
+        EvaluateMaterialityUseCase, GenerateComprehensiveFinancialStatementsUseCase,
         GenerateFinancialStatementsUseCase, GenerateNoteDraftUseCase, GenerateTrialBalanceUseCase,
-        LockClosingPeriodUseCase, PrepareClosingUseCase,
+        LockClosingPeriodUseCase, PrepareClosingUseCase, VerifyLedgerConsistencyUseCase,
     },
     interactor::{
         AdjustAccountsInteractor, ApplyIfrsValuationInteractor, ConsolidateLedgerInteractor,
         GenerateFinancialStatementsInteractor, GenerateNoteDraftInteractor,
         GenerateTrialBalanceInteractor, LockClosingPeriodInteractor, PrepareClosingInteractor,
+        closing::{
+            EvaluateMaterialityInteractor, GenerateComprehensiveFinancialStatementsInteractor,
+            VerifyLedgerConsistencyInteractor,
+        },
     },
 };
 use javelin_infrastructure::{
@@ -45,6 +53,10 @@ pub struct ClosingController {
     >,
     generate_financial_statements:
         Arc<GenerateFinancialStatementsInteractor<LedgerQueryServiceImpl>>,
+    evaluate_materiality: Arc<EvaluateMaterialityInteractor>,
+    verify_ledger_consistency: Arc<VerifyLedgerConsistencyInteractor>,
+    generate_comprehensive_financial_statements:
+        Arc<GenerateComprehensiveFinancialStatementsInteractor>,
 }
 
 impl ClosingController {
@@ -66,6 +78,11 @@ impl ClosingController {
         generate_financial_statements: Arc<
             GenerateFinancialStatementsInteractor<LedgerQueryServiceImpl>,
         >,
+        evaluate_materiality: Arc<EvaluateMaterialityInteractor>,
+        verify_ledger_consistency: Arc<VerifyLedgerConsistencyInteractor>,
+        generate_comprehensive_financial_statements: Arc<
+            GenerateComprehensiveFinancialStatementsInteractor,
+        >,
     ) -> Self {
         Self {
             consolidate_ledger,
@@ -76,6 +93,9 @@ impl ClosingController {
             adjust_accounts,
             apply_ifrs_valuation,
             generate_financial_statements,
+            evaluate_materiality,
+            verify_ledger_consistency,
+            generate_comprehensive_financial_statements,
         }
     }
 
@@ -164,6 +184,39 @@ impl ClosingController {
         request: GenerateFinancialStatementsRequest,
     ) -> AdapterResult<GenerateFinancialStatementsResponse> {
         self.generate_financial_statements
+            .execute(request)
+            .await
+            .map_err(crate::error::AdapterError::ApplicationError)
+    }
+
+    /// 重要性判定処理
+    pub async fn evaluate_materiality(
+        &self,
+        request: EvaluateMaterialityRequest,
+    ) -> AdapterResult<EvaluateMaterialityResponse> {
+        self.evaluate_materiality
+            .execute(request)
+            .await
+            .map_err(crate::error::AdapterError::ApplicationError)
+    }
+
+    /// 元帳整合性検証処理
+    pub async fn verify_ledger_consistency(
+        &self,
+        request: VerifyLedgerConsistencyRequest,
+    ) -> AdapterResult<VerifyLedgerConsistencyResponse> {
+        self.verify_ledger_consistency
+            .execute(request)
+            .await
+            .map_err(crate::error::AdapterError::ApplicationError)
+    }
+
+    /// 包括的財務諸表生成処理
+    pub async fn generate_comprehensive_financial_statements(
+        &self,
+        request: GenerateComprehensiveFinancialStatementsRequest,
+    ) -> AdapterResult<GenerateComprehensiveFinancialStatementsResponse> {
+        self.generate_comprehensive_financial_statements
             .execute(request)
             .await
             .map_err(crate::error::AdapterError::ApplicationError)

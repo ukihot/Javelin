@@ -87,15 +87,15 @@ impl EvaluateMaterialityUseCase for EvaluateMaterialityInteractor {
             // 文字列から質的要因を変換（簡易実装）
             let qualitative_factors: Vec<QualitativeFactor> = factors
                 .iter()
-                .filter_map(|f| match f.as_str() {
-                    "AccountingPolicyChange" => Some(QualitativeFactor::AccountingPolicyChange),
-                    "RelatedPartyTransaction" => Some(QualitativeFactor::RelatedPartyTransaction),
-                    "LegalViolation" => Some(QualitativeFactor::LegalViolation),
-                    "Litigation" => Some(QualitativeFactor::Litigation),
-                    "ManagementFraud" => Some(QualitativeFactor::ManagementFraud),
-                    "GoingConcernUncertainty" => Some(QualitativeFactor::GoingConcernUncertainty),
-                    "SubsequentEvent" => Some(QualitativeFactor::SubsequentEvent),
-                    _ => Some(QualitativeFactor::Other(f.clone())),
+                .map(|f| match f.as_str() {
+                    "AccountingPolicyChange" => QualitativeFactor::AccountingPolicyChange,
+                    "RelatedPartyTransaction" => QualitativeFactor::RelatedPartyTransaction,
+                    "LegalViolation" => QualitativeFactor::LegalViolation,
+                    "Litigation" => QualitativeFactor::Litigation,
+                    "ManagementFraud" => QualitativeFactor::ManagementFraud,
+                    "GoingConcernUncertainty" => QualitativeFactor::GoingConcernUncertainty,
+                    "SubsequentEvent" => QualitativeFactor::SubsequentEvent,
+                    _ => QualitativeFactor::Other(f.clone()),
                 })
                 .collect();
 

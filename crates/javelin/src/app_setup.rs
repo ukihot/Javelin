@@ -18,6 +18,10 @@ use javelin_application::{
         AdjustAccountsInteractor, ApplyIfrsValuationInteractor, ConsolidateLedgerInteractor,
         GenerateFinancialStatementsInteractor, GenerateNoteDraftInteractor,
         GenerateTrialBalanceInteractor, LockClosingPeriodInteractor, PrepareClosingInteractor,
+        closing::{
+            EvaluateMaterialityInteractor, GenerateComprehensiveFinancialStatementsInteractor,
+            VerifyLedgerConsistencyInteractor,
+        },
     },
     projection_builder::ProjectionBuilder,
 };
@@ -317,6 +321,12 @@ pub async fn setup_controllers(
     let generate_financial_statements_interactor =
         Arc::new(GenerateFinancialStatementsInteractor::new(Arc::clone(&ledger_query_service)));
 
+    // Phase 3 Interactors
+    let evaluate_materiality_interactor = Arc::new(EvaluateMaterialityInteractor::new());
+    let verify_ledger_consistency_interactor = Arc::new(VerifyLedgerConsistencyInteractor::new());
+    let generate_comprehensive_financial_statements_interactor =
+        Arc::new(GenerateComprehensiveFinancialStatementsInteractor::new());
+
     // ClosingController構築
     let closing_controller = Arc::new(ClosingController::new(
         consolidate_ledger_interactor,
@@ -327,6 +337,9 @@ pub async fn setup_controllers(
         adjust_accounts_interactor,
         apply_ifrs_valuation_interactor,
         generate_financial_statements_interactor,
+        evaluate_materiality_interactor,
+        verify_ledger_consistency_interactor,
+        generate_comprehensive_financial_statements_interactor,
     ));
 
     // SearchController構築

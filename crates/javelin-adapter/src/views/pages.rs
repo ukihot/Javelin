@@ -15,7 +15,10 @@ pub mod primary_records;
 
 // Re-exports for backward compatibility (explicit to avoid ambiguous glob re-exports)
 // Closing
-pub use closing::ClosingPage;
+pub use closing::{
+    ClosingPage, ComprehensiveFinancialStatementsPage, LedgerConsistencyVerificationPage,
+    MaterialityEvaluationPage,
+};
 // Closing Preparation
 pub use closing_preparation::ClosingPreparationExecutionPage;
 // Financial Statements

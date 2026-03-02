@@ -26,7 +26,8 @@ pub mod notes_menu_page_state;
 // Re-exports for backward compatibility
 pub use closing::{
     AccountAdjustmentExecutionPageState, ClosingMenuPageState,
-    ClosingPreparationExecutionPageState, TrialBalancePageState,
+    ClosingPreparationExecutionPageState, ComprehensiveFinancialStatementsPageState,
+    LedgerConsistencyVerificationPageState, MaterialityEvaluationPageState, TrialBalancePageState,
 };
 pub use financial_statements::{
     FinancialStatementExecutionPageState, FinancialStatementsMenuPageState, NoteDraftPageState,

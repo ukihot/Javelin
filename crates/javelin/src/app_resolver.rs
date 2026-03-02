@@ -353,6 +353,17 @@ impl PageStateResolver {
                 "H-04: Business Partners",
                 "取引先マスタ画面",
             ))),
+
+            // Phase 3 Routes
+            Route::MaterialityEvaluation => {
+                Ok(Box::new(javelin_adapter::MaterialityEvaluationPageState::new()))
+            }
+            Route::LedgerConsistencyVerification => {
+                Ok(Box::new(javelin_adapter::LedgerConsistencyVerificationPageState::new()))
+            }
+            Route::ComprehensiveFinancialStatements => {
+                Ok(Box::new(javelin_adapter::ComprehensiveFinancialStatementsPageState::new()))
+            }
         }
     }
 }
