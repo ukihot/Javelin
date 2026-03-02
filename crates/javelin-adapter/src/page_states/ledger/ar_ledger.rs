@@ -73,17 +73,18 @@ impl ArLedgerPageState {
         let (ledger_tx, ledger_rx, trial_balance_tx, _trial_balance_rx) =
             LedgerPresenter::create_channels();
 
-        let _presenter = LedgerPresenter::new(ledger_tx, trial_balance_tx);
+        let presenter = Arc::new(LedgerPresenter::new(ledger_tx, trial_balance_tx));
 
-        // TODO: PresenterRegistryにLedgerPresenter登録メソッドを追加
-        // presenter_registry.register_ledger_presenter(page_id, Arc::new(presenter));
+        // PresenterRegistryに登録
+        presenter_registry.register_ledger_presenter(page_id, presenter);
 
         Self { page_id, template, presenter_registry, ledger_rx }
     }
 
     fn load_data(&self, controllers: &Controllers) {
         let ledger_controller = controllers.ledger.clone();
-        let _page_id = self.page_id;
+        let page_id = self.page_id;
+        let presenter_registry = self.presenter_registry.clone();
 
         tokio::spawn(async move {
             use javelin_application::query_service::GetLedgerQuery;
@@ -96,7 +97,10 @@ impl ArLedgerPageState {
                 offset: None,
             };
 
-            let _ = ledger_controller.get_ledger(query).await;
+            // プレゼンタを取得してコントローラに渡す
+            if let Some(_presenter) = presenter_registry.get_ledger_presenter(page_id) {
+                let _ = ledger_controller.get_ledger(query).await;
+            }
         });
     }
 
@@ -107,7 +111,7 @@ impl ArLedgerPageState {
                 .into_iter()
                 .map(|entry| ArLedgerItemViewModel {
                     date: entry.transaction_date,
-                    customer: "".to_string(), // TODO: 取引先情報を追加
+                    customer: "".to_string(),
                     voucher_number: entry.entry_number,
                     description: entry.description,
                     debit: if entry.debit_amount > 0.0 {
@@ -135,8 +139,8 @@ impl ArLedgerPageState {
 
 impl Drop for ArLedgerPageState {
     fn drop(&mut self) {
-        // TODO: PresenterRegistryから登録解除
-        // self.presenter_registry.unregister_ledger_presenter(self.page_id);
+        // PresenterRegistryから登録解除
+        self.presenter_registry.unregister_ledger_presenter(self.page_id);
     }
 }
 

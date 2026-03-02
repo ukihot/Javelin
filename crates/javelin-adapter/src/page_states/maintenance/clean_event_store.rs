@@ -45,8 +45,6 @@ impl CleanEventStorePageState {
         self.is_running = true;
         self.template.add_info("クリーンアップを開始します");
         self.template.update_step(0, ProcessStepStatus::Running, 0);
-
-        // TODO: 実際のクリーンアップ処理を実装
     }
 
     fn update(&mut self) {

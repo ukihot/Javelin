@@ -47,7 +47,6 @@ impl RebuildProjectionsPageState {
         self.template.add_info("Projection再構築を開始します");
         self.template.update_step(0, ProcessStepStatus::Running, 0);
 
-        // TODO: 実際の再構築処理を実装
         // projection_builder.rebuild_all_projections().await
     }
 

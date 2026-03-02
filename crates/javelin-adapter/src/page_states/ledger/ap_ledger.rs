@@ -130,7 +130,7 @@ impl ApLedgerPageState {
 
 impl Drop for ApLedgerPageState {
     fn drop(&mut self) {
-        // TODO: PresenterRegistryから登録解除
+        self.presenter_registry.unregister_ledger_presenter(self.page_id);
     }
 }
 

@@ -29,7 +29,7 @@ use uuid::Uuid;
 
 use crate::presenter::{
     AccountMasterPresenter, ApplicationSettingsPresenter, BatchHistoryPresenter,
-    CompanyMasterPresenter, JournalEntryPresenter, SearchPresenter,
+    CompanyMasterPresenter, JournalEntryPresenter, LedgerPresenter, SearchPresenter,
     SubsidiaryAccountMasterPresenter,
 };
 
@@ -69,6 +69,7 @@ pub struct PresenterRegistry {
     subsidiary_account_master_presenters:
         Arc<RwLock<HashMap<Uuid, Arc<SubsidiaryAccountMasterPresenter>>>>,
     batch_history_presenters: Arc<RwLock<HashMap<Uuid, Arc<BatchHistoryPresenter>>>>,
+    ledger_presenters: Arc<RwLock<HashMap<Uuid, Arc<LedgerPresenter>>>>,
 }
 
 impl PresenterRegistry {
@@ -82,6 +83,7 @@ impl PresenterRegistry {
             application_settings_presenters: Arc::new(RwLock::new(HashMap::new())),
             subsidiary_account_master_presenters: Arc::new(RwLock::new(HashMap::new())),
             batch_history_presenters: Arc::new(RwLock::new(HashMap::new())),
+            ledger_presenters: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -234,6 +236,23 @@ impl PresenterRegistry {
         self.batch_history_presenters.write().unwrap().remove(&id);
     }
 
+    // Ledger Presenter methods
+
+    /// Register a ledger presenter for a page instance
+    pub fn register_ledger_presenter(&self, id: Uuid, presenter: Arc<LedgerPresenter>) {
+        self.ledger_presenters.write().unwrap().insert(id, presenter);
+    }
+
+    /// Get a ledger presenter by page instance ID
+    pub fn get_ledger_presenter(&self, id: Uuid) -> Option<Arc<LedgerPresenter>> {
+        self.ledger_presenters.read().unwrap().get(&id).cloned()
+    }
+
+    /// Unregister a ledger presenter
+    pub fn unregister_ledger_presenter(&self, id: Uuid) {
+        self.ledger_presenters.write().unwrap().remove(&id);
+    }
+
     // Utility methods
 
     /// Get the total number of registered presenters across all types
@@ -245,6 +264,7 @@ impl PresenterRegistry {
             + self.application_settings_presenters.read().unwrap().len()
             + self.subsidiary_account_master_presenters.read().unwrap().len()
             + self.batch_history_presenters.read().unwrap().len()
+            + self.ledger_presenters.read().unwrap().len()
     }
 
     /// Clear all registered presenters (useful for testing)
@@ -256,6 +276,7 @@ impl PresenterRegistry {
         self.application_settings_presenters.write().unwrap().clear();
         self.subsidiary_account_master_presenters.write().unwrap().clear();
         self.batch_history_presenters.write().unwrap().clear();
+        self.ledger_presenters.write().unwrap().clear();
     }
 }
 
