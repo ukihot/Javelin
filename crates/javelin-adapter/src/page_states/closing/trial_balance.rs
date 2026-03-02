@@ -20,6 +20,17 @@ impl TrialBalancePageState {
         let (_, trial_balance_rx) = tokio::sync::mpsc::unbounded_channel();
         Self { page: ClosingPage::new(trial_balance_rx) }
     }
+
+    fn load_trial_balance(&self, controllers: &Controllers) {
+        let generate_trial_balance = controllers.generate_trial_balance.clone();
+
+        // 非同期で試算表を生成
+        tokio::spawn(async move {
+            // 試算表生成処理
+            // 将来的にはプレゼンタ経由でデータを受信
+            let _ = generate_trial_balance;
+        });
+    }
 }
 
 impl PageState for TrialBalancePageState {
@@ -30,8 +41,11 @@ impl PageState for TrialBalancePageState {
     fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
-        _controllers: &Controllers,
+        controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
+        // 初回データロード
+        self.load_trial_balance(controllers);
+
         loop {
             // Tick animation
             self.page.tick();

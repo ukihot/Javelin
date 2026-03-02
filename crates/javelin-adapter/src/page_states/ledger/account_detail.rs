@@ -1,12 +1,16 @@
 // AccountDetailPageState - 勘定科目明細画面
 // 責務: 勘定科目の詳細明細表示
 
+use std::sync::Arc;
+
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame, layout::Constraint};
+use uuid::Uuid;
 
 use crate::{
     error::AdapterResult,
-    navigation::{Controllers, NavAction, PageState, Route},
+    navigation::{Controllers, NavAction, PageState, PresenterRegistry, Route},
+    presenter::LedgerPresenter,
     views::layouts::templates::{MasterListItem, MasterListTemplate},
 };
 
@@ -51,23 +55,78 @@ impl MasterListItem for AccountDetailItemViewModel {
 
 /// 勘定科目明細画面
 pub struct AccountDetailPageState {
+    page_id: Uuid,
     template: MasterListTemplate<AccountDetailItemViewModel>,
+    presenter_registry: Arc<PresenterRegistry>,
+    ledger_rx: tokio::sync::mpsc::UnboundedReceiver<crate::presenter::LedgerViewModel>,
 }
 
 impl AccountDetailPageState {
-    pub fn new() -> Self {
+    pub fn new(presenter_registry: Arc<PresenterRegistry>) -> Self {
+        let page_id = Uuid::new_v4();
         let template = MasterListTemplate::new("勘定科目明細");
-        Self { template }
+
+        let (ledger_tx, ledger_rx, trial_balance_tx, _trial_balance_rx) =
+            LedgerPresenter::create_channels();
+
+        let _presenter = LedgerPresenter::new(ledger_tx, trial_balance_tx);
+
+        Self { page_id, template, presenter_registry, ledger_rx }
     }
 
-    fn load_data(&mut self, _controllers: &Controllers) {
-        // TODO: 実際のコントローラを使ってデータを取得
-        // 現在は空のデータを表示
-        self.template.set_data(vec![], 0, 0);
+    fn load_data(&self, controllers: &Controllers) {
+        let ledger_controller = controllers.ledger.clone();
+
+        tokio::spawn(async move {
+            use javelin_application::query_service::GetLedgerQuery;
+
+            let query = GetLedgerQuery {
+                account_code: "1100".to_string(), // 仮の勘定科目コード
+                from_date: None,
+                to_date: None,
+                limit: Some(100),
+                offset: None,
+            };
+
+            let _ = ledger_controller.get_ledger(query).await;
+        });
+    }
+
+    fn poll_ledger_data(&mut self) {
+        while let Ok(ledger_data) = self.ledger_rx.try_recv() {
+            let items: Vec<AccountDetailItemViewModel> = ledger_data
+                .entries
+                .into_iter()
+                .map(|entry| AccountDetailItemViewModel {
+                    date: entry.transaction_date,
+                    voucher_number: entry.entry_number,
+                    description: entry.description,
+                    debit: if entry.debit_amount > 0.0 {
+                        format!("{:.2}", entry.debit_amount)
+                    } else {
+                        "".to_string()
+                    },
+                    credit: if entry.credit_amount > 0.0 {
+                        format!("{:.2}", entry.credit_amount)
+                    } else {
+                        "".to_string()
+                    },
+                    balance: format!("{:.2}", entry.balance),
+                })
+                .collect();
+
+            self.template.set_data(items, 0, 0);
+        }
     }
 
     fn render(&mut self, frame: &mut Frame) {
         self.template.render(frame);
+    }
+}
+
+impl Drop for AccountDetailPageState {
+    fn drop(&mut self) {
+        // TODO: PresenterRegistryから登録解除
     }
 }
 
@@ -81,10 +140,11 @@ impl PageState for AccountDetailPageState {
         terminal: &mut DefaultTerminal,
         controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
-        // 初回データロード
         self.load_data(controllers);
 
         loop {
+            self.poll_ledger_data();
+
             terminal
                 .draw(|frame| {
                     self.render(frame);
@@ -100,14 +160,8 @@ impl PageState for AccountDetailPageState {
                     continue;
                 }
 
-                match key.code {
-                    KeyCode::Esc => {
-                        return Ok(NavAction::Back);
-                    }
-                    KeyCode::Enter => {
-                        // 仕訳詳細への遷移（将来実装）
-                    }
-                    _ => {}
+                if key.code == KeyCode::Esc {
+                    return Ok(NavAction::Back);
                 }
             }
         }
@@ -116,6 +170,6 @@ impl PageState for AccountDetailPageState {
 
 impl Default for AccountDetailPageState {
     fn default() -> Self {
-        Self::new()
+        Self::new(Arc::new(PresenterRegistry::new()))
     }
 }

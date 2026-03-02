@@ -60,9 +60,17 @@ impl ValuationResultPageState {
         Self { template }
     }
 
-    fn load_data(&mut self, _controllers: &Controllers) {
-        // TODO: 実際のコントローラを使ってデータを取得
-        // 現在は空のデータを表示
+    fn load_data(&mut self, controllers: &Controllers) {
+        let apply_ifrs_valuation = controllers.apply_ifrs_valuation.clone();
+
+        // 非同期で評価結果を取得
+        tokio::spawn(async move {
+            // 評価結果の取得処理
+            // 将来的にはプレゼンタ経由でデータを受信
+            let _ = apply_ifrs_valuation;
+        });
+
+        // 現在は空のデータを表示（将来的にはプレゼンタ経由で受信）
         self.template.set_data(vec![], 0, 0);
     }
 

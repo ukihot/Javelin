@@ -1,12 +1,16 @@
 // GeneralLedgerPage - 総勘定元帳画面
 // 責務: 総勘定元帳の表示
 
+use std::sync::Arc;
+
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame, layout::Constraint};
+use uuid::Uuid;
 
 use crate::{
     error::AdapterResult,
-    navigation::{Controllers, NavAction, PageState, Route},
+    navigation::{Controllers, NavAction, PageState, PresenterRegistry, Route},
+    presenter::LedgerPresenter,
     views::layouts::templates::{MasterListItem, MasterListTemplate},
 };
 
@@ -51,23 +55,78 @@ impl MasterListItem for GeneralLedgerItemViewModel {
 
 /// 総勘定元帳画面
 pub struct GeneralLedgerPageState {
+    page_id: Uuid,
     template: MasterListTemplate<GeneralLedgerItemViewModel>,
+    presenter_registry: Arc<PresenterRegistry>,
+    ledger_rx: tokio::sync::mpsc::UnboundedReceiver<crate::presenter::LedgerViewModel>,
 }
 
 impl GeneralLedgerPageState {
-    pub fn new() -> Self {
+    pub fn new(presenter_registry: Arc<PresenterRegistry>) -> Self {
+        let page_id = Uuid::new_v4();
         let template = MasterListTemplate::new("総勘定元帳");
-        Self { template }
+
+        let (ledger_tx, ledger_rx, trial_balance_tx, _trial_balance_rx) =
+            LedgerPresenter::create_channels();
+
+        let _presenter = LedgerPresenter::new(ledger_tx, trial_balance_tx);
+
+        Self { page_id, template, presenter_registry, ledger_rx }
     }
 
-    fn load_data(&mut self, _controllers: &Controllers) {
-        // TODO: 実際のコントローラを使ってデータを取得
-        // 現在は空のデータを表示
-        self.template.set_data(vec![], 0, 0);
+    fn load_data(&self, controllers: &Controllers) {
+        let ledger_controller = controllers.ledger.clone();
+
+        tokio::spawn(async move {
+            use javelin_application::query_service::GetLedgerQuery;
+
+            let query = GetLedgerQuery {
+                account_code: "0000".to_string(), // 全勘定科目
+                from_date: None,
+                to_date: None,
+                limit: Some(100),
+                offset: None,
+            };
+
+            let _ = ledger_controller.get_ledger(query).await;
+        });
+    }
+
+    fn poll_ledger_data(&mut self) {
+        while let Ok(ledger_data) = self.ledger_rx.try_recv() {
+            let items: Vec<GeneralLedgerItemViewModel> = ledger_data
+                .entries
+                .into_iter()
+                .map(|entry| GeneralLedgerItemViewModel {
+                    date: entry.transaction_date,
+                    voucher_number: entry.entry_number,
+                    description: entry.description,
+                    debit: if entry.debit_amount > 0.0 {
+                        format!("{:.2}", entry.debit_amount)
+                    } else {
+                        "".to_string()
+                    },
+                    credit: if entry.credit_amount > 0.0 {
+                        format!("{:.2}", entry.credit_amount)
+                    } else {
+                        "".to_string()
+                    },
+                    balance: format!("{:.2}", entry.balance),
+                })
+                .collect();
+
+            self.template.set_data(items, 0, 0);
+        }
     }
 
     fn render(&mut self, frame: &mut Frame) {
         self.template.render(frame);
+    }
+}
+
+impl Drop for GeneralLedgerPageState {
+    fn drop(&mut self) {
+        // TODO: PresenterRegistryから登録解除
     }
 }
 
@@ -81,10 +140,11 @@ impl PageState for GeneralLedgerPageState {
         terminal: &mut DefaultTerminal,
         controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
-        // 初回データロード
         self.load_data(controllers);
 
         loop {
+            self.poll_ledger_data();
+
             terminal
                 .draw(|frame| {
                     self.render(frame);
@@ -104,14 +164,8 @@ impl PageState for GeneralLedgerPageState {
                     KeyCode::Esc => {
                         return Ok(NavAction::Back);
                     }
-                    KeyCode::Char('j') | KeyCode::Down => {
-                        // 次の項目を選択（将来実装）
-                    }
-                    KeyCode::Char('k') | KeyCode::Up => {
-                        // 前の項目を選択（将来実装）
-                    }
                     KeyCode::Enter => {
-                        // 詳細画面への遷移（将来実装）
+                        // 詳細画面への遷移
                     }
                     _ => {}
                 }
@@ -122,6 +176,6 @@ impl PageState for GeneralLedgerPageState {
 
 impl Default for GeneralLedgerPageState {
     fn default() -> Self {
-        Self::new()
+        Self::new(Arc::new(PresenterRegistry::new()))
     }
 }

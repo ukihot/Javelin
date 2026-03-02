@@ -60,12 +60,24 @@ impl PageStateResolver {
             Route::LedgerAggregationExecution => {
                 Ok(Box::new(javelin_adapter::LedgerAggregationExecutionPageState::new()))
             }
-            Route::GeneralLedger => Ok(Box::new(javelin_adapter::GeneralLedgerPageState::new())),
-            Route::AccountDetail => Ok(Box::new(javelin_adapter::AccountDetailPageState::new())),
-            Route::ArLedger => Ok(Box::new(javelin_adapter::ArLedgerPageState::new())),
-            Route::ArDetail => Ok(Box::new(javelin_adapter::ArDetailPageState::new())),
-            Route::ApLedger => Ok(Box::new(javelin_adapter::ApLedgerPageState::new())),
-            Route::ApDetail => Ok(Box::new(javelin_adapter::ApDetailPageState::new())),
+            Route::GeneralLedger => Ok(Box::new(javelin_adapter::GeneralLedgerPageState::new(
+                Arc::clone(&self.presenter_registry),
+            ))),
+            Route::AccountDetail => Ok(Box::new(javelin_adapter::AccountDetailPageState::new(
+                Arc::clone(&self.presenter_registry),
+            ))),
+            Route::ArLedger => Ok(Box::new(javelin_adapter::ArLedgerPageState::new(Arc::clone(
+                &self.presenter_registry,
+            )))),
+            Route::ArDetail => Ok(Box::new(javelin_adapter::ArDetailPageState::new(Arc::clone(
+                &self.presenter_registry,
+            )))),
+            Route::ApLedger => Ok(Box::new(javelin_adapter::ApLedgerPageState::new(Arc::clone(
+                &self.presenter_registry,
+            )))),
+            Route::ApDetail => Ok(Box::new(javelin_adapter::ApDetailPageState::new(Arc::clone(
+                &self.presenter_registry,
+            )))),
 
             // ========== C. Fixed Assets & Lease ==========
             Route::FixedAssetsMenu => {

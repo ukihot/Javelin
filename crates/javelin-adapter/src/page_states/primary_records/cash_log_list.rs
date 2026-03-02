@@ -58,7 +58,8 @@ impl CashLogListPageState {
     }
 
     fn load_data(&mut self, _controllers: &Controllers) {
-        // TODO: 実際のコントローラを使ってデータを取得
+        // キャッシュログ用のコントローラは未実装
+        // 将来的に CashLogController を実装して使用
         self.template.set_data(vec![], 0, 0);
     }
 
