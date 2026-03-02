@@ -87,6 +87,7 @@ impl FixedAssetPresenter {
     }
 
     /// チャネルを作成
+    #[allow(clippy::type_complexity)]
     pub fn create_channels() -> (
         mpsc::UnboundedSender<Vec<FixedAssetViewModel>>,
         mpsc::UnboundedReceiver<Vec<FixedAssetViewModel>>,
