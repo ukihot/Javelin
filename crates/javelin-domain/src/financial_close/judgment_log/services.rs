@@ -352,8 +352,6 @@ mod tests {
 
     #[test]
     fn test_calculate_quality_score() {
-        let mut log = create_test_judgment_log();
-
         // Add more parameters to increase score
         let mut params = HashMap::new();
         params.insert("PD".to_string(), ParameterValue::Float(0.05));
