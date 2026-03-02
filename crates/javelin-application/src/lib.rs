@@ -22,27 +22,35 @@ pub mod dtos {
         CancelJournalEntryRequest, ConsolidateLedgerRequest, CorrectJournalEntryRequest,
         CreateAdditionalEntryRequest, CreateReclassificationEntryRequest,
         CreateReplacementEntryRequest, CreateReversalEntryRequest, DeleteDraftJournalEntryRequest,
-        GenerateFinancialStatementsRequest, GenerateNoteDraftRequest, GenerateTrialBalanceRequest,
-        GetJournalEntryQuery, JournalEntryLineDto, ListJournalEntriesQuery,
-        LoadAccountMasterRequest, LockClosingPeriodRequest, PrepareClosingRequest,
-        RegisterJournalEntryRequest, RejectJournalEntryRequest, ReverseJournalEntryRequest,
-        SubmitForApprovalRequest, UpdateDraftJournalEntryRequest,
+        EvaluateMaterialityRequest, FinancialMetrics,
+        GenerateComprehensiveFinancialStatementsRequest, GenerateFinancialStatementsRequest,
+        GenerateNoteDraftRequest, GenerateTrialBalanceRequest, GetJournalEntryQuery,
+        JournalEntryLineDto, ListJournalEntriesQuery, LoadAccountMasterRequest,
+        LockClosingPeriodRequest, PrepareClosingRequest, RegisterJournalEntryRequest,
+        RejectJournalEntryRequest, ReverseJournalEntryRequest, StatementType,
+        SubmitForApprovalRequest, UpdateDraftJournalEntryRequest, VerificationLevel,
+        VerifyLedgerConsistencyRequest,
     };
     // Response types
     pub use response::{
         AccountBalanceDto, AccountBreakdownDto, AccountMasterItem, AccountReclassificationDto,
-        AdjustAccountsResponse, ApplyIfrsValuationResponse, ApproveJournalEntryResponse,
-        BankReconciliationDifferenceDto, ConsolidateLedgerResponse, ContingentLiabilityDto,
-        CorrectJournalEntryResponse, DeleteDraftJournalEntryResponse, FairValueAdjustmentDto,
-        FinancialIndicatorsDto, ForeignExchangeDifferenceDto, GenerateFinancialStatementsResponse,
-        GenerateNoteDraftResponse, GenerateTrialBalanceResponse, ImpairmentLossDto,
+        AdjustAccountsResponse, AlertSeverity, AnomalyAlert, ApplyIfrsValuationResponse,
+        ApprovalLevel as DtoApprovalLevel, ApprovalStatus, ApproveJournalEntryResponse,
+        BalanceChange, BankReconciliationDifferenceDto, ConsistencyCheckResult,
+        ConsolidateLedgerResponse, ContingentLiabilityDto, CorrectJournalEntryResponse,
+        CrossCheckResult, DeleteDraftJournalEntryResponse, DiscrepancyDetail,
+        EvaluateMaterialityResponse, FailedCheck, FairValueAdjustmentDto, FinancialIndicatorsDto,
+        ForeignExchangeDifferenceDto, GenerateComprehensiveFinancialStatementsResponse,
+        GenerateFinancialStatementsResponse, GenerateNoteDraftResponse,
+        GenerateTrialBalanceResponse, GeneratedStatement, ImpairmentLossDto, InconsistencyDetail,
         InventoryWriteDownDto, JournalEntryDetail, JournalEntryLineDetail, JournalEntryListItem,
         JournalEntryListResult, LeaseMeasurementDto, LedgerDiscrepancyDto,
         LoadAccountMasterResponse, LockClosingPeriodResponse, PrepareClosingResponse,
         RegisterJournalEntryResponse, RejectJournalEntryResponse, ReverseJournalEntryResponse,
         StatementOfCashFlowsDto, StatementOfChangesInEquityDto, StatementOfFinancialPositionDto,
         StatementOfProfitOrLossDto, SubmitForApprovalResponse, TaxEffectAdjustmentDto,
-        UpdateDraftJournalEntryResponse,
+        TemporaryAccountBalance, ThresholdInfo, UpdateDraftJournalEntryResponse,
+        VerifyLedgerConsistencyResponse,
     };
 }
 
@@ -59,6 +67,8 @@ pub mod input_ports {
     pub mod create_replacement_entry;
     pub mod create_reversal_entry;
     pub mod delete_draft_journal_entry;
+    pub mod evaluate_materiality;
+    pub mod generate_comprehensive_financial_statements;
     pub mod generate_financial_statements;
     pub mod generate_note_draft;
     pub mod generate_trial_balance;
@@ -74,6 +84,7 @@ pub mod input_ports {
     pub mod search_journal_entry;
     pub mod submit_for_approval;
     pub mod update_draft_journal_entry;
+    pub mod verify_ledger_consistency;
 
     // Re-export for convenience
     pub use adjust_accounts::*;
@@ -87,6 +98,8 @@ pub mod input_ports {
     pub use create_replacement_entry::*;
     pub use create_reversal_entry::*;
     pub use delete_draft_journal_entry::*;
+    pub use evaluate_materiality::*;
+    pub use generate_comprehensive_financial_statements::*;
     pub use generate_financial_statements::*;
     pub use generate_note_draft::*;
     pub use generate_trial_balance::*;
@@ -102,4 +115,5 @@ pub mod input_ports {
     pub use search_journal_entry::*;
     pub use submit_for_approval::*;
     pub use update_draft_journal_entry::*;
+    pub use verify_ledger_consistency::*;
 }
