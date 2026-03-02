@@ -1,5 +1,5 @@
-// GeneralLedgerPage - 総勘定元帳画面
-// 責務: 総勘定元帳の表示
+// AccountDetailPageState - 勘定科目明細画面
+// 責務: 勘定科目の詳細明細表示
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame, layout::Constraint};
@@ -10,9 +10,9 @@ use crate::{
     views::layouts::templates::{MasterListItem, MasterListTemplate},
 };
 
-/// 総勘定元帳項目ViewModel
+/// 勘定科目明細項目ViewModel
 #[derive(Debug, Clone)]
-pub struct GeneralLedgerItemViewModel {
+pub struct AccountDetailItemViewModel {
     pub date: String,
     pub voucher_number: String,
     pub description: String,
@@ -21,7 +21,7 @@ pub struct GeneralLedgerItemViewModel {
     pub balance: String,
 }
 
-impl MasterListItem for GeneralLedgerItemViewModel {
+impl MasterListItem for AccountDetailItemViewModel {
     fn headers() -> Vec<&'static str> {
         vec!["日付", "伝票番号", "摘要", "借方", "貸方", "残高"]
     }
@@ -30,7 +30,7 @@ impl MasterListItem for GeneralLedgerItemViewModel {
         vec![
             Constraint::Length(12),
             Constraint::Length(15),
-            Constraint::Min(20),
+            Constraint::Min(25),
             Constraint::Length(15),
             Constraint::Length(15),
             Constraint::Length(15),
@@ -49,14 +49,14 @@ impl MasterListItem for GeneralLedgerItemViewModel {
     }
 }
 
-/// 総勘定元帳画面
-pub struct GeneralLedgerPageState {
-    template: MasterListTemplate<GeneralLedgerItemViewModel>,
+/// 勘定科目明細画面
+pub struct AccountDetailPageState {
+    template: MasterListTemplate<AccountDetailItemViewModel>,
 }
 
-impl GeneralLedgerPageState {
+impl AccountDetailPageState {
     pub fn new() -> Self {
-        let template = MasterListTemplate::new("総勘定元帳");
+        let template = MasterListTemplate::new("勘定科目明細");
         Self { template }
     }
 
@@ -71,9 +71,9 @@ impl GeneralLedgerPageState {
     }
 }
 
-impl PageState for GeneralLedgerPageState {
+impl PageState for AccountDetailPageState {
     fn route(&self) -> Route {
-        Route::GeneralLedger
+        Route::AccountDetail
     }
 
     fn run(
@@ -104,14 +104,8 @@ impl PageState for GeneralLedgerPageState {
                     KeyCode::Esc => {
                         return Ok(NavAction::Back);
                     }
-                    KeyCode::Char('j') | KeyCode::Down => {
-                        // 次の項目を選択（将来実装）
-                    }
-                    KeyCode::Char('k') | KeyCode::Up => {
-                        // 前の項目を選択（将来実装）
-                    }
                     KeyCode::Enter => {
-                        // 詳細画面への遷移（将来実装）
+                        // 仕訳詳細への遷移（将来実装）
                     }
                     _ => {}
                 }
@@ -120,7 +114,7 @@ impl PageState for GeneralLedgerPageState {
     }
 }
 
-impl Default for GeneralLedgerPageState {
+impl Default for AccountDetailPageState {
     fn default() -> Self {
         Self::new()
     }

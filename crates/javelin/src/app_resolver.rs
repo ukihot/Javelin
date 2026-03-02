@@ -77,11 +77,7 @@ impl PageStateResolver {
                 Ok(Box::new(javelin_adapter::LedgerAggregationExecutionPageState::new()))
             }
             Route::GeneralLedger => Ok(Box::new(javelin_adapter::GeneralLedgerPageState::new())),
-            Route::AccountDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::AccountDetail,
-                "B-04: Account Detail",
-                "勘定科目明細画面",
-            ))),
+            Route::AccountDetail => Ok(Box::new(javelin_adapter::AccountDetailPageState::new())),
             Route::ArLedger => Ok(Box::new(javelin_adapter::StubPageState::new(
                 Route::ArLedger,
                 "B-05: AR Ledger",
@@ -158,11 +154,9 @@ impl PageStateResolver {
             Route::ClosingPreparationExecution => {
                 Ok(Box::new(javelin_adapter::ClosingPreparationExecutionPageState::new()))
             }
-            Route::ClosingPreparationResult => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::ClosingPreparationResult,
-                "D-03: Closing Preparation Result",
-                "締準備処理結果画面",
-            ))),
+            Route::ClosingPreparationResult => {
+                Ok(Box::new(javelin_adapter::PreparationResultPageState::new()))
+            }
             Route::ClosingLockExecution => {
                 Ok(Box::new(javelin_adapter::ClosingLockExecutionPageState::new()))
             }
@@ -173,25 +167,17 @@ impl PageStateResolver {
             Route::AccountAdjustmentExecution => {
                 Ok(Box::new(javelin_adapter::AccountAdjustmentExecutionPageState::new()))
             }
-            Route::AdjustmentJournalList => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::AdjustmentJournalList,
-                "D-08: Adjustment Journal List",
-                "補正仕訳一覧画面",
-            ))),
+            Route::AdjustmentJournalList => {
+                Ok(Box::new(javelin_adapter::AdjustmentJournalListPageState::new()))
+            }
             Route::ValuationExecution => {
                 Ok(Box::new(javelin_adapter::IfrsValuationExecutionPageState::new()))
             }
-            Route::ValuationResult => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::ValuationResult,
-                "D-10: Valuation Result",
-                "評価結果一覧画面",
-            ))),
+            Route::ValuationResult => {
+                Ok(Box::new(javelin_adapter::ValuationResultPageState::new()))
+            }
             Route::NotesDraftGenerationExecution => {
-                Ok(Box::new(javelin_adapter::StubPageState::new(
-                    Route::NotesDraftGenerationExecution,
-                    "D-11: Notes Draft Generation Execution",
-                    "注記草案生成実行画面",
-                )))
+                Ok(Box::new(javelin_adapter::NotesDraftGenerationExecutionPageState::new()))
             }
             Route::NotesDraft => Ok(Box::new(javelin_adapter::NoteDraftPageState::new())),
             Route::FinancialStatementGenerationExecution => {

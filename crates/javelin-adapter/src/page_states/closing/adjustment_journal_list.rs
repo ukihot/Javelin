@@ -1,5 +1,5 @@
-// GeneralLedgerPage - 総勘定元帳画面
-// 責務: 総勘定元帳の表示
+// AdjustmentJournalListPageState - 補正仕訳一覧画面
+// 責務: 補正仕訳の一覧表示
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame, layout::Constraint};
@@ -10,53 +10,53 @@ use crate::{
     views::layouts::templates::{MasterListItem, MasterListTemplate},
 };
 
-/// 総勘定元帳項目ViewModel
+/// 補正仕訳項目ViewModel
 #[derive(Debug, Clone)]
-pub struct GeneralLedgerItemViewModel {
+pub struct AdjustmentJournalItemViewModel {
+    pub entry_number: String,
     pub date: String,
-    pub voucher_number: String,
-    pub description: String,
+    pub account_name: String,
     pub debit: String,
     pub credit: String,
-    pub balance: String,
+    pub description: String,
 }
 
-impl MasterListItem for GeneralLedgerItemViewModel {
+impl MasterListItem for AdjustmentJournalItemViewModel {
     fn headers() -> Vec<&'static str> {
-        vec!["日付", "伝票番号", "摘要", "借方", "貸方", "残高"]
+        vec!["仕訳番号", "日付", "勘定科目", "借方", "貸方", "摘要"]
     }
 
     fn column_widths() -> Vec<Constraint> {
         vec![
+            Constraint::Length(15),
             Constraint::Length(12),
+            Constraint::Length(20),
+            Constraint::Length(15),
             Constraint::Length(15),
             Constraint::Min(20),
-            Constraint::Length(15),
-            Constraint::Length(15),
-            Constraint::Length(15),
         ]
     }
 
     fn to_row(&self) -> Vec<String> {
         vec![
+            self.entry_number.clone(),
             self.date.clone(),
-            self.voucher_number.clone(),
-            self.description.clone(),
+            self.account_name.clone(),
             self.debit.clone(),
             self.credit.clone(),
-            self.balance.clone(),
+            self.description.clone(),
         ]
     }
 }
 
-/// 総勘定元帳画面
-pub struct GeneralLedgerPageState {
-    template: MasterListTemplate<GeneralLedgerItemViewModel>,
+/// 補正仕訳一覧画面
+pub struct AdjustmentJournalListPageState {
+    template: MasterListTemplate<AdjustmentJournalItemViewModel>,
 }
 
-impl GeneralLedgerPageState {
+impl AdjustmentJournalListPageState {
     pub fn new() -> Self {
-        let template = MasterListTemplate::new("総勘定元帳");
+        let template = MasterListTemplate::new("補正仕訳一覧");
         Self { template }
     }
 
@@ -71,9 +71,9 @@ impl GeneralLedgerPageState {
     }
 }
 
-impl PageState for GeneralLedgerPageState {
+impl PageState for AdjustmentJournalListPageState {
     fn route(&self) -> Route {
-        Route::GeneralLedger
+        Route::AdjustmentJournalList
     }
 
     fn run(
@@ -104,12 +104,6 @@ impl PageState for GeneralLedgerPageState {
                     KeyCode::Esc => {
                         return Ok(NavAction::Back);
                     }
-                    KeyCode::Char('j') | KeyCode::Down => {
-                        // 次の項目を選択（将来実装）
-                    }
-                    KeyCode::Char('k') | KeyCode::Up => {
-                        // 前の項目を選択（将来実装）
-                    }
                     KeyCode::Enter => {
                         // 詳細画面への遷移（将来実装）
                     }
@@ -120,7 +114,7 @@ impl PageState for GeneralLedgerPageState {
     }
 }
 
-impl Default for GeneralLedgerPageState {
+impl Default for AdjustmentJournalListPageState {
     fn default() -> Self {
         Self::new()
     }

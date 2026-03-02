@@ -1,5 +1,5 @@
-// GeneralLedgerPage - 総勘定元帳画面
-// 責務: 総勘定元帳の表示
+// ValuationResultPageState - 評価結果一覧画面
+// 責務: IFRS評価結果の一覧表示
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame, layout::Constraint};
@@ -10,53 +10,53 @@ use crate::{
     views::layouts::templates::{MasterListItem, MasterListTemplate},
 };
 
-/// 総勘定元帳項目ViewModel
+/// 評価結果項目ViewModel
 #[derive(Debug, Clone)]
-pub struct GeneralLedgerItemViewModel {
-    pub date: String,
-    pub voucher_number: String,
-    pub description: String,
-    pub debit: String,
-    pub credit: String,
-    pub balance: String,
+pub struct ValuationResultItemViewModel {
+    pub asset_code: String,
+    pub asset_name: String,
+    pub book_value: String,
+    pub fair_value: String,
+    pub difference: String,
+    pub status: String,
 }
 
-impl MasterListItem for GeneralLedgerItemViewModel {
+impl MasterListItem for ValuationResultItemViewModel {
     fn headers() -> Vec<&'static str> {
-        vec!["日付", "伝票番号", "摘要", "借方", "貸方", "残高"]
+        vec!["資産コード", "資産名", "帳簿価額", "公正価値", "差額", "状態"]
     }
 
     fn column_widths() -> Vec<Constraint> {
         vec![
             Constraint::Length(12),
-            Constraint::Length(15),
             Constraint::Min(20),
             Constraint::Length(15),
             Constraint::Length(15),
             Constraint::Length(15),
+            Constraint::Length(10),
         ]
     }
 
     fn to_row(&self) -> Vec<String> {
         vec![
-            self.date.clone(),
-            self.voucher_number.clone(),
-            self.description.clone(),
-            self.debit.clone(),
-            self.credit.clone(),
-            self.balance.clone(),
+            self.asset_code.clone(),
+            self.asset_name.clone(),
+            self.book_value.clone(),
+            self.fair_value.clone(),
+            self.difference.clone(),
+            self.status.clone(),
         ]
     }
 }
 
-/// 総勘定元帳画面
-pub struct GeneralLedgerPageState {
-    template: MasterListTemplate<GeneralLedgerItemViewModel>,
+/// 評価結果一覧画面
+pub struct ValuationResultPageState {
+    template: MasterListTemplate<ValuationResultItemViewModel>,
 }
 
-impl GeneralLedgerPageState {
+impl ValuationResultPageState {
     pub fn new() -> Self {
-        let template = MasterListTemplate::new("総勘定元帳");
+        let template = MasterListTemplate::new("IFRS評価結果一覧");
         Self { template }
     }
 
@@ -71,9 +71,9 @@ impl GeneralLedgerPageState {
     }
 }
 
-impl PageState for GeneralLedgerPageState {
+impl PageState for ValuationResultPageState {
     fn route(&self) -> Route {
-        Route::GeneralLedger
+        Route::ValuationResult
     }
 
     fn run(
@@ -104,12 +104,6 @@ impl PageState for GeneralLedgerPageState {
                     KeyCode::Esc => {
                         return Ok(NavAction::Back);
                     }
-                    KeyCode::Char('j') | KeyCode::Down => {
-                        // 次の項目を選択（将来実装）
-                    }
-                    KeyCode::Char('k') | KeyCode::Up => {
-                        // 前の項目を選択（将来実装）
-                    }
                     KeyCode::Enter => {
                         // 詳細画面への遷移（将来実装）
                     }
@@ -120,7 +114,7 @@ impl PageState for GeneralLedgerPageState {
     }
 }
 
-impl Default for GeneralLedgerPageState {
+impl Default for ValuationResultPageState {
     fn default() -> Self {
         Self::new()
     }
