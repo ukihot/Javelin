@@ -3,10 +3,16 @@
 
 use std::sync::Arc;
 
-use crate::controller::{
-    AccountMasterController, ApplicationSettingsController, BatchHistoryController,
-    ClosingController, CompanyMasterController, JournalEntryController, LedgerController,
-    SearchController, SubsidiaryAccountMasterController,
+use crate::{
+    controller::{
+        AccountMasterController, ApplicationSettingsController, BatchHistoryController,
+        ClosingController, CompanyMasterController, JournalEntryController, LedgerController,
+        SearchController, SubsidiaryAccountMasterController,
+    },
+    presenter::{
+        ComprehensiveFinancialStatementsPresenter, LedgerConsistencyVerificationPresenter,
+        MaterialityEvaluationPresenter,
+    },
 };
 
 /// Type alias for AccountMasterController with concrete QueryService
@@ -59,6 +65,10 @@ pub struct Controllers {
     pub ledger: Arc<LedgerControllerType>,
     pub search: Arc<SearchControllerType>,
     pub batch_history: Arc<BatchHistoryControllerType>,
+    pub materiality_evaluation_presenter: Arc<MaterialityEvaluationPresenter>,
+    pub ledger_consistency_verification_presenter: Arc<LedgerConsistencyVerificationPresenter>,
+    pub comprehensive_financial_statements_presenter:
+        Arc<ComprehensiveFinancialStatementsPresenter>,
 }
 
 impl Controllers {
@@ -74,6 +84,11 @@ impl Controllers {
         ledger: Arc<LedgerControllerType>,
         search: Arc<SearchControllerType>,
         batch_history: Arc<BatchHistoryControllerType>,
+        materiality_evaluation_presenter: Arc<MaterialityEvaluationPresenter>,
+        ledger_consistency_verification_presenter: Arc<LedgerConsistencyVerificationPresenter>,
+        comprehensive_financial_statements_presenter: Arc<
+            ComprehensiveFinancialStatementsPresenter,
+        >,
     ) -> Self {
         Self {
             account_master,
@@ -85,6 +100,9 @@ impl Controllers {
             ledger,
             search,
             batch_history,
+            materiality_evaluation_presenter,
+            ledger_consistency_verification_presenter,
+            comprehensive_financial_statements_presenter,
         }
     }
 }

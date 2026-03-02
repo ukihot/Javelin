@@ -35,7 +35,13 @@ use javelin_infrastructure::{
     read::ledger::LedgerQueryServiceImpl, write::event_store::ClosingEventStore,
 };
 
-use crate::{error::AdapterResult, presenter::LedgerPresenter};
+use crate::{
+    error::AdapterResult,
+    presenter::{
+        ComprehensiveFinancialStatementsPresenter, LedgerConsistencyVerificationPresenter,
+        LedgerPresenter, MaterialityEvaluationPresenter,
+    },
+};
 
 /// 月次決算処理コントローラ（具体型版）
 ///
@@ -220,5 +226,77 @@ impl ClosingController {
             .execute(request)
             .await
             .map_err(crate::error::AdapterError::ApplicationError)
+    }
+
+    /// 重要性判定処理（Presenter経由）
+    pub async fn handle_evaluate_materiality(
+        &self,
+        request: EvaluateMaterialityRequest,
+        presenter: Arc<MaterialityEvaluationPresenter>,
+    ) {
+        presenter.notify_progress("重要性判定処理を開始します".to_string()).await;
+        presenter.notify_progress("財務指標を取得中...".to_string()).await;
+        presenter.notify_progress("金額的重要性を判定中...".to_string()).await;
+
+        match self.evaluate_materiality.execute(request).await {
+            Ok(response) => {
+                presenter.notify_progress("重要性判定が完了しました".to_string()).await;
+                presenter.present_result(response).await;
+            }
+            Err(e) => {
+                presenter.notify_error(format!("重要性判定に失敗しました: {}", e)).await;
+            }
+        }
+    }
+
+    /// 元帳整合性検証処理（Presenter経由）
+    pub async fn handle_verify_ledger_consistency(
+        &self,
+        request: VerifyLedgerConsistencyRequest,
+        presenter: Arc<LedgerConsistencyVerificationPresenter>,
+    ) {
+        presenter.notify_progress("元帳整合性検証処理を開始します".to_string()).await;
+        presenter.notify_progress("元帳データを取得中...".to_string()).await;
+        presenter.notify_progress("基本整合性を検証中...".to_string()).await;
+
+        match self.verify_ledger_consistency.execute(request).await {
+            Ok(response) => {
+                presenter.notify_progress("残高変動を分析中...".to_string()).await;
+                presenter.notify_progress("異常値を検出中...".to_string()).await;
+                presenter.notify_progress("仮勘定を分析中...".to_string()).await;
+                presenter.notify_progress("元帳整合性検証が完了しました".to_string()).await;
+                presenter.present_result(response).await;
+            }
+            Err(e) => {
+                presenter.notify_error(format!("元帳整合性検証に失敗しました: {}", e)).await;
+            }
+        }
+    }
+
+    /// 包括的財務諸表生成処理（Presenter経由）
+    pub async fn handle_generate_comprehensive_financial_statements(
+        &self,
+        request: GenerateComprehensiveFinancialStatementsRequest,
+        presenter: Arc<ComprehensiveFinancialStatementsPresenter>,
+    ) {
+        presenter
+            .notify_progress("包括的財務諸表生成処理を開始します".to_string())
+            .await;
+        presenter.notify_progress("元帳データを取得中...".to_string()).await;
+        presenter.notify_progress("貸借対照表を生成中...".to_string()).await;
+
+        match self.generate_comprehensive_financial_statements.execute(request).await {
+            Ok(response) => {
+                presenter.notify_progress("損益計算書を生成中...".to_string()).await;
+                presenter.notify_progress("キャッシュフロー計算書を生成中...".to_string()).await;
+                presenter.notify_progress("整合性を検証中...".to_string()).await;
+                presenter.notify_progress("クロスチェックを実行中...".to_string()).await;
+                presenter.notify_progress("包括的財務諸表生成が完了しました".to_string()).await;
+                presenter.present_result(response).await;
+            }
+            Err(e) => {
+                presenter.notify_error(format!("包括的財務諸表生成に失敗しました: {}", e)).await;
+            }
+        }
     }
 }

@@ -354,6 +354,43 @@ pub async fn setup_controllers(
         Arc::clone(&presenter_registry),
     ));
 
+    // Phase 3 Presenters構築
+    let (
+        materiality_evaluation_result_tx,
+        _materiality_evaluation_result_rx,
+        materiality_evaluation_progress_tx,
+        _materiality_evaluation_progress_rx,
+    ) = javelin_adapter::presenter::MaterialityEvaluationPresenter::create_channels();
+    let materiality_evaluation_presenter =
+        Arc::new(javelin_adapter::presenter::MaterialityEvaluationPresenter::new(
+            materiality_evaluation_result_tx,
+            materiality_evaluation_progress_tx,
+        ));
+
+    let (
+        ledger_consistency_result_tx,
+        _ledger_consistency_result_rx,
+        ledger_consistency_progress_tx,
+        _ledger_consistency_progress_rx,
+    ) = javelin_adapter::presenter::LedgerConsistencyVerificationPresenter::create_channels();
+    let ledger_consistency_verification_presenter =
+        Arc::new(javelin_adapter::presenter::LedgerConsistencyVerificationPresenter::new(
+            ledger_consistency_result_tx,
+            ledger_consistency_progress_tx,
+        ));
+
+    let (
+        comprehensive_fs_result_tx,
+        _comprehensive_fs_result_rx,
+        comprehensive_fs_progress_tx,
+        _comprehensive_fs_progress_rx,
+    ) = javelin_adapter::presenter::ComprehensiveFinancialStatementsPresenter::create_channels();
+    let comprehensive_financial_statements_presenter =
+        Arc::new(javelin_adapter::presenter::ComprehensiveFinancialStatementsPresenter::new(
+            comprehensive_fs_result_tx,
+            comprehensive_fs_progress_tx,
+        ));
+
     // Controllers container
     let controllers = Controllers::new(
         account_master_controller,
@@ -365,6 +402,9 @@ pub async fn setup_controllers(
         ledger_controller,
         search_controller,
         batch_history_controller,
+        materiality_evaluation_presenter,
+        ledger_consistency_verification_presenter,
+        comprehensive_financial_statements_presenter,
     );
 
     // View層の構築

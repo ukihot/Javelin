@@ -7,6 +7,7 @@ use ratatui::DefaultTerminal;
 use crate::{
     error::AdapterResult,
     navigation::{Controllers, NavAction, PageState, Route},
+    presenter::MaterialityEvaluationPresenter,
     views::pages::MaterialityEvaluationPage,
 };
 
@@ -16,7 +17,13 @@ pub struct MaterialityEvaluationPageState {
 
 impl MaterialityEvaluationPageState {
     pub fn new() -> Self {
-        Self { page: MaterialityEvaluationPage::new() }
+        let (result_tx, result_rx, progress_tx, progress_rx) =
+            MaterialityEvaluationPresenter::create_channels();
+
+        // 未使用のチャネルを保持（Presenterが使用）
+        let _ = (result_tx, progress_tx);
+
+        Self { page: MaterialityEvaluationPage::new(result_rx, progress_rx) }
     }
 }
 

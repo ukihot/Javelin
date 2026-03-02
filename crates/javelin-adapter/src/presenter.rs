@@ -6,8 +6,11 @@ pub mod account_master_presenter;
 pub mod application_settings_presenter;
 pub mod batch_history_presenter;
 pub mod company_master_presenter;
+pub mod comprehensive_financial_statements_presenter;
 pub mod journal_entry_presenter;
+pub mod ledger_consistency_verification_presenter;
 pub mod ledger_presenter;
+pub mod materiality_evaluation_presenter;
 pub mod search_presenter;
 pub mod subsidiary_account_master_presenter;
 
@@ -23,14 +26,25 @@ pub use batch_history_presenter::{
 pub use company_master_presenter::{
     CompanyMasterItemViewModel, CompanyMasterPresenter, CompanyMasterViewModel,
 };
+pub use comprehensive_financial_statements_presenter::{
+    ComprehensiveFinancialStatementsChannels, ComprehensiveFinancialStatementsPresenter,
+    ComprehensiveFinancialStatementsViewModel,
+};
 use javelin_application::output_ports::{EventNotification, EventOutputPort};
 pub use journal_entry_presenter::{
     JournalEntryDetailViewModel, JournalEntryLineViewModel, JournalEntryListItemViewModel,
     JournalEntryListViewModel, JournalEntryPresenter, JournalEntryViewModel,
 };
+pub use ledger_consistency_verification_presenter::{
+    LedgerConsistencyVerificationChannels, LedgerConsistencyVerificationPresenter,
+    LedgerConsistencyVerificationViewModel,
+};
 pub use ledger_presenter::{
     LedgerEntryViewModel, LedgerPresenter, LedgerViewModel, TrialBalanceEntryViewModel,
     TrialBalanceViewModel,
+};
+pub use materiality_evaluation_presenter::{
+    MaterialityEvaluationChannels, MaterialityEvaluationPresenter, MaterialityEvaluationViewModel,
 };
 pub use search_presenter::{
     JournalEntryItemViewModel, JournalEntryLineItemViewModel, SearchChannels, SearchPresenter,

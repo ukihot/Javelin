@@ -240,6 +240,25 @@ impl BatchExecutionTemplate {
         }
     }
 
+    /// 特定のステップの状態を取得
+    ///
+    /// インデックスで指定されたステップの状態を取得します。
+    /// インデックスが範囲外の場合はWaitingを返します。
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - 取得するステップのインデックス
+    ///
+    /// # Returns
+    ///
+    /// ステップの状態
+    pub fn get_step_status(&self, index: usize) -> ProcessStepStatus {
+        self.steps
+            .get(index)
+            .map(|step| step.status.clone())
+            .unwrap_or(ProcessStepStatus::Waiting)
+    }
+
     /// ローディング状態に設定
     ///
     /// テンプレートをローディング状態に変更します。

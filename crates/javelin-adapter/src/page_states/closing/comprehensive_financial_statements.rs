@@ -7,6 +7,7 @@ use ratatui::DefaultTerminal;
 use crate::{
     error::AdapterResult,
     navigation::{Controllers, NavAction, PageState, Route},
+    presenter::ComprehensiveFinancialStatementsPresenter,
     views::pages::ComprehensiveFinancialStatementsPage,
 };
 
@@ -16,7 +17,10 @@ pub struct ComprehensiveFinancialStatementsPageState {
 
 impl ComprehensiveFinancialStatementsPageState {
     pub fn new() -> Self {
-        Self { page: ComprehensiveFinancialStatementsPage::new() }
+        let (result_tx, result_rx, progress_tx, progress_rx) =
+            ComprehensiveFinancialStatementsPresenter::create_channels();
+        let _ = (result_tx, progress_tx);
+        Self { page: ComprehensiveFinancialStatementsPage::new(result_rx, progress_rx) }
     }
 }
 
@@ -31,20 +35,15 @@ impl PageState for ComprehensiveFinancialStatementsPageState {
         controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
         loop {
-            // Tick animation
             self.page.tick();
-
-            // Update page data
             self.page.update(controllers);
 
-            // Render the page
             terminal
                 .draw(|frame| {
                     self.page.render(frame);
                 })
                 .map_err(|e| crate::error::AdapterError::RenderingFailed(e.to_string()))?;
 
-            // Handle events with timeout for animation updates
             if event::poll(std::time::Duration::from_millis(100))
                 .map_err(crate::error::AdapterError::EventReadFailed)?
                 && let Event::Key(key) =
@@ -55,18 +54,10 @@ impl PageState for ComprehensiveFinancialStatementsPageState {
                 }
 
                 match key.code {
-                    KeyCode::Esc => {
-                        return Ok(NavAction::Back);
-                    }
-                    KeyCode::Char('s') => {
-                        self.page.start_generation(controllers);
-                    }
-                    KeyCode::Char('j') | KeyCode::Down => {
-                        self.page.select_next();
-                    }
-                    KeyCode::Char('k') | KeyCode::Up => {
-                        self.page.select_previous();
-                    }
+                    KeyCode::Esc => return Ok(NavAction::Back),
+                    KeyCode::Char('s') => self.page.start_generation(controllers),
+                    KeyCode::Char('j') | KeyCode::Down => self.page.select_next(),
+                    KeyCode::Char('k') | KeyCode::Up => self.page.select_previous(),
                     _ => {}
                 }
             }
