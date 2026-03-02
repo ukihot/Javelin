@@ -181,6 +181,10 @@ pub enum DomainError {
     #[error("[D-10003] Invalid KPI calculation")]
     InvalidKpiCalculation,
 
+    // Materiality errors (D-11xxx)
+    #[error("[D-11001] Invalid materiality judgment")]
+    InvalidMateriality,
+
     #[error("[D-9999] Unknown domain error: {0}")]
     Unknown(String),
 }
