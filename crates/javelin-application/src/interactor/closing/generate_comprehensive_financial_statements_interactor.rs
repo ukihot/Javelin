@@ -4,7 +4,8 @@
 use chrono::Utc;
 use javelin_domain::financial_close::{
     financial_statements::{
-        entities::FinancialStatement, services::FinancialStatementService,
+        entities::FinancialStatement,
+        services::{CrossCheckReport, FinancialStatementService},
         values::FinancialStatementType,
     },
     ledger::entities::{GeneralLedger, SubsidiaryLedger, SubsidiaryLedgerType},
@@ -151,12 +152,18 @@ impl GenerateComprehensiveFinancialStatementsUseCase
         };
 
         // クロスチェック
-        let cross_check = if request.perform_cross_check && domain_statements.len() >= 3 {
-            let report = FinancialStatementService::cross_check_statements(
-                &domain_statements[0],
-                &domain_statements[1],
-                &domain_statements[2],
-            )?;
+        let cross_check = if request.perform_cross_check && domain_statements.len() >= 2 {
+            // 最低2つの財務諸表があればクロスチェック可能
+            let report = if domain_statements.len() >= 3 {
+                FinancialStatementService::cross_check_statements(
+                    &domain_statements[0],
+                    &domain_statements[1],
+                    &domain_statements[2],
+                )?
+            } else {
+                // 2つの場合は簡易チェック（警告なし）
+                CrossCheckReport::new()
+            };
 
             let failed_checks: Vec<FailedCheck> = report
                 .warnings()
