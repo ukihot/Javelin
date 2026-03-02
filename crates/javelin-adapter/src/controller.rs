@@ -7,6 +7,7 @@ pub mod application_settings_controller;
 pub mod batch_history_controller;
 pub mod closing_controller;
 pub mod company_master_controller;
+pub mod journal_detail_controller;
 pub mod journal_entry_controller;
 pub mod ledger_controller;
 pub mod search_controller;
@@ -30,6 +31,7 @@ pub use javelin_application::dtos::{
         UserOptionsDto,
     },
 };
+pub use journal_detail_controller::JournalDetailController;
 pub use journal_entry_controller::JournalEntryController;
 pub use ledger_controller::LedgerController;
 pub use search_controller::SearchController;

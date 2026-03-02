@@ -35,4 +35,16 @@ pub trait JournalEntrySearchQueryService: Send + Sync {
         &self,
         fiscal_year: u32,
     ) -> ApplicationResult<Vec<String>>;
+
+    /// 仕訳詳細を取得
+    ///
+    /// # Arguments
+    /// * `entry_id` - 仕訳ID
+    ///
+    /// # Returns
+    /// * `ApplicationResult<Option<JournalEntryDetail>>` - 仕訳詳細（存在しない場合はNone）
+    async fn get_detail(
+        &self,
+        entry_id: &str,
+    ) -> ApplicationResult<Option<crate::dtos::response::JournalEntryDetail>>;
 }

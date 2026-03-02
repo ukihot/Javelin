@@ -230,6 +230,61 @@ impl JournalEntrySearchQueryService for JournalEntrySearchQueryServiceImpl {
 
         Ok(voucher_numbers)
     }
+
+    async fn get_detail(
+        &self,
+        entry_id: &str,
+    ) -> ApplicationResult<Option<javelin_application::dtos::response::JournalEntryDetail>> {
+        // ProjectionDBから仕訳詳細を取得
+        let key = format!("journal_entry:{}", entry_id);
+
+        let Some(data) = self
+            .projection_db
+            .get_projection(&key)
+            .await
+            .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?
+        else {
+            return Ok(None);
+        };
+
+        let entry: JournalEntrySearchReadModel = serde_json::from_slice(&data)
+            .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+        // JournalEntryDetailに変換
+        let lines = entry
+            .lines
+            .into_iter()
+            .map(|line| javelin_application::dtos::response::JournalEntryLineDetail {
+                line_number: line.line_number,
+                side: line.side,
+                account_code: line.account_code,
+                account_name: line.account_name,
+                sub_account_code: None, // TODO: 補助科目対応
+                department_code: None,  // TODO: 部門対応
+                amount: line.amount,
+                currency: "JPY".to_string(),  // TODO: 通貨対応
+                tax_type: "None".to_string(), // TODO: 税区分対応
+                tax_amount: 0.0,              // TODO: 税額対応
+            })
+            .collect();
+
+        let detail = javelin_application::dtos::response::JournalEntryDetail {
+            entry_id: entry.entry_id,
+            entry_number: entry.entry_number,
+            status: entry.status,
+            transaction_date: entry.transaction_date,
+            voucher_number: "V-001".to_string(), // TODO: 証憑番号対応
+            lines,
+            created_by: "system".to_string(), // TODO: 作成者対応
+            created_at: chrono::Utc::now().to_rfc3339(), // TODO: 作成日時対応
+            updated_by: None,
+            updated_at: None,
+            approved_by: None,
+            approved_at: None,
+        };
+
+        Ok(Some(detail))
+    }
 }
 
 #[cfg(test)]

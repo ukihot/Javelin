@@ -32,4 +32,4 @@ pub use master_management::{
 };
 pub use menu_page::MenuPage;
 // Primary Records
-pub use primary_records::{JournalEntryFormPage, JournalListPage};
+pub use primary_records::{JournalDetailPage, JournalEntryFormPage, JournalListPage};

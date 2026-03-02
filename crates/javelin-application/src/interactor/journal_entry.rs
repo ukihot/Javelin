@@ -8,6 +8,7 @@ mod create_reclassification_entry_interactor;
 mod create_replacement_entry_interactor;
 mod create_reversal_entry_interactor;
 mod delete_draft_journal_entry_interactor;
+mod get_journal_entry_detail_interactor;
 mod register_journal_entry_interactor;
 mod reject_journal_entry_interactor;
 mod reverse_journal_entry_interactor;
@@ -23,6 +24,7 @@ pub use create_reclassification_entry_interactor::CreateReclassificationEntryInt
 pub use create_replacement_entry_interactor::CreateReplacementEntryInteractor;
 pub use create_reversal_entry_interactor::CreateReversalEntryInteractor;
 pub use delete_draft_journal_entry_interactor::DeleteDraftJournalEntryInteractor;
+pub use get_journal_entry_detail_interactor::GetJournalEntryDetailInteractor;
 pub use register_journal_entry_interactor::RegisterJournalEntryInteractor;
 pub use reject_journal_entry_interactor::RejectJournalEntryInteractor;
 pub use reverse_journal_entry_interactor::ReverseJournalEntryInteractor;

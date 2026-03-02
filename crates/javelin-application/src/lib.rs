@@ -72,6 +72,7 @@ pub mod input_ports {
     pub mod generate_financial_statements;
     pub mod generate_note_draft;
     pub mod generate_trial_balance;
+    pub mod get_journal_entry_detail;
     pub mod load_account_master;
     pub mod load_application_settings;
     pub mod load_company_master;
@@ -103,6 +104,7 @@ pub mod input_ports {
     pub use generate_financial_statements::*;
     pub use generate_note_draft::*;
     pub use generate_trial_balance::*;
+    pub use get_journal_entry_detail::*;
     pub use load_account_master::*;
     pub use load_application_settings::*;
     pub use load_company_master::*;

@@ -6,8 +6,9 @@ use std::sync::Arc;
 use crate::{
     controller::{
         AccountMasterController, ApplicationSettingsController, BatchHistoryController,
-        ClosingController, CompanyMasterController, JournalEntryController, LedgerController,
-        SearchController, SubsidiaryAccountMasterController,
+        ClosingController, CompanyMasterController, JournalDetailController,
+        JournalEntryController, LedgerController, SearchController,
+        SubsidiaryAccountMasterController,
     },
     presenter::{
         ComprehensiveFinancialStatementsPresenter, LedgerConsistencyVerificationPresenter,
@@ -35,8 +36,22 @@ pub type SubsidiaryAccountMasterControllerType = SubsidiaryAccountMasterControll
     javelin_infrastructure::read::subsidiary_account_master::SubsidiaryAccountMasterQueryServiceImpl,
 >;
 
-/// Type alias for JournalEntryController (no generics needed)
-pub type JournalEntryControllerType = JournalEntryController;
+/// Type alias for JournalEntryController with concrete UseCase
+pub type JournalEntryControllerType = JournalEntryController<
+    javelin_application::interactor::RegisterJournalEntryInteractor<
+        javelin_infrastructure::write::event_store::EventStore,
+        crate::presenter::JournalEntryPresenter,
+        javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
+    >,
+>;
+
+/// Type alias for JournalDetailController with concrete UseCase
+pub type JournalDetailControllerType = JournalDetailController<
+    javelin_application::interactor::GetJournalEntryDetailInteractor<
+        javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
+        crate::presenter::JournalEntryPresenter,
+    >,
+>;
 
 /// Type alias for SearchController (no generics needed)
 pub type SearchControllerType = SearchController;
@@ -61,6 +76,7 @@ pub struct Controllers {
     pub company_master: Arc<CompanyMasterControllerType>,
     pub subsidiary_account_master: Arc<SubsidiaryAccountMasterControllerType>,
     pub journal_entry: Arc<JournalEntryControllerType>,
+    pub journal_detail: Arc<JournalDetailControllerType>,
     pub closing: Arc<ClosingControllerType>,
     pub ledger: Arc<LedgerControllerType>,
     pub search: Arc<SearchControllerType>,
@@ -80,6 +96,7 @@ impl Controllers {
         company_master: Arc<CompanyMasterControllerType>,
         subsidiary_account_master: Arc<SubsidiaryAccountMasterControllerType>,
         journal_entry: Arc<JournalEntryControllerType>,
+        journal_detail: Arc<JournalDetailControllerType>,
         closing: Arc<ClosingControllerType>,
         ledger: Arc<LedgerControllerType>,
         search: Arc<SearchControllerType>,
@@ -96,6 +113,7 @@ impl Controllers {
             company_master,
             subsidiary_account_master,
             journal_entry,
+            journal_detail,
             closing,
             ledger,
             search,

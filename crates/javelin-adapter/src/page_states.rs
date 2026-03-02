@@ -42,5 +42,6 @@ pub use master_management::{
     SubsidiaryAccountMasterPageState,
 };
 pub use primary_records::{
-    JournalEntryPageState, JournalListPageState, PrimaryRecordsMenuPageState,
+    JournalDetailPageState, JournalEntryPageState, JournalListPageState,
+    PrimaryRecordsMenuPageState,
 };

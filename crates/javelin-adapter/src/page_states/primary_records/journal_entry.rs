@@ -154,7 +154,9 @@ impl PageState for JournalEntryPageState {
                                             self.page.start_submit();
 
                                             let page_id = self.id;
-                                            let controller = Arc::clone(&controllers.journal_entry);
+                                            let controller: Arc<
+                                                crate::navigation::controllers::JournalEntryControllerType,
+                                            > = Arc::clone(&controllers.journal_entry);
 
                                             tokio::spawn(async move {
                                                 let _ = controller

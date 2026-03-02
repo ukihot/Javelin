@@ -17,6 +17,9 @@ pub enum ApplicationError {
     #[error("[A-2001] Query execution failed: {0}")]
     QueryExecutionFailed(String),
 
+    #[error("[A-2002] Resource not found: {0}")]
+    NotFound(String),
+
     #[error("[A-3001] Projection build failed: {0}")]
     ProjectionBuildFailed(String),
 

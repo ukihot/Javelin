@@ -7,8 +7,8 @@ use javelin_adapter::{
     PresenterRegistry,
     controller::{
         AccountMasterController, ApplicationSettingsController, BatchHistoryController,
-        ClosingController, CompanyMasterController, JournalEntryController, LedgerController,
-        SearchController, SubsidiaryAccountMasterController,
+        ClosingController, CompanyMasterController, LedgerController, SearchController,
+        SubsidiaryAccountMasterController,
     },
     navigation::Controllers,
     presenter::LedgerPresenter,
@@ -287,12 +287,45 @@ pub async fn setup_controllers(
         Arc::clone(&presenter_registry),
     ));
 
+    // 仕訳関連Interactor構築
+    // ダミーPresenterを使用したInteractorを作成（実際のPresenterは各PageStateで作成される）
+    let (dummy_list_tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let (dummy_detail_tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let (dummy_result_tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let (dummy_progress_tx, _) = tokio::sync::mpsc::unbounded_channel();
+    let dummy_journal_entry_presenter =
+        Arc::new(javelin_adapter::presenter::JournalEntryPresenter::new(
+            dummy_list_tx,
+            dummy_detail_tx,
+            dummy_result_tx,
+            dummy_progress_tx,
+        ));
+
+    let register_journal_entry_interactor =
+        Arc::new(javelin_application::interactor::RegisterJournalEntryInteractor::new(
+            Arc::clone(&event_store),
+            Arc::clone(&dummy_journal_entry_presenter),
+            Arc::clone(&search_query_service),
+        ));
+
+    let get_journal_entry_detail_interactor =
+        Arc::new(javelin_application::interactor::GetJournalEntryDetailInteractor::new(
+            Arc::clone(&search_query_service),
+            Arc::clone(&dummy_journal_entry_presenter),
+        ));
+
     // 業務コントローラ構築
-    let journal_entry_controller = Arc::new(JournalEntryController::new(
-        Arc::clone(&event_store),
-        Arc::clone(&search_query_service),
-        Arc::clone(&presenter_registry),
-    ));
+    let journal_entry_controller =
+        Arc::new(javelin_adapter::controller::JournalEntryController::new(
+            register_journal_entry_interactor,
+            Arc::clone(&presenter_registry),
+        ));
+
+    let journal_detail_controller =
+        Arc::new(javelin_adapter::controller::JournalDetailController::new(
+            get_journal_entry_detail_interactor,
+            Arc::clone(&presenter_registry),
+        ));
 
     let ledger_controller = Arc::new(LedgerController::new(Arc::clone(&ledger_query_service)));
 
@@ -398,6 +431,7 @@ pub async fn setup_controllers(
         company_master_controller,
         subsidiary_account_master_controller,
         journal_entry_controller,
+        journal_detail_controller,
         closing_controller,
         ledger_controller,
         search_controller,

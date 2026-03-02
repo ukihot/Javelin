@@ -51,10 +51,9 @@ impl PageStateResolver {
             Route::JournalList => Ok(Box::new(javelin_adapter::JournalListPageState::new(
                 Arc::clone(&self.presenter_registry),
             ))),
-            Route::JournalDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::JournalDetail,
-                "A-04: Journal Detail",
-                "仕訳詳細画面",
+            Route::JournalDetail => Ok(Box::new(javelin_adapter::JournalDetailPageState::new(
+                Arc::clone(&self.presenter_registry),
+                "dummy-entry-id".to_string(), // TODO: パラメータ渡しの仕組みを実装
             ))),
             Route::DocumentManagement => Ok(Box::new(javelin_adapter::StubPageState::new(
                 Route::DocumentManagement,

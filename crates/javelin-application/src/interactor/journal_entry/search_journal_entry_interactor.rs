@@ -209,6 +209,13 @@ mod tests {
         ) -> ApplicationResult<Vec<String>> {
             Ok(vec![])
         }
+
+        async fn get_detail(
+            &self,
+            _entry_id: &str,
+        ) -> ApplicationResult<Option<crate::dtos::response::JournalEntryDetail>> {
+            Ok(None)
+        }
     }
 
     struct MockOutputPort;

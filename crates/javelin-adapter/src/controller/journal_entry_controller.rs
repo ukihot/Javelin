@@ -3,33 +3,35 @@
 
 use std::sync::Arc;
 
-use javelin_application::dtos::RegisterJournalEntryRequest;
-use javelin_infrastructure::{
-    read::journal_entry::JournalEntrySearchQueryServiceImpl, write::event_store::EventStore,
+use javelin_application::{
+    dtos::RegisterJournalEntryRequest, input_ports::RegisterJournalEntryUseCase,
 };
+
+use crate::navigation::PresenterRegistry;
 
 /// 仕訳登録コントローラ
 ///
 /// 仕訳登録に関するすべての操作を受け付ける。
 /// ユースケースへの委譲のみを行い、ビジネスロジックは含まない。
-pub struct JournalEntryController {
-    event_store: Arc<EventStore>,
-    search_query_service: Arc<JournalEntrySearchQueryServiceImpl>,
-    presenter_registry: Arc<crate::navigation::PresenterRegistry>,
+pub struct JournalEntryController<R>
+where
+    R: RegisterJournalEntryUseCase,
+{
+    register_use_case: Arc<R>,
+    presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl JournalEntryController {
+impl<R> JournalEntryController<R>
+where
+    R: RegisterJournalEntryUseCase,
+{
     /// 新しいコントローラインスタンスを作成
-    pub fn new(
-        event_store: Arc<EventStore>,
-        search_query_service: Arc<JournalEntrySearchQueryServiceImpl>,
-        presenter_registry: Arc<crate::navigation::PresenterRegistry>,
-    ) -> Self {
-        Self { event_store, search_query_service, presenter_registry }
+    pub fn new(register_use_case: Arc<R>, presenter_registry: Arc<PresenterRegistry>) -> Self {
+        Self { register_use_case, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
-    pub fn presenter_registry(&self) -> &Arc<crate::navigation::PresenterRegistry> {
+    pub fn presenter_registry(&self) -> &Arc<PresenterRegistry> {
         &self.presenter_registry
     }
 
@@ -44,30 +46,10 @@ impl JournalEntryController {
     /// * `Err(String)` - 登録失敗
     pub async fn handle_register_journal_entry(
         &self,
-        page_id: uuid::Uuid,
+        _page_id: uuid::Uuid,
         request: RegisterJournalEntryRequest,
     ) -> Result<(), String> {
-        use javelin_application::input_ports::RegisterJournalEntryUseCase;
-
-        // PresenterRegistryからpage_id用のPresenterを取得
-        if let Some(journal_entry_presenter_arc) =
-            self.presenter_registry.get_journal_entry_presenter(page_id)
-        {
-            // ArcからPresenterをclone
-            let journal_entry_presenter = (*journal_entry_presenter_arc).clone();
-
-            // このページ専用のInteractorを動的に作成
-            let interactor = javelin_application::interactor::RegisterJournalEntryInteractor::new(
-                Arc::clone(&self.event_store),
-                Arc::new(journal_entry_presenter),
-                Arc::clone(&self.search_query_service),
-            );
-
-            // 実行
-            interactor.execute(request).await.map_err(|e| e.to_string())?;
-            Ok(())
-        } else {
-            Err(format!("JournalEntryPresenter not found for page_id: {}", page_id))
-        }
+        // UseCaseに委譲
+        self.register_use_case.execute(request).await.map_err(|e| e.to_string())
     }
 }

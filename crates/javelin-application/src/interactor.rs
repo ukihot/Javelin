@@ -15,9 +15,9 @@ pub use journal_entry::{
     ApproveJournalEntryInteractor, CancelJournalEntryInteractor, CorrectJournalEntryInteractor,
     CreateAdditionalEntryInteractor, CreateReclassificationEntryInteractor,
     CreateReplacementEntryInteractor, CreateReversalEntryInteractor,
-    DeleteDraftJournalEntryInteractor, RegisterJournalEntryInteractor,
-    RejectJournalEntryInteractor, ReverseJournalEntryInteractor, SubmitForApprovalInteractor,
-    UpdateDraftJournalEntryInteractor,
+    DeleteDraftJournalEntryInteractor, GetJournalEntryDetailInteractor,
+    RegisterJournalEntryInteractor, RejectJournalEntryInteractor, ReverseJournalEntryInteractor,
+    SearchJournalEntryInteractor, SubmitForApprovalInteractor, UpdateDraftJournalEntryInteractor,
 };
 pub use master_data::{
     LoadAccountMasterInteractor, LoadApplicationSettingsInteractor, LoadCompanyMasterInteractor,
