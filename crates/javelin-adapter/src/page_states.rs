@@ -11,6 +11,7 @@ pub use home_page_state::HomePageState;
 
 // Route hierarchy modules
 pub mod closing;
+pub mod closing_preparation;
 pub mod financial_statements;
 pub mod fixed_assets;
 pub mod ledger;

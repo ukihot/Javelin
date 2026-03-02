@@ -1,68 +1,22 @@
 // LeaseSchedulePageState - リース負債スケジュール画面
-// 責務: リース負債の支払スケジュール表示
+// 責務: リース負債スケジュールのデータ管理とライフサイクル
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use ratatui::{DefaultTerminal, Frame, layout::Constraint};
+use ratatui::DefaultTerminal;
 
 use crate::{
     error::AdapterResult,
     navigation::{Controllers, NavAction, PageState, Route},
-    views::layouts::templates::{MasterListItem, MasterListTemplate},
+    views::pages::LeaseSchedulePage,
 };
 
-/// リーススケジュール項目ViewModel
-#[derive(Debug, Clone)]
-pub struct LeaseScheduleItemViewModel {
-    pub payment_date: String,
-    pub payment_amount: String,
-    pub principal: String,
-    pub interest: String,
-    pub remaining_balance: String,
-}
-
-impl MasterListItem for LeaseScheduleItemViewModel {
-    fn headers() -> Vec<&'static str> {
-        vec!["支払日", "支払額", "元本", "利息", "残高"]
-    }
-
-    fn column_widths() -> Vec<Constraint> {
-        vec![
-            Constraint::Length(12),
-            Constraint::Length(15),
-            Constraint::Length(15),
-            Constraint::Length(15),
-            Constraint::Length(18),
-        ]
-    }
-
-    fn to_row(&self) -> Vec<String> {
-        vec![
-            self.payment_date.clone(),
-            self.payment_amount.clone(),
-            self.principal.clone(),
-            self.interest.clone(),
-            self.remaining_balance.clone(),
-        ]
-    }
-}
-
-/// リース負債スケジュール画面
 pub struct LeaseSchedulePageState {
-    template: MasterListTemplate<LeaseScheduleItemViewModel>,
+    page: LeaseSchedulePage,
 }
 
 impl LeaseSchedulePageState {
     pub fn new() -> Self {
-        let template = MasterListTemplate::new("リース負債スケジュール");
-        Self { template }
-    }
-
-    fn load_data(&mut self, _controllers: &Controllers) {
-        self.template.set_data(vec![], 0, 0);
-    }
-
-    fn render(&mut self, frame: &mut Frame) {
-        self.template.render(frame);
+        Self { page: LeaseSchedulePage::new() }
     }
 }
 
@@ -74,14 +28,12 @@ impl PageState for LeaseSchedulePageState {
     fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
-        controllers: &Controllers,
+        _controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
-        self.load_data(controllers);
-
         loop {
             terminal
                 .draw(|frame| {
-                    self.render(frame);
+                    self.page.render(frame);
                 })
                 .map_err(|e| crate::error::AdapterError::RenderingFailed(e.to_string()))?;
 
@@ -94,8 +46,11 @@ impl PageState for LeaseSchedulePageState {
                     continue;
                 }
 
-                if key.code == KeyCode::Esc {
-                    return Ok(NavAction::Back);
+                match key.code {
+                    KeyCode::Esc => return Ok(NavAction::Back),
+                    KeyCode::Char('j') | KeyCode::Down => self.page.select_next(),
+                    KeyCode::Char('k') | KeyCode::Up => self.page.select_previous(),
+                    _ => {}
                 }
             }
         }

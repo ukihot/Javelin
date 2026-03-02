@@ -1,70 +1,22 @@
 // CashLogListPageState - キャッシュログ一覧画面
-// 責務: キャッシュログの一覧表示
+// 責務: キャッシュログのデータ管理とライフサイクル
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use ratatui::{DefaultTerminal, Frame, layout::Constraint};
+use ratatui::DefaultTerminal;
 
 use crate::{
     error::AdapterResult,
     navigation::{Controllers, NavAction, PageState, Route},
-    views::layouts::templates::{MasterListItem, MasterListTemplate},
+    views::pages::CashLogListPage,
 };
 
-/// キャッシュログ項目ViewModel
-#[derive(Debug, Clone)]
-pub struct CashLogItemViewModel {
-    pub log_id: String,
-    pub date: String,
-    pub amount: String,
-    pub description: String,
-    pub category: String,
-}
-
-impl MasterListItem for CashLogItemViewModel {
-    fn headers() -> Vec<&'static str> {
-        vec!["ログID", "日付", "金額", "摘要", "カテゴリ"]
-    }
-
-    fn column_widths() -> Vec<Constraint> {
-        vec![
-            Constraint::Length(12),
-            Constraint::Length(12),
-            Constraint::Length(15),
-            Constraint::Min(30),
-            Constraint::Length(15),
-        ]
-    }
-
-    fn to_row(&self) -> Vec<String> {
-        vec![
-            self.log_id.clone(),
-            self.date.clone(),
-            self.amount.clone(),
-            self.description.clone(),
-            self.category.clone(),
-        ]
-    }
-}
-
-/// キャッシュログ一覧画面
 pub struct CashLogListPageState {
-    template: MasterListTemplate<CashLogItemViewModel>,
+    page: CashLogListPage,
 }
 
 impl CashLogListPageState {
     pub fn new() -> Self {
-        let template = MasterListTemplate::new("キャッシュログ一覧");
-        Self { template }
-    }
-
-    fn load_data(&mut self, _controllers: &Controllers) {
-        // キャッシュログ用のコントローラは未実装
-        // 将来的に CashLogController を実装して使用
-        self.template.set_data(vec![], 0, 0);
-    }
-
-    fn render(&mut self, frame: &mut Frame) {
-        self.template.render(frame);
+        Self { page: CashLogListPage::new() }
     }
 }
 
@@ -76,14 +28,12 @@ impl PageState for CashLogListPageState {
     fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
-        controllers: &Controllers,
+        _controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
-        self.load_data(controllers);
-
         loop {
             terminal
                 .draw(|frame| {
-                    self.render(frame);
+                    self.page.render(frame);
                 })
                 .map_err(|e| crate::error::AdapterError::RenderingFailed(e.to_string()))?;
 
@@ -96,8 +46,11 @@ impl PageState for CashLogListPageState {
                     continue;
                 }
 
-                if key.code == KeyCode::Esc {
-                    return Ok(NavAction::Back);
+                match key.code {
+                    KeyCode::Esc => return Ok(NavAction::Back),
+                    KeyCode::Char('j') | KeyCode::Down => self.page.select_next(),
+                    KeyCode::Char('k') | KeyCode::Up => self.page.select_previous(),
+                    _ => {}
                 }
             }
         }

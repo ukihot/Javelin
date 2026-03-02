@@ -1,81 +1,22 @@
 // AdjustmentJournalListPageState - 補正仕訳一覧画面
-// 責務: 補正仕訳の一覧表示
+// 責務: 補正仕訳のデータ管理とライフサイクル
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use ratatui::{DefaultTerminal, Frame, layout::Constraint};
+use ratatui::DefaultTerminal;
 
 use crate::{
     error::AdapterResult,
     navigation::{Controllers, NavAction, PageState, Route},
-    views::layouts::templates::{MasterListItem, MasterListTemplate},
+    views::pages::AdjustmentJournalListPage,
 };
 
-/// 補正仕訳項目ViewModel
-#[derive(Debug, Clone)]
-pub struct AdjustmentJournalItemViewModel {
-    pub entry_number: String,
-    pub date: String,
-    pub account_name: String,
-    pub debit: String,
-    pub credit: String,
-    pub description: String,
-}
-
-impl MasterListItem for AdjustmentJournalItemViewModel {
-    fn headers() -> Vec<&'static str> {
-        vec!["仕訳番号", "日付", "勘定科目", "借方", "貸方", "摘要"]
-    }
-
-    fn column_widths() -> Vec<Constraint> {
-        vec![
-            Constraint::Length(15),
-            Constraint::Length(12),
-            Constraint::Length(20),
-            Constraint::Length(15),
-            Constraint::Length(15),
-            Constraint::Min(20),
-        ]
-    }
-
-    fn to_row(&self) -> Vec<String> {
-        vec![
-            self.entry_number.clone(),
-            self.date.clone(),
-            self.account_name.clone(),
-            self.debit.clone(),
-            self.credit.clone(),
-            self.description.clone(),
-        ]
-    }
-}
-
-/// 補正仕訳一覧画面
 pub struct AdjustmentJournalListPageState {
-    template: MasterListTemplate<AdjustmentJournalItemViewModel>,
+    page: AdjustmentJournalListPage,
 }
 
 impl AdjustmentJournalListPageState {
     pub fn new() -> Self {
-        let template = MasterListTemplate::new("補正仕訳一覧");
-        Self { template }
-    }
-
-    fn load_data(&mut self, controllers: &Controllers) {
-        let adjust_accounts = controllers.adjust_accounts.clone();
-
-        // 非同期で補正仕訳一覧を取得
-        tokio::spawn(async move {
-            // 補正仕訳一覧の取得処理
-            // 将来的にはプレゼンタ経由でデータを受信
-            let _ = adjust_accounts;
-        });
-
-        // 現在は空のデータを表示（将来的にはプレゼンタ経由で受信）
-        self.template.set_data(vec![], 0, 0);
-    }
-
-    fn render(&mut self, frame: &mut Frame) {
-        self.template.render(frame);
+        Self { page: AdjustmentJournalListPage::new() }
     }
 }
 
@@ -87,15 +28,12 @@ impl PageState for AdjustmentJournalListPageState {
     fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
-        controllers: &Controllers,
+        _controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
-        // 初回データロード
-        self.load_data(controllers);
-
         loop {
             terminal
                 .draw(|frame| {
-                    self.render(frame);
+                    self.page.render(frame);
                 })
                 .map_err(|e| crate::error::AdapterError::RenderingFailed(e.to_string()))?;
 
@@ -109,12 +47,9 @@ impl PageState for AdjustmentJournalListPageState {
                 }
 
                 match key.code {
-                    KeyCode::Esc => {
-                        return Ok(NavAction::Back);
-                    }
-                    KeyCode::Enter => {
-                        // 詳細画面への遷移（将来実装）
-                    }
+                    KeyCode::Esc => return Ok(NavAction::Back),
+                    KeyCode::Char('j') | KeyCode::Down => self.page.select_next(),
+                    KeyCode::Char('k') | KeyCode::Up => self.page.select_previous(),
                     _ => {}
                 }
             }

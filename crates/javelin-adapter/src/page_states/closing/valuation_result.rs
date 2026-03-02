@@ -1,81 +1,22 @@
-// ValuationResultPageState - 評価結果一覧画面
-// 責務: IFRS評価結果の一覧表示
+// ValuationResultPageState - IFRS評価結果一覧画面
+// 責務: IFRS評価結果のデータ管理とライフサイクル
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use ratatui::{DefaultTerminal, Frame, layout::Constraint};
+use ratatui::DefaultTerminal;
 
 use crate::{
     error::AdapterResult,
     navigation::{Controllers, NavAction, PageState, Route},
-    views::layouts::templates::{MasterListItem, MasterListTemplate},
+    views::pages::ValuationResultPage,
 };
 
-/// 評価結果項目ViewModel
-#[derive(Debug, Clone)]
-pub struct ValuationResultItemViewModel {
-    pub asset_code: String,
-    pub asset_name: String,
-    pub book_value: String,
-    pub fair_value: String,
-    pub difference: String,
-    pub status: String,
-}
-
-impl MasterListItem for ValuationResultItemViewModel {
-    fn headers() -> Vec<&'static str> {
-        vec!["資産コード", "資産名", "帳簿価額", "公正価値", "差額", "状態"]
-    }
-
-    fn column_widths() -> Vec<Constraint> {
-        vec![
-            Constraint::Length(12),
-            Constraint::Min(20),
-            Constraint::Length(15),
-            Constraint::Length(15),
-            Constraint::Length(15),
-            Constraint::Length(10),
-        ]
-    }
-
-    fn to_row(&self) -> Vec<String> {
-        vec![
-            self.asset_code.clone(),
-            self.asset_name.clone(),
-            self.book_value.clone(),
-            self.fair_value.clone(),
-            self.difference.clone(),
-            self.status.clone(),
-        ]
-    }
-}
-
-/// 評価結果一覧画面
 pub struct ValuationResultPageState {
-    template: MasterListTemplate<ValuationResultItemViewModel>,
+    page: ValuationResultPage,
 }
 
 impl ValuationResultPageState {
     pub fn new() -> Self {
-        let template = MasterListTemplate::new("IFRS評価結果一覧");
-        Self { template }
-    }
-
-    fn load_data(&mut self, controllers: &Controllers) {
-        let apply_ifrs_valuation = controllers.apply_ifrs_valuation.clone();
-
-        // 非同期で評価結果を取得
-        tokio::spawn(async move {
-            // 評価結果の取得処理
-            // 将来的にはプレゼンタ経由でデータを受信
-            let _ = apply_ifrs_valuation;
-        });
-
-        // 現在は空のデータを表示（将来的にはプレゼンタ経由で受信）
-        self.template.set_data(vec![], 0, 0);
-    }
-
-    fn render(&mut self, frame: &mut Frame) {
-        self.template.render(frame);
+        Self { page: ValuationResultPage::new() }
     }
 }
 
@@ -87,15 +28,12 @@ impl PageState for ValuationResultPageState {
     fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
-        controllers: &Controllers,
+        _controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
-        // 初回データロード
-        self.load_data(controllers);
-
         loop {
             terminal
                 .draw(|frame| {
-                    self.render(frame);
+                    self.page.render(frame);
                 })
                 .map_err(|e| crate::error::AdapterError::RenderingFailed(e.to_string()))?;
 
@@ -109,12 +47,9 @@ impl PageState for ValuationResultPageState {
                 }
 
                 match key.code {
-                    KeyCode::Esc => {
-                        return Ok(NavAction::Back);
-                    }
-                    KeyCode::Enter => {
-                        // 詳細画面への遷移（将来実装）
-                    }
+                    KeyCode::Esc => return Ok(NavAction::Back),
+                    KeyCode::Char('j') | KeyCode::Down => self.page.select_next(),
+                    KeyCode::Char('k') | KeyCode::Up => self.page.select_previous(),
                     _ => {}
                 }
             }

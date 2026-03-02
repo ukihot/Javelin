@@ -1,73 +1,22 @@
 // DocumentManagementPageState - 証憑管理画面
-// 責務: 証憑ファイルの管理
+// 責務: 証憑のデータ管理とライフサイクル
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use ratatui::{DefaultTerminal, Frame, layout::Constraint};
+use ratatui::DefaultTerminal;
 
 use crate::{
     error::AdapterResult,
     navigation::{Controllers, NavAction, PageState, Route},
-    views::layouts::templates::{MasterListItem, MasterListTemplate},
+    views::pages::DocumentManagementPage,
 };
 
-/// 証憑項目ViewModel
-#[derive(Debug, Clone)]
-pub struct DocumentItemViewModel {
-    pub document_id: String,
-    pub voucher_number: String,
-    pub document_type: String,
-    pub file_name: String,
-    pub upload_date: String,
-    pub file_size: String,
-}
-
-impl MasterListItem for DocumentItemViewModel {
-    fn headers() -> Vec<&'static str> {
-        vec!["証憑ID", "伝票番号", "種類", "ファイル名", "登録日", "サイズ"]
-    }
-
-    fn column_widths() -> Vec<Constraint> {
-        vec![
-            Constraint::Length(12),
-            Constraint::Length(15),
-            Constraint::Length(12),
-            Constraint::Min(25),
-            Constraint::Length(12),
-            Constraint::Length(10),
-        ]
-    }
-
-    fn to_row(&self) -> Vec<String> {
-        vec![
-            self.document_id.clone(),
-            self.voucher_number.clone(),
-            self.document_type.clone(),
-            self.file_name.clone(),
-            self.upload_date.clone(),
-            self.file_size.clone(),
-        ]
-    }
-}
-
-/// 証憑管理画面
 pub struct DocumentManagementPageState {
-    template: MasterListTemplate<DocumentItemViewModel>,
+    page: DocumentManagementPage,
 }
 
 impl DocumentManagementPageState {
     pub fn new() -> Self {
-        let template = MasterListTemplate::new("証憑管理");
-        Self { template }
-    }
-
-    fn load_data(&mut self, _controllers: &Controllers) {
-        // 証憑管理用のコントローラは未実装
-        // 将来的に DocumentController を実装して使用
-        self.template.set_data(vec![], 0, 0);
-    }
-
-    fn render(&mut self, frame: &mut Frame) {
-        self.template.render(frame);
+        Self { page: DocumentManagementPage::new() }
     }
 }
 
@@ -79,14 +28,12 @@ impl PageState for DocumentManagementPageState {
     fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
-        controllers: &Controllers,
+        _controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
-        self.load_data(controllers);
-
         loop {
             terminal
                 .draw(|frame| {
-                    self.render(frame);
+                    self.page.render(frame);
                 })
                 .map_err(|e| crate::error::AdapterError::RenderingFailed(e.to_string()))?;
 
@@ -100,12 +47,9 @@ impl PageState for DocumentManagementPageState {
                 }
 
                 match key.code {
-                    KeyCode::Esc => {
-                        return Ok(NavAction::Back);
-                    }
-                    KeyCode::Enter => {
-                        // 証憑表示（将来実装）
-                    }
+                    KeyCode::Esc => return Ok(NavAction::Back),
+                    KeyCode::Char('j') | KeyCode::Down => self.page.select_next(),
+                    KeyCode::Char('k') | KeyCode::Up => self.page.select_previous(),
                     _ => {}
                 }
             }

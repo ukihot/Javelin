@@ -15,13 +15,11 @@ use crate::{
 };
 
 /// 締準備処理結果画面
-pub struct PreparationResultPageState {
-    title: String,
-}
+pub struct PreparationResultPageState {}
 
 impl PreparationResultPageState {
     pub fn new() -> Self {
-        Self { title: "締準備処理結果".to_string() }
+        Self {}
     }
 
     fn render(&self, frame: &mut Frame) {
