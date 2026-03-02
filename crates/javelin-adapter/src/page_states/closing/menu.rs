@@ -23,6 +23,9 @@ impl ClosingMenuPageState {
             ("Valuation Execution", "評価処理実行"),
             ("Notes Draft", "注記草案表示"),
             ("Financial Statement Generation", "財務諸表生成実行"),
+            ("Materiality Evaluation", "重要性判定処理"),
+            ("Ledger Consistency Verification", "元帳整合性検証処理"),
+            ("Comprehensive Financial Statements", "包括的財務諸表生成処理"),
         ];
 
         Self { page: MenuPage::new("D. Monthly Closing (Close Calendar)", &menu_items) }
@@ -72,6 +75,9 @@ impl PageState for ClosingMenuPageState {
                             4 => Route::ValuationExecution,                    // D-09
                             5 => Route::NotesDraft,                            // D-12
                             6 => Route::FinancialStatementGenerationExecution, // D-13
+                            7 => Route::MaterialityEvaluation,                 // D-14
+                            8 => Route::LedgerConsistencyVerification,         // D-15
+                            9 => Route::ComprehensiveFinancialStatements,      // D-16
                             _ => continue,
                         };
                         return Ok(NavAction::Go(route));
