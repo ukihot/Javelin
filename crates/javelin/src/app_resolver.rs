@@ -83,51 +83,29 @@ impl PageStateResolver {
             Route::FixedAssetsMenu => {
                 Ok(Box::new(javelin_adapter::FixedAssetsMenuPageState::new()))
             }
-            Route::FixedAssetList => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::FixedAssetList,
-                "C-02: Fixed Asset List",
-                "固定資産一覧画面",
+            Route::FixedAssetList => Ok(Box::new(javelin_adapter::FixedAssetListPageState::new(
+                Arc::clone(&self.presenter_registry),
             ))),
-            Route::AssetDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::AssetDetail,
-                "C-03: Asset Detail",
-                "資産詳細画面",
-            ))),
-            Route::AssetRegistration => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::AssetRegistration,
-                "C-04: Asset Registration",
-                "資産登録実行画面",
-            ))),
-            Route::DepreciationExecution => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::DepreciationExecution,
-                "C-05: Depreciation Execution",
-                "減価償却計算実行画面",
-            ))),
-            Route::DepreciationResult => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::DepreciationResult,
-                "C-06: Depreciation Result",
-                "償却計算結果一覧画面",
-            ))),
-            Route::LeaseContractList => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::LeaseContractList,
-                "C-07: Lease Contract List",
-                "リース契約一覧画面",
-            ))),
-            Route::LeaseContractDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::LeaseContractDetail,
-                "C-08: Lease Contract Detail",
-                "リース契約詳細画面",
-            ))),
-            Route::LeaseSchedule => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::LeaseSchedule,
-                "C-09: Lease Schedule",
-                "リース負債スケジュール画面",
-            ))),
-            Route::RouAssetList => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::RouAssetList,
-                "C-10: ROU Asset List",
-                "使用権資産台帳画面",
-            ))),
+            Route::AssetDetail => Ok(Box::new(javelin_adapter::AssetDetailPageState::new())),
+            Route::AssetRegistration => {
+                Ok(Box::new(javelin_adapter::AssetRegistrationPageState::new()))
+            }
+            Route::DepreciationExecution => {
+                Ok(Box::new(javelin_adapter::DepreciationExecutionPageState::new()))
+            }
+            Route::DepreciationResult => {
+                Ok(Box::new(javelin_adapter::DepreciationResultPageState::new(Arc::clone(
+                    &self.presenter_registry,
+                ))))
+            }
+            Route::LeaseContractList => {
+                Ok(Box::new(javelin_adapter::LeaseContractListPageState::new()))
+            }
+            Route::LeaseContractDetail => {
+                Ok(Box::new(javelin_adapter::LeaseContractDetailPageState::new()))
+            }
+            Route::LeaseSchedule => Ok(Box::new(javelin_adapter::LeaseSchedulePageState::new())),
+            Route::RouAssetList => Ok(Box::new(javelin_adapter::RouAssetListPageState::new())),
 
             // ========== D. Monthly Closing ==========
             Route::ClosingMenu => Ok(Box::new(javelin_adapter::ClosingMenuPageState::new())),

@@ -1,0 +1,90 @@
+// DepreciationExecutionPageState - 減価償却計算実行画面
+// 責務: 減価償却計算の実行
+
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use ratatui::DefaultTerminal;
+
+use crate::{
+    error::AdapterResult,
+    navigation::{Controllers, NavAction, PageState, Route},
+    views::layouts::templates::{BatchExecutionTemplate, ProcessStep, ProcessStepStatus},
+};
+
+/// 減価償却計算実行画面
+pub struct DepreciationExecutionPageState {
+    template: BatchExecutionTemplate,
+}
+
+impl DepreciationExecutionPageState {
+    pub fn new() -> Self {
+        let mut template = BatchExecutionTemplate::new("減価償却計算実行");
+
+        let steps = vec![
+            ProcessStep::new("固定資産台帳取得"),
+            ProcessStep::new("減価償却計算"),
+            ProcessStep::new("仕訳生成"),
+            ProcessStep::new("計算結果保存"),
+        ];
+        template.set_steps(steps);
+
+        Self { template }
+    }
+
+    fn execute_depreciation(&mut self, _controllers: &Controllers) {
+        self.template.update_step(0, ProcessStepStatus::Running, 0);
+        self.template.update_step(0, ProcessStepStatus::Completed, 100);
+
+        self.template.update_step(1, ProcessStepStatus::Running, 0);
+        self.template.update_step(1, ProcessStepStatus::Completed, 100);
+
+        self.template.update_step(2, ProcessStepStatus::Running, 0);
+        self.template.update_step(2, ProcessStepStatus::Completed, 100);
+
+        self.template.update_step(3, ProcessStepStatus::Running, 0);
+        self.template.update_step(3, ProcessStepStatus::Completed, 100);
+    }
+}
+
+impl PageState for DepreciationExecutionPageState {
+    fn route(&self) -> Route {
+        Route::DepreciationExecution
+    }
+
+    fn run(
+        &mut self,
+        terminal: &mut DefaultTerminal,
+        controllers: &Controllers,
+    ) -> AdapterResult<NavAction> {
+        self.execute_depreciation(controllers);
+
+        loop {
+            self.template.tick();
+
+            terminal
+                .draw(|frame| {
+                    self.template.render(frame);
+                })
+                .map_err(|e| crate::error::AdapterError::RenderingFailed(e.to_string()))?;
+
+            if event::poll(std::time::Duration::from_millis(100))
+                .map_err(crate::error::AdapterError::EventReadFailed)?
+                && let Event::Key(key) =
+                    event::read().map_err(crate::error::AdapterError::EventReadFailed)?
+            {
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
+
+                if key.code == KeyCode::Esc {
+                    return Ok(NavAction::Back);
+                }
+            }
+        }
+    }
+}
+
+impl Default for DepreciationExecutionPageState {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -29,8 +29,8 @@ use uuid::Uuid;
 
 use crate::presenter::{
     AccountMasterPresenter, ApplicationSettingsPresenter, BatchHistoryPresenter,
-    CompanyMasterPresenter, JournalEntryPresenter, LedgerPresenter, SearchPresenter,
-    SubsidiaryAccountMasterPresenter,
+    CompanyMasterPresenter, FixedAssetPresenter, JournalEntryPresenter, LedgerPresenter,
+    SearchPresenter, SubsidiaryAccountMasterPresenter,
 };
 
 /// Global registry mapping page instances to presenters
@@ -70,6 +70,7 @@ pub struct PresenterRegistry {
         Arc<RwLock<HashMap<Uuid, Arc<SubsidiaryAccountMasterPresenter>>>>,
     batch_history_presenters: Arc<RwLock<HashMap<Uuid, Arc<BatchHistoryPresenter>>>>,
     ledger_presenters: Arc<RwLock<HashMap<Uuid, Arc<LedgerPresenter>>>>,
+    fixed_asset_presenters: Arc<RwLock<HashMap<Uuid, Arc<FixedAssetPresenter>>>>,
 }
 
 impl PresenterRegistry {
@@ -84,6 +85,7 @@ impl PresenterRegistry {
             subsidiary_account_master_presenters: Arc::new(RwLock::new(HashMap::new())),
             batch_history_presenters: Arc::new(RwLock::new(HashMap::new())),
             ledger_presenters: Arc::new(RwLock::new(HashMap::new())),
+            fixed_asset_presenters: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -253,6 +255,23 @@ impl PresenterRegistry {
         self.ledger_presenters.write().unwrap().remove(&id);
     }
 
+    // Fixed Asset Presenter methods
+
+    /// Register a fixed asset presenter for a page instance
+    pub fn register_fixed_asset_presenter(&self, id: Uuid, presenter: Arc<FixedAssetPresenter>) {
+        self.fixed_asset_presenters.write().unwrap().insert(id, presenter);
+    }
+
+    /// Get a fixed asset presenter by page instance ID
+    pub fn get_fixed_asset_presenter(&self, id: Uuid) -> Option<Arc<FixedAssetPresenter>> {
+        self.fixed_asset_presenters.read().unwrap().get(&id).cloned()
+    }
+
+    /// Unregister a fixed asset presenter
+    pub fn unregister_fixed_asset_presenter(&self, id: Uuid) {
+        self.fixed_asset_presenters.write().unwrap().remove(&id);
+    }
+
     // Utility methods
 
     /// Get the total number of registered presenters across all types
@@ -265,6 +284,7 @@ impl PresenterRegistry {
             + self.subsidiary_account_master_presenters.read().unwrap().len()
             + self.batch_history_presenters.read().unwrap().len()
             + self.ledger_presenters.read().unwrap().len()
+            + self.fixed_asset_presenters.read().unwrap().len()
     }
 
     /// Clear all registered presenters (useful for testing)
@@ -277,6 +297,7 @@ impl PresenterRegistry {
         self.subsidiary_account_master_presenters.write().unwrap().clear();
         self.batch_history_presenters.write().unwrap().clear();
         self.ledger_presenters.write().unwrap().clear();
+        self.fixed_asset_presenters.write().unwrap().clear();
     }
 }
 

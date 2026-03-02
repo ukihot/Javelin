@@ -7,6 +7,7 @@ pub mod application_settings_presenter;
 pub mod batch_history_presenter;
 pub mod company_master_presenter;
 pub mod comprehensive_financial_statements_presenter;
+pub mod fixed_asset_presenter;
 pub mod journal_entry_presenter;
 pub mod ledger_consistency_verification_presenter;
 pub mod ledger_presenter;
@@ -29,6 +30,10 @@ pub use company_master_presenter::{
 pub use comprehensive_financial_statements_presenter::{
     ComprehensiveFinancialStatementsChannels, ComprehensiveFinancialStatementsPresenter,
     ComprehensiveFinancialStatementsViewModel,
+};
+pub use fixed_asset_presenter::{
+    DepreciationResultViewModel, FixedAssetPresenter, FixedAssetViewModel, LeaseContractViewModel,
+    LeaseScheduleViewModel, RouAssetViewModel,
 };
 use javelin_application::output_ports::{EventNotification, EventOutputPort};
 pub use journal_entry_presenter::{

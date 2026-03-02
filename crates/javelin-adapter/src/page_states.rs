@@ -36,7 +36,12 @@ pub use financial_statements::{
     FinancialStatementExecutionPageState, FinancialStatementsMenuPageState, NoteDraftPageState,
     NotesMenuPageState,
 };
-pub use fixed_assets::{FixedAssetsMenuPageState, IfrsValuationExecutionPageState};
+pub use fixed_assets::{
+    AssetDetailPageState, AssetRegistrationPageState, DepreciationExecutionPageState,
+    DepreciationResultPageState, FixedAssetListPageState, FixedAssetsMenuPageState,
+    IfrsValuationExecutionPageState, LeaseContractDetailPageState, LeaseContractListPageState,
+    LeaseSchedulePageState, RouAssetListPageState,
+};
 pub use ledger::{
     AccountDetailPageState, ApDetailPageState, ApLedgerPageState, ArDetailPageState,
     ArLedgerPageState, GeneralLedgerPageState, LedgerAggregationExecutionPageState,
