@@ -29,17 +29,11 @@ impl PageStateResolver {
                 Ok(Box::new(javelin_adapter::MaintenanceMenuPageState::new()))
             }
             Route::MaintenanceRebuildProjections => {
-                Ok(Box::new(javelin_adapter::StubPageState::new(
-                    Route::MaintenanceRebuildProjections,
-                    "Maintenance: Rebuild Projections",
-                    "Trigger projection rebuild",
-                )))
+                Ok(Box::new(javelin_adapter::RebuildProjectionsPageState::new()))
             }
-            Route::MaintenanceCleanEventStore => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::MaintenanceCleanEventStore,
-                "Maintenance: Clean Event Store",
-                "Purge/compact event store",
-            ))),
+            Route::MaintenanceCleanEventStore => {
+                Ok(Box::new(javelin_adapter::CleanEventStorePageState::new()))
+            }
 
             // ========== A. Primary Records ==========
             Route::PrimaryRecordsMenu => {
@@ -55,21 +49,11 @@ impl PageStateResolver {
                 Arc::clone(&self.presenter_registry),
                 "dummy-entry-id".to_string(), // TODO: パラメータ渡しの仕組みを実装
             ))),
-            Route::DocumentManagement => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::DocumentManagement,
-                "A-05: Document Management",
-                "証憑管理画面",
-            ))),
-            Route::CashLogInput => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::CashLogInput,
-                "A-06: Cash Log Input",
-                "キャッシュログ入力画面",
-            ))),
-            Route::CashLogList => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::CashLogList,
-                "A-07: Cash Log List",
-                "キャッシュログ一覧画面",
-            ))),
+            Route::DocumentManagement => {
+                Ok(Box::new(javelin_adapter::DocumentManagementPageState::new()))
+            }
+            Route::CashLogInput => Ok(Box::new(javelin_adapter::CashLogInputPageState::new())),
+            Route::CashLogList => Ok(Box::new(javelin_adapter::CashLogListPageState::new())),
 
             // ========== B. Ledger Management ==========
             Route::LedgerMenu => Ok(Box::new(javelin_adapter::LedgerMenuPageState::new())),
@@ -78,26 +62,10 @@ impl PageStateResolver {
             }
             Route::GeneralLedger => Ok(Box::new(javelin_adapter::GeneralLedgerPageState::new())),
             Route::AccountDetail => Ok(Box::new(javelin_adapter::AccountDetailPageState::new())),
-            Route::ArLedger => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::ArLedger,
-                "B-05: AR Ledger",
-                "売掛金補助元帳画面",
-            ))),
-            Route::ArDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::ArDetail,
-                "B-06: AR Detail",
-                "売掛金明細画面",
-            ))),
-            Route::ApLedger => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::ApLedger,
-                "B-07: AP Ledger",
-                "買掛金補助元帳画面",
-            ))),
-            Route::ApDetail => Ok(Box::new(javelin_adapter::StubPageState::new(
-                Route::ApDetail,
-                "B-08: AP Detail",
-                "買掛金明細画面",
-            ))),
+            Route::ArLedger => Ok(Box::new(javelin_adapter::ArLedgerPageState::new())),
+            Route::ArDetail => Ok(Box::new(javelin_adapter::ArDetailPageState::new())),
+            Route::ApLedger => Ok(Box::new(javelin_adapter::ApLedgerPageState::new())),
+            Route::ApDetail => Ok(Box::new(javelin_adapter::ApDetailPageState::new())),
 
             // ========== C. Fixed Assets & Lease ==========
             Route::FixedAssetsMenu => {
