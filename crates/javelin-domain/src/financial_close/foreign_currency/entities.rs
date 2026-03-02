@@ -9,6 +9,7 @@ use super::values::{
     MonetaryClassification,
 };
 use crate::{
+    common::Amount,
     entity::Entity,
     error::{DomainError, DomainResult},
     value_object::ValueObject,
@@ -24,11 +25,11 @@ pub struct ForeignCurrencyTransaction {
     /// 外貨通貨
     foreign_currency: Currency,
     /// 外貨建金額
-    foreign_amount: i64,
+    foreign_amount: Amount,
     /// 取引日レート
     transaction_rate: ExchangeRate,
     /// 機能通貨換算額（取引日）
-    functional_amount_at_transaction: i64,
+    functional_amount_at_transaction: Amount,
     /// 貨幣性・非貨幣性分類
     monetary_classification: MonetaryClassification,
     /// 勘定科目コード
@@ -38,9 +39,9 @@ pub struct ForeignCurrencyTransaction {
     /// 期末評価替え済フラグ
     remeasured: bool,
     /// 期末換算額
-    functional_amount_at_closing: Option<i64>,
+    functional_amount_at_closing: Option<Amount>,
     /// 為替差損益
-    exchange_gain_loss: Option<i64>,
+    exchange_gain_loss: Option<Amount>,
     /// 作成日時
     created_at: DateTime<Utc>,
     /// 更新日時
@@ -53,7 +54,7 @@ impl ForeignCurrencyTransaction {
         id: ForeignCurrencyTransactionId,
         functional_currency: FunctionalCurrency,
         foreign_currency: Currency,
-        foreign_amount: i64,
+        foreign_amount: Amount,
         transaction_rate: ExchangeRate,
         monetary_classification: MonetaryClassification,
         account_code: String,
@@ -65,7 +66,7 @@ impl ForeignCurrencyTransaction {
 
         transaction_rate.validate()?;
 
-        let functional_amount_at_transaction = transaction_rate.convert(foreign_amount);
+        let functional_amount_at_transaction = transaction_rate.convert(&foreign_amount);
 
         let now = Utc::now();
         Ok(Self {
@@ -94,9 +95,9 @@ impl ForeignCurrencyTransaction {
 
         closing_rate.validate()?;
 
-        let functional_amount_at_closing = closing_rate.convert(self.foreign_amount);
+        let functional_amount_at_closing = closing_rate.convert(&self.foreign_amount);
         let exchange_gain_loss =
-            functional_amount_at_closing - self.functional_amount_at_transaction;
+            &functional_amount_at_closing - &self.functional_amount_at_transaction;
 
         self.functional_amount_at_closing = Some(functional_amount_at_closing);
         self.exchange_gain_loss = Some(exchange_gain_loss);
@@ -107,14 +108,16 @@ impl ForeignCurrencyTransaction {
     }
 
     /// 為替差損益を取得（評価替え済の場合）
-    pub fn get_exchange_gain_loss(&self) -> Option<i64> {
-        self.exchange_gain_loss
+    pub fn get_exchange_gain_loss(&self) -> Option<&Amount> {
+        self.exchange_gain_loss.as_ref()
     }
 
     /// 期末帳簿価額を取得
-    pub fn closing_carrying_amount(&self) -> i64 {
+    pub fn closing_carrying_amount(&self) -> Amount {
         self.functional_amount_at_closing
-            .unwrap_or(self.functional_amount_at_transaction)
+            .as_ref()
+            .unwrap_or(&self.functional_amount_at_transaction)
+            .clone()
     }
 
     // Getters
@@ -130,16 +133,16 @@ impl ForeignCurrencyTransaction {
         &self.foreign_currency
     }
 
-    pub fn foreign_amount(&self) -> i64 {
-        self.foreign_amount
+    pub fn foreign_amount(&self) -> &Amount {
+        &self.foreign_amount
     }
 
     pub fn transaction_rate(&self) -> &ExchangeRate {
         &self.transaction_rate
     }
 
-    pub fn functional_amount_at_transaction(&self) -> i64 {
-        self.functional_amount_at_transaction
+    pub fn functional_amount_at_transaction(&self) -> &Amount {
+        &self.functional_amount_at_transaction
     }
 
     pub fn monetary_classification(&self) -> &MonetaryClassification {
@@ -158,8 +161,8 @@ impl ForeignCurrencyTransaction {
         self.remeasured
     }
 
-    pub fn functional_amount_at_closing(&self) -> Option<i64> {
-        self.functional_amount_at_closing
+    pub fn functional_amount_at_closing(&self) -> Option<&Amount> {
+        self.functional_amount_at_closing.as_ref()
     }
 
     pub fn created_at(&self) -> DateTime<Utc> {
@@ -205,7 +208,7 @@ mod tests {
             id,
             functional_currency,
             Currency::USD,
-            1_000, // 1,000 USD
+            Amount::from_i64(1_000), // 1,000 USD
             transaction_rate,
             MonetaryClassification::Monetary,
             "1100".to_string(),
@@ -217,8 +220,8 @@ mod tests {
     #[test]
     fn test_foreign_currency_transaction_creation() {
         let transaction = create_test_transaction();
-        assert_eq!(transaction.foreign_amount(), 1_000);
-        assert_eq!(transaction.functional_amount_at_transaction(), 150_000); // 1,000 * 150
+        assert_eq!(transaction.foreign_amount().to_i64(), Some(1_000));
+        assert_eq!(transaction.functional_amount_at_transaction().to_i64(), Some(150_000)); // 1,000 * 150
         assert!(!transaction.is_remeasured());
     }
 
@@ -238,8 +241,8 @@ mod tests {
 
         assert!(transaction.remeasure(closing_rate).is_ok());
         assert!(transaction.is_remeasured());
-        assert_eq!(transaction.functional_amount_at_closing(), Some(155_000)); // 1,000 * 155
-        assert_eq!(transaction.get_exchange_gain_loss(), Some(5_000)); // 155,000 - 150,000
+        assert_eq!(transaction.functional_amount_at_closing().unwrap().to_i64(), Some(155_000)); // 1,000 * 155
+        assert_eq!(transaction.get_exchange_gain_loss().unwrap().to_i64(), Some(5_000)); // 155,000 - 150,000
     }
 
     #[test]
@@ -262,7 +265,7 @@ mod tests {
             id,
             functional_currency,
             Currency::USD,
-            1_000,
+            Amount::from_i64(1_000),
             transaction_rate,
             MonetaryClassification::NonMonetaryCost, // 非貨幣性項目（原価測定）
             "1500".to_string(),
@@ -289,7 +292,7 @@ mod tests {
         let mut transaction = create_test_transaction();
 
         // 評価替え前
-        assert_eq!(transaction.closing_carrying_amount(), 150_000);
+        assert_eq!(transaction.closing_carrying_amount().to_i64(), Some(150_000));
 
         // 評価替え後
         let closing_rate = ExchangeRate::new(
@@ -303,7 +306,7 @@ mod tests {
         .unwrap();
         transaction.remeasure(closing_rate).unwrap();
 
-        assert_eq!(transaction.closing_carrying_amount(), 155_000);
+        assert_eq!(transaction.closing_carrying_amount().to_i64(), Some(155_000));
     }
 
     #[test]
@@ -321,6 +324,6 @@ mod tests {
         .unwrap();
 
         transaction.remeasure(closing_rate).unwrap();
-        assert_eq!(transaction.get_exchange_gain_loss(), Some(-5_000)); // 145,000 - 150,000 = -5,000（為替差損）
+        assert_eq!(transaction.get_exchange_gain_loss().unwrap().to_i64(), Some(-5_000)); // 145,000 - 150,000 = -5,000（為替差損）
     }
 }

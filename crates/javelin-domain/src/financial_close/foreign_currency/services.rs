@@ -4,7 +4,10 @@ use super::{
     entities::ForeignCurrencyTransaction,
     values::{Currency, MonetaryClassification},
 };
-use crate::error::{DomainError, DomainResult};
+use crate::{
+    common::Amount,
+    error::{DomainError, DomainResult},
+};
 
 /// 外貨換算ドメインサービス
 pub struct ForeignCurrencyService;
@@ -72,16 +75,18 @@ impl ForeignCurrencyService {
     }
 
     /// 為替差損益を分析
-    pub fn analyze_exchange_gain_loss(transactions: &[ForeignCurrencyTransaction]) -> (i64, i64) {
-        let mut total_gain = 0i64;
-        let mut total_loss = 0i64;
+    pub fn analyze_exchange_gain_loss(
+        transactions: &[ForeignCurrencyTransaction],
+    ) -> (Amount, Amount) {
+        let mut total_gain = Amount::zero();
+        let mut total_loss = Amount::zero();
 
         for transaction in transactions {
             if let Some(gain_loss) = transaction.get_exchange_gain_loss() {
-                if gain_loss > 0 {
-                    total_gain += gain_loss;
+                if gain_loss.is_positive() {
+                    total_gain = total_gain + gain_loss.clone();
                 } else {
-                    total_loss += gain_loss.abs();
+                    total_loss = total_loss + gain_loss.abs();
                 }
             }
         }
@@ -91,46 +96,61 @@ impl ForeignCurrencyService {
 
     /// 重要な換算差額を判定
     pub fn is_significant_exchange_difference(
-        exchange_difference: i64,
-        total_assets: i64,
+        exchange_difference: &Amount,
+        total_assets: &Amount,
         materiality_threshold: f64,
     ) -> bool {
-        if total_assets == 0 {
+        if total_assets.is_zero() {
             return false;
         }
 
-        let ratio = exchange_difference.abs() as f64 / total_assets as f64;
-        ratio >= materiality_threshold
+        if let (Some(diff_f64), Some(assets_f64)) =
+            (exchange_difference.abs().to_f64(), total_assets.to_f64())
+        {
+            let ratio = diff_f64 / assets_f64;
+            ratio >= materiality_threshold
+        } else {
+            false
+        }
     }
 
     /// ヘッジ会計の有効性を評価（簡易版）
     pub fn evaluate_hedge_effectiveness(
-        hedged_item_change: i64,
-        hedging_instrument_change: i64,
+        hedged_item_change: &Amount,
+        hedging_instrument_change: &Amount,
         effectiveness_range: (f64, f64), // (下限, 上限) 例: (0.8, 1.25)
     ) -> bool {
-        if hedged_item_change == 0 {
+        if hedged_item_change.is_zero() {
             return false;
         }
 
         // ヘッジ対象とヘッジ手段は逆方向に動くため、絶対値で比較
-        let ratio = hedging_instrument_change.abs() as f64 / hedged_item_change.abs() as f64;
-        ratio >= effectiveness_range.0 && ratio <= effectiveness_range.1
+        if let (Some(hedged_f64), Some(hedging_f64)) =
+            (hedged_item_change.abs().to_f64(), hedging_instrument_change.abs().to_f64())
+        {
+            let ratio = hedging_f64 / hedged_f64;
+            ratio >= effectiveness_range.0 && ratio <= effectiveness_range.1
+        } else {
+            false
+        }
     }
 
     /// 複数通貨の総合的な為替リスクを評価
     pub fn assess_currency_risk(
         transactions: &[ForeignCurrencyTransaction],
-    ) -> Vec<(Currency, i64)> {
+    ) -> Vec<(Currency, Amount)> {
         use std::collections::HashMap;
 
-        let mut exposure_by_currency: HashMap<String, i64> = HashMap::new();
+        let mut exposure_by_currency: HashMap<String, Amount> = HashMap::new();
 
         for transaction in transactions {
             let currency_key = transaction.foreign_currency().as_str().to_string();
             let exposure = transaction.foreign_amount();
 
-            *exposure_by_currency.entry(currency_key).or_insert(0) += exposure;
+            exposure_by_currency
+                .entry(currency_key)
+                .and_modify(|e| *e = &*e + exposure)
+                .or_insert_with(|| exposure.clone());
         }
 
         exposure_by_currency
@@ -193,13 +213,13 @@ mod tests {
 
     #[test]
     fn test_is_significant_exchange_difference() {
-        let exchange_difference = 10_000_000; // 1,000万円
-        let total_assets = 1_000_000_000; // 10億円
+        let exchange_difference = Amount::from_i64(10_000_000); // 1,000万円
+        let total_assets = Amount::from_i64(1_000_000_000); // 10億円
         let materiality_threshold = 0.005; // 0.5%
 
         let is_significant = ForeignCurrencyService::is_significant_exchange_difference(
-            exchange_difference,
-            total_assets,
+            &exchange_difference,
+            &total_assets,
             materiality_threshold,
         );
 
@@ -208,12 +228,12 @@ mod tests {
 
     #[test]
     fn test_evaluate_hedge_effectiveness() {
-        let hedged_item_change = -10_000_000; // 1,000万円の損失
-        let hedging_instrument_change = 9_500_000; // 950万円の利益
+        let hedged_item_change = Amount::from_i64(-10_000_000); // 1,000万円の損失
+        let hedging_instrument_change = Amount::from_i64(9_500_000); // 950万円の利益
 
         let is_effective = ForeignCurrencyService::evaluate_hedge_effectiveness(
-            hedged_item_change,
-            hedging_instrument_change,
+            &hedged_item_change,
+            &hedging_instrument_change,
             (0.8, 1.25),
         );
 

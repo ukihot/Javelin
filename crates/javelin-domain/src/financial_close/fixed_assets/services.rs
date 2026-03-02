@@ -6,19 +6,25 @@ use super::{
     entities::{Component, FixedAsset},
     values::{AssetCategory, DepreciationMethod},
 };
-use crate::error::{DomainError, DomainResult};
+use crate::{
+    common::Amount,
+    error::{DomainError, DomainResult},
+};
 
 /// 固定資産ドメインサービス
 pub struct FixedAssetDomainService;
 
 impl FixedAssetDomainService {
     /// 総勘定元帳との整合性を検証
-    pub fn verify_ledger_consistency(asset: &FixedAsset, ledger_balance: i64) -> DomainResult<()> {
+    pub fn verify_ledger_consistency(
+        asset: &FixedAsset,
+        ledger_balance: &Amount,
+    ) -> DomainResult<()> {
         let carrying_amount = asset.carrying_amount();
-        if carrying_amount != ledger_balance {
+        if &carrying_amount != ledger_balance {
             return Err(DomainError::LedgerInconsistency {
-                asset_carrying_amount: carrying_amount,
-                ledger_balance,
+                asset_carrying_amount: carrying_amount.to_i64().unwrap_or(0),
+                ledger_balance: ledger_balance.to_i64().unwrap_or(0),
             });
         }
         Ok(())
@@ -28,10 +34,10 @@ impl FixedAssetDomainService {
     pub fn calculate_monthly_depreciation(
         component: &Component,
         target_month: DateTime<Utc>,
-    ) -> DomainResult<i64> {
+    ) -> DomainResult<Amount> {
         // 償却開始日より前の場合は0
         if target_month < component.depreciation_start_date() {
-            return Ok(0);
+            return Ok(Amount::zero());
         }
 
         // 償却方法に応じて計算
@@ -43,7 +49,11 @@ impl FixedAssetDomainService {
                 // 定率法の実装（簡易版）
                 let remaining_value = component.carrying_amount();
                 let rate = Self::calculate_declining_balance_rate(component.useful_life().years());
-                Ok((remaining_value as f64 * rate) as i64)
+                if let Some(rv_f64) = remaining_value.to_f64() {
+                    Ok(Amount::from_i64((rv_f64 * rate) as i64))
+                } else {
+                    Ok(Amount::zero())
+                }
             }
             DepreciationMethod::UnitsOfProduction => {
                 // 生産高比例法は別途生産量データが必要
@@ -65,7 +75,7 @@ impl FixedAssetDomainService {
     pub fn calculate_annual_depreciation(
         component: &Component,
         _fiscal_year: u32,
-    ) -> DomainResult<i64> {
+    ) -> DomainResult<Amount> {
         match component.depreciation_method() {
             DepreciationMethod::StraightLine => {
                 Ok(component.calculate_straight_line_depreciation(12))
@@ -73,7 +83,11 @@ impl FixedAssetDomainService {
             DepreciationMethod::DecliningBalance => {
                 let remaining_value = component.carrying_amount();
                 let rate = Self::calculate_declining_balance_rate(component.useful_life().years());
-                Ok((remaining_value as f64 * rate) as i64)
+                if let Some(rv_f64) = remaining_value.to_f64() {
+                    Ok(Amount::from_i64((rv_f64 * rate) as i64))
+                } else {
+                    Ok(Amount::zero())
+                }
             }
             DepreciationMethod::UnitsOfProduction => {
                 Err(DomainError::UnsupportedDepreciationMethod)
@@ -84,13 +98,15 @@ impl FixedAssetDomainService {
     /// 減損兆候をチェック
     pub fn check_impairment_indicators(
         asset: &FixedAsset,
-        market_value: Option<i64>,
+        market_value: Option<&Amount>,
         performance_decline: bool,
     ) -> bool {
         // 市場価格が著しく低下している
         if let Some(mv) = market_value {
             let carrying_amount = asset.carrying_amount();
-            if mv < (carrying_amount * 70) / 100 {
+            if let (Some(mv_i64), Some(ca_i64)) = (mv.to_i64(), carrying_amount.to_i64())
+                && mv_i64 < (ca_i64 * 70) / 100
+            {
                 // 30%以上の低下
                 return true;
             }
@@ -111,33 +127,35 @@ impl FixedAssetDomainService {
 
     /// 回収可能価額を計算（使用価値法）
     pub fn calculate_recoverable_amount(
-        future_cash_flows: &[i64],
+        future_cash_flows: &[Amount],
         discount_rate: f64,
-    ) -> DomainResult<i64> {
+    ) -> DomainResult<Amount> {
         if !(0.0..=1.0).contains(&discount_rate) {
             return Err(DomainError::InvalidDiscountRate);
         }
 
         let mut present_value = 0.0;
-        for (year, &cash_flow) in future_cash_flows.iter().enumerate() {
-            let discount_factor = 1.0 / (1.0 + discount_rate).powi((year + 1) as i32);
-            present_value += cash_flow as f64 * discount_factor;
+        for (year, cash_flow) in future_cash_flows.iter().enumerate() {
+            if let Some(cf_f64) = cash_flow.to_f64() {
+                let discount_factor = 1.0 / (1.0 + discount_rate).powi((year + 1) as i32);
+                present_value += cf_f64 * discount_factor;
+            }
         }
 
-        Ok(present_value as i64)
+        Ok(Amount::from_i64(present_value as i64))
     }
 
     /// 減損損失を計算
     pub fn calculate_impairment_loss(
-        carrying_amount: i64,
-        recoverable_amount: i64,
-    ) -> DomainResult<i64> {
-        if recoverable_amount < 0 {
+        carrying_amount: &Amount,
+        recoverable_amount: &Amount,
+    ) -> DomainResult<Amount> {
+        if recoverable_amount.is_negative() {
             return Err(DomainError::InvalidRecoverableAmount);
         }
 
         if carrying_amount <= recoverable_amount {
-            return Ok(0);
+            return Ok(Amount::zero());
         }
 
         Ok(carrying_amount - recoverable_amount)
@@ -160,12 +178,12 @@ impl FixedAssetDomainService {
 
         // 償却可能額が残っていること
         let depreciable_amount = component.cost() - component.residual_value();
-        component.accumulated_depreciation() < depreciable_amount
+        component.accumulated_depreciation() < &depreciable_amount
     }
 
     /// 複数コンポーネントの合計帳簿価額を計算
-    pub fn calculate_total_carrying_amount(components: &[Component]) -> i64 {
-        components.iter().map(|c| c.carrying_amount()).sum()
+    pub fn calculate_total_carrying_amount(components: &[Component]) -> Amount {
+        components.iter().fold(Amount::zero(), |acc, c| acc + c.carrying_amount())
     }
 }
 
@@ -185,9 +203,9 @@ mod tests {
         Component::new(
             id,
             "Test Component".to_string(),
-            1_000_000,
+            Amount::from_i64(1_000_000),
             useful_life,
-            100_000,
+            Amount::from_i64(100_000),
             DepreciationMethod::StraightLine,
             Utc::now(),
         )
@@ -204,7 +222,7 @@ mod tests {
                 .unwrap();
 
         // (1,000,000 - 100,000) / 60ヶ月 = 15,000
-        assert_eq!(depreciation, 15_000);
+        assert_eq!(depreciation.to_i64(), Some(15_000));
     }
 
     #[test]
@@ -215,7 +233,7 @@ mod tests {
             FixedAssetDomainService::calculate_annual_depreciation(&component, 2024).unwrap();
 
         // (1,000,000 - 100,000) / 5年 = 180,000
-        assert_eq!(depreciation, 180_000);
+        assert_eq!(depreciation.to_i64(), Some(180_000));
     }
 
     #[test]
@@ -235,19 +253,25 @@ mod tests {
             "1000".to_string(),
             "PPE".to_string(),
             acquisition_date,
-            1_000_000,
+            Amount::from_i64(1_000_000),
             super::super::values::MeasurementModel::CostModel,
         )
         .unwrap();
 
         // 市場価格が30%以上低下
-        let has_indicator =
-            FixedAssetDomainService::check_impairment_indicators(&asset, Some(600_000), false);
+        let has_indicator = FixedAssetDomainService::check_impairment_indicators(
+            &asset,
+            Some(&Amount::from_i64(600_000)),
+            false,
+        );
         assert!(has_indicator);
 
         // 市場価格が30%未満の低下
-        let has_indicator =
-            FixedAssetDomainService::check_impairment_indicators(&asset, Some(800_000), false);
+        let has_indicator = FixedAssetDomainService::check_impairment_indicators(
+            &asset,
+            Some(&Amount::from_i64(800_000)),
+            false,
+        );
         assert!(!has_indicator);
     }
 
@@ -262,7 +286,7 @@ mod tests {
             "1000".to_string(),
             "PPE".to_string(),
             acquisition_date,
-            1_000_000,
+            Amount::from_i64(1_000_000),
             super::super::values::MeasurementModel::CostModel,
         )
         .unwrap();
@@ -274,7 +298,13 @@ mod tests {
 
     #[test]
     fn test_calculate_recoverable_amount() {
-        let future_cash_flows = vec![200_000, 200_000, 200_000, 200_000, 200_000];
+        let future_cash_flows = vec![
+            Amount::from_i64(200_000),
+            Amount::from_i64(200_000),
+            Amount::from_i64(200_000),
+            Amount::from_i64(200_000),
+            Amount::from_i64(200_000),
+        ];
         let discount_rate = 0.05;
 
         let recoverable_amount = FixedAssetDomainService::calculate_recoverable_amount(
@@ -284,32 +314,37 @@ mod tests {
         .unwrap();
 
         // 現在価値の合計（概算）
-        assert!(recoverable_amount > 800_000);
-        assert!(recoverable_amount < 1_000_000);
+        let ra_i64 = recoverable_amount.to_i64().unwrap();
+        assert!(ra_i64 > 800_000);
+        assert!(ra_i64 < 1_000_000);
     }
 
     #[test]
     fn test_calculate_impairment_loss() {
-        let carrying_amount = 1_000_000;
-        let recoverable_amount = 800_000;
+        let carrying_amount = Amount::from_i64(1_000_000);
+        let recoverable_amount = Amount::from_i64(800_000);
 
-        let impairment_loss =
-            FixedAssetDomainService::calculate_impairment_loss(carrying_amount, recoverable_amount)
-                .unwrap();
+        let impairment_loss = FixedAssetDomainService::calculate_impairment_loss(
+            &carrying_amount,
+            &recoverable_amount,
+        )
+        .unwrap();
 
-        assert_eq!(impairment_loss, 200_000);
+        assert_eq!(impairment_loss.to_i64(), Some(200_000));
     }
 
     #[test]
     fn test_calculate_impairment_loss_no_impairment() {
-        let carrying_amount = 1_000_000;
-        let recoverable_amount = 1_200_000;
+        let carrying_amount = Amount::from_i64(1_000_000);
+        let recoverable_amount = Amount::from_i64(1_200_000);
 
-        let impairment_loss =
-            FixedAssetDomainService::calculate_impairment_loss(carrying_amount, recoverable_amount)
-                .unwrap();
+        let impairment_loss = FixedAssetDomainService::calculate_impairment_loss(
+            &carrying_amount,
+            &recoverable_amount,
+        )
+        .unwrap();
 
-        assert_eq!(impairment_loss, 0);
+        assert!(impairment_loss.is_zero());
     }
 
     #[test]
@@ -323,7 +358,7 @@ mod tests {
             "1500".to_string(),
             "CIP".to_string(),
             acquisition_date,
-            1_000_000,
+            Amount::from_i64(1_000_000),
             super::super::values::MeasurementModel::CostModel,
         )
         .unwrap();
@@ -349,6 +384,6 @@ mod tests {
 
         let total =
             FixedAssetDomainService::calculate_total_carrying_amount(&[component1, component2]);
-        assert_eq!(total, 2_000_000);
+        assert_eq!(total.to_i64(), Some(2_000_000));
     }
 }

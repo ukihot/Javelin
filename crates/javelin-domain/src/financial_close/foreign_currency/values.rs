@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
+    common::Amount,
     error::{DomainError, DomainResult},
     value_object::ValueObject,
 };
@@ -202,8 +203,11 @@ impl ExchangeRate {
     }
 
     /// 金額を換算
-    pub fn convert(&self, amount: i64) -> i64 {
-        (amount * self.rate_scaled) / Self::SCALE_FACTOR
+    pub fn convert(&self, amount: &Amount) -> Amount {
+        use bigdecimal::BigDecimal;
+        let rate_decimal =
+            BigDecimal::from(self.rate_scaled) / BigDecimal::from(Self::SCALE_FACTOR);
+        Amount::from(amount.value() * rate_decimal)
     }
 
     pub fn base_currency(&self) -> &Currency {
@@ -364,7 +368,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(rate.convert(100), 15_000); // 100 USD * 150 = 15,000 JPY
+        assert_eq!(rate.convert(&Amount::from_i64(100)).to_i64(), Some(15_000)); // 100 USD * 150 = 15,000 JPY
     }
 
     #[test]

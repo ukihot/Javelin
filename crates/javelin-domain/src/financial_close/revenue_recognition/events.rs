@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::values::{ContractId, PerformanceObligationId, TransactionPrice};
-use crate::event::DomainEvent;
+use crate::{common::Amount, event::DomainEvent};
 
 /// 収益認識イベント
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,21 +68,21 @@ pub enum RevenueRecognitionEventType {
     PerformanceObligationAdded {
         obligation_id: PerformanceObligationId,
         description: String,
-        standalone_selling_price: i64,
+        standalone_selling_price: Amount,
         is_distinct: bool,
     },
     /// 取引価格配分（Step 4）
-    TransactionPriceAllocated { allocations: Vec<(PerformanceObligationId, i64)> },
+    TransactionPriceAllocated { allocations: Vec<(PerformanceObligationId, Amount)> },
     /// 収益認識（Step 5）
     RevenueRecognized {
         obligation_id: PerformanceObligationId,
-        amount: i64,
+        amount: Amount,
         recognition_date: DateTime<Utc>,
     },
     /// 契約変更（Step 3）
-    ContractModified { old_price: i64, new_price: i64, modification_date: DateTime<Utc> },
+    ContractModified { old_price: Amount, new_price: Amount, modification_date: DateTime<Utc> },
     /// 契約完了
-    ContractCompleted { completion_date: DateTime<Utc>, total_revenue: i64 },
+    ContractCompleted { completion_date: DateTime<Utc>, total_revenue: Amount },
     /// 契約結合
     ContractsCombined { combined_from: Vec<ContractId> },
 }
@@ -94,7 +94,13 @@ mod tests {
     #[test]
     fn test_contract_identified_event() {
         let contract_id = ContractId::new();
-        let transaction_price = TransactionPrice::new(1_000_000, 0, 0, 0).unwrap();
+        let transaction_price = TransactionPrice::new(
+            Amount::from_i64(1_000_000),
+            Amount::zero(),
+            Amount::zero(),
+            Amount::zero(),
+        )
+        .unwrap();
 
         let event = RevenueRecognitionEvent::new(
             contract_id.clone(),
@@ -118,7 +124,7 @@ mod tests {
             contract_id,
             RevenueRecognitionEventType::RevenueRecognized {
                 obligation_id,
-                amount: 500_000,
+                amount: Amount::from_i64(500_000),
                 recognition_date: Utc::now(),
             },
         );

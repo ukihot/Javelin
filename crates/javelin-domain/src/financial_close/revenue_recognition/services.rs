@@ -1,7 +1,10 @@
 // 収益認識のドメインサービス
 
 use super::{entities::Contract, values::ProgressRate};
-use crate::error::{DomainError, DomainResult};
+use crate::{
+    common::Amount,
+    error::{DomainError, DomainResult},
+};
 
 /// 収益認識ドメインサービス
 pub struct RevenueRecognitionService;
@@ -43,8 +46,8 @@ impl RevenueRecognitionService {
 
     /// 変動対価を見積（期待値法）
     pub fn estimate_variable_consideration_expected_value(
-        scenarios: &[(i64, f64)], // (金額, 確率)
-    ) -> DomainResult<i64> {
+        scenarios: &[(Amount, f64)], // (金額, 確率)
+    ) -> DomainResult<Amount> {
         if scenarios.is_empty() {
             return Err(DomainError::InvalidTransactionPrice);
         }
@@ -55,16 +58,18 @@ impl RevenueRecognitionService {
             return Err(DomainError::InvalidTransactionPrice);
         }
 
-        let expected_value: f64 =
-            scenarios.iter().map(|(amount, prob)| *amount as f64 * prob).sum();
+        let expected_value: f64 = scenarios
+            .iter()
+            .filter_map(|(amount, prob)| amount.to_f64().map(|a| a * prob))
+            .sum();
 
-        Ok(expected_value as i64)
+        Ok(Amount::from_i64(expected_value as i64))
     }
 
     /// 変動対価を見積（最頻値法）
     pub fn estimate_variable_consideration_most_likely(
-        scenarios: &[(i64, f64)], // (金額, 確率)
-    ) -> DomainResult<i64> {
+        scenarios: &[(Amount, f64)], // (金額, 確率)
+    ) -> DomainResult<Amount> {
         if scenarios.is_empty() {
             return Err(DomainError::InvalidTransactionPrice);
         }
@@ -77,12 +82,12 @@ impl RevenueRecognitionService {
             })
             .ok_or(DomainError::InvalidTransactionPrice)?;
 
-        Ok(most_likely.0)
+        Ok(most_likely.0.clone())
     }
 
     /// 変動対価の制約を評価
     pub fn evaluate_constraint(
-        _estimated_amount: i64,
+        _estimated_amount: &Amount,
         uncertainty_factors: &[String],
         experience_with_similar: bool,
     ) -> bool {
@@ -102,22 +107,25 @@ impl RevenueRecognitionService {
     }
 
     /// 独立販売価格を見積（調整市場評価アプローチ）
-    pub fn estimate_ssp_adjusted_market_assessment(market_prices: &[i64]) -> DomainResult<i64> {
+    pub fn estimate_ssp_adjusted_market_assessment(
+        market_prices: &[Amount],
+    ) -> DomainResult<Amount> {
         if market_prices.is_empty() {
             return Err(DomainError::InvalidStandaloneSellingPrice);
         }
 
         // 市場価格の平均を使用
-        let sum: i64 = market_prices.iter().sum();
-        Ok(sum / market_prices.len() as i64)
+        let sum = market_prices.iter().fold(Amount::zero(), |acc, price| acc + price.clone());
+        let count = Amount::from_i64(market_prices.len() as i64);
+        Ok(&sum / &count)
     }
 
     /// 独立販売価格を見積（予想コスト加算アプローチ）
     pub fn estimate_ssp_expected_cost_plus_margin(
-        expected_cost: i64,
+        expected_cost: &Amount,
         margin_rate: u32, // パーセント
-    ) -> DomainResult<i64> {
-        if expected_cost < 0 {
+    ) -> DomainResult<Amount> {
+        if expected_cost.is_negative() {
             return Err(DomainError::InvalidStandaloneSellingPrice);
         }
 
@@ -125,8 +133,9 @@ impl RevenueRecognitionService {
             return Err(DomainError::InvalidStandaloneSellingPrice);
         }
 
-        let margin = (expected_cost * i64::from(margin_rate)) / 100;
-        Ok(expected_cost + margin)
+        let margin =
+            expected_cost * &Amount::from_i64(i64::from(margin_rate)) / Amount::from_i64(100);
+        Ok(expected_cost + &margin)
     }
 
     /// 残余アプローチの適用要件を判定
@@ -140,21 +149,25 @@ impl RevenueRecognitionService {
 
     /// 進捗度を測定（インプット法：コスト基準）
     pub fn measure_progress_input_method(
-        costs_incurred: i64,
-        total_expected_costs: i64,
+        costs_incurred: &Amount,
+        total_expected_costs: &Amount,
     ) -> DomainResult<ProgressRate> {
-        if total_expected_costs <= 0 {
+        if !total_expected_costs.is_positive() {
             return Err(DomainError::InvalidRevenueRecognitionPattern);
         }
 
-        if costs_incurred < 0 {
+        if costs_incurred.is_negative() {
             return Err(DomainError::InvalidRevenueRecognitionPattern);
         }
 
         let percentage = if costs_incurred >= total_expected_costs {
             100
+        } else if let (Some(incurred), Some(total)) =
+            (costs_incurred.to_i64(), total_expected_costs.to_i64())
+        {
+            ((incurred * 100) / total) as u32
         } else {
-            ((costs_incurred * 100) / total_expected_costs) as u32
+            0
         };
 
         ProgressRate::new(percentage)
@@ -192,20 +205,22 @@ impl RevenueRecognitionService {
 
     /// 重要な金融要素の調整額を計算
     pub fn calculate_financing_adjustment(
-        promised_consideration: i64,
-        cash_selling_price: i64,
+        promised_consideration: &Amount,
+        cash_selling_price: &Amount,
         discount_rate: f64,
         years: u32,
-    ) -> DomainResult<i64> {
+    ) -> DomainResult<Amount> {
         if !(0.0..=1.0).contains(&discount_rate) {
             return Err(DomainError::InvalidTransactionPrice);
         }
 
         // 現在価値を計算
-        let present_value =
-            promised_consideration as f64 / (1.0 + discount_rate).powi(years as i32);
-
-        Ok(present_value as i64 - cash_selling_price)
+        if let Some(promised_f64) = promised_consideration.to_f64() {
+            let present_value = promised_f64 / (1.0 + discount_rate).powi(years as i32);
+            Ok(&Amount::from_i64(present_value as i64) - cash_selling_price)
+        } else {
+            Err(DomainError::InvalidTransactionPrice)
+        }
     }
 }
 
@@ -228,14 +243,26 @@ mod tests {
             ContractId::new(),
             "CUST001".to_string(),
             Utc::now(),
-            TransactionPrice::new(1_000_000, 0, 0, 0).unwrap(),
+            TransactionPrice::new(
+                Amount::from_i64(1_000_000),
+                Amount::zero(),
+                Amount::zero(),
+                Amount::zero(),
+            )
+            .unwrap(),
         )
         .unwrap();
         let contract2 = Contract::new(
             ContractId::new(),
             "CUST001".to_string(),
             Utc::now(),
-            TransactionPrice::new(500_000, 0, 0, 0).unwrap(),
+            TransactionPrice::new(
+                Amount::from_i64(500_000),
+                Amount::zero(),
+                Amount::zero(),
+                Amount::zero(),
+            )
+            .unwrap(),
         )
         .unwrap();
         let contracts = vec![contract1, contract2];
@@ -259,44 +286,56 @@ mod tests {
 
     #[test]
     fn test_estimate_variable_consideration_expected_value() {
-        let scenarios = vec![(1_000_000, 0.5), (800_000, 0.3), (600_000, 0.2)];
+        let scenarios = vec![
+            (Amount::from_i64(1_000_000), 0.5),
+            (Amount::from_i64(800_000), 0.3),
+            (Amount::from_i64(600_000), 0.2),
+        ];
 
         let result =
             RevenueRecognitionService::estimate_variable_consideration_expected_value(&scenarios)
                 .unwrap();
 
         // 1,000,000 * 0.5 + 800,000 * 0.3 + 600,000 * 0.2 = 860,000
-        assert_eq!(result, 860_000);
+        assert_eq!(result.to_i64(), Some(860_000));
     }
 
     #[test]
     fn test_estimate_variable_consideration_most_likely() {
-        let scenarios = vec![(1_000_000, 0.5), (800_000, 0.3), (600_000, 0.2)];
+        let scenarios = vec![
+            (Amount::from_i64(1_000_000), 0.5),
+            (Amount::from_i64(800_000), 0.3),
+            (Amount::from_i64(600_000), 0.2),
+        ];
 
         let result =
             RevenueRecognitionService::estimate_variable_consideration_most_likely(&scenarios)
                 .unwrap();
 
-        assert_eq!(result, 1_000_000); // 最も確率が高い
+        assert_eq!(result.to_i64(), Some(1_000_000)); // 最も確率が高い
     }
 
     #[test]
     fn test_estimate_ssp_adjusted_market_assessment() {
-        let market_prices = vec![500_000, 550_000, 480_000];
+        let market_prices =
+            vec![Amount::from_i64(500_000), Amount::from_i64(550_000), Amount::from_i64(480_000)];
 
         let result =
             RevenueRecognitionService::estimate_ssp_adjusted_market_assessment(&market_prices)
                 .unwrap();
 
-        assert_eq!(result, 510_000); // 平均
+        assert_eq!(result.to_i64(), Some(510_000)); // 平均
     }
 
     #[test]
     fn test_estimate_ssp_expected_cost_plus_margin() {
-        let result =
-            RevenueRecognitionService::estimate_ssp_expected_cost_plus_margin(400_000, 25).unwrap();
+        let result = RevenueRecognitionService::estimate_ssp_expected_cost_plus_margin(
+            &Amount::from_i64(400_000),
+            25,
+        )
+        .unwrap();
 
-        assert_eq!(result, 500_000); // 400,000 + 25% = 500,000
+        assert_eq!(result.to_i64(), Some(500_000)); // 400,000 + 25% = 500,000
     }
 
     #[test]
@@ -308,8 +347,11 @@ mod tests {
 
     #[test]
     fn test_measure_progress_input_method() {
-        let result =
-            RevenueRecognitionService::measure_progress_input_method(300_000, 1_000_000).unwrap();
+        let result = RevenueRecognitionService::measure_progress_input_method(
+            &Amount::from_i64(300_000),
+            &Amount::from_i64(1_000_000),
+        )
+        .unwrap();
 
         assert_eq!(result.percentage(), 30);
     }
@@ -332,13 +374,16 @@ mod tests {
     #[test]
     fn test_calculate_financing_adjustment() {
         let result = RevenueRecognitionService::calculate_financing_adjustment(
-            1_100_000, 1_000_000, 0.05, 2,
+            &Amount::from_i64(1_100_000),
+            &Amount::from_i64(1_000_000),
+            0.05,
+            2,
         )
         .unwrap();
 
         // 1,100,000 / (1.05)^2 ≈ 997,732
         // 997,732 - 1,000,000 ≈ -2,268
-        assert!(result < 0);
-        assert!(result > -10_000);
+        assert!(result.is_negative());
+        assert!(result.to_i64().unwrap() > -10_000);
     }
 }

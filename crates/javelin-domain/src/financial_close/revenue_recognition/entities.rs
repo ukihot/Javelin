@@ -11,6 +11,7 @@ pub use super::values::{
     ContractId as ContractIdExport, PerformanceObligationId as PerformanceObligationIdExport,
 };
 use crate::{
+    common::Amount,
     entity::Entity,
     error::{DomainError, DomainResult},
     value_object::ValueObject,
@@ -96,20 +97,19 @@ impl Contract {
         let total_transaction_price = self.transaction_price.total();
 
         // 独立販売価格の合計を計算
-        let total_ssp: i64 = self
+        let total_ssp: Amount = self
             .performance_obligations
             .iter()
-            .map(|po| po.standalone_selling_price().amount())
-            .sum();
+            .fold(Amount::zero(), |acc, po| acc + po.standalone_selling_price().amount().clone());
 
-        if total_ssp == 0 {
+        if total_ssp.is_zero() {
             return Err(DomainError::InvalidStandaloneSellingPrice);
         }
 
         // 独立販売価格比率法で配分
         for obligation in &mut self.performance_obligations {
             let ssp = obligation.standalone_selling_price().amount();
-            let allocated_amount = (total_transaction_price * ssp) / total_ssp;
+            let allocated_amount = &(&total_transaction_price * ssp) / &total_ssp;
             obligation.set_allocated_price(allocated_amount)?;
         }
 
@@ -227,7 +227,7 @@ pub struct PerformanceObligation {
     /// 独立販売価格
     standalone_selling_price: StandaloneSellingPrice,
     /// 配分された取引価格
-    allocated_price: Option<i64>,
+    allocated_price: Option<Amount>,
     /// 収益認識タイミング
     recognition_timing: RecognitionTiming,
     /// 収益認識パターン（期間認識の場合）
@@ -235,7 +235,7 @@ pub struct PerformanceObligation {
     /// 進捗度
     progress_rate: ProgressRate,
     /// 認識済収益額
-    recognized_revenue: i64,
+    recognized_revenue: Amount,
     /// 履行義務充足済フラグ
     is_satisfied: bool,
     /// 別個の財・サービスか
@@ -269,7 +269,7 @@ impl PerformanceObligation {
             recognition_timing,
             recognition_pattern: None,
             progress_rate: ProgressRate::new(0)?,
-            recognized_revenue: 0,
+            recognized_revenue: Amount::zero(),
             is_satisfied: false,
             is_distinct,
             created_at: now,
@@ -278,8 +278,8 @@ impl PerformanceObligation {
     }
 
     /// 配分価格を設定
-    pub fn set_allocated_price(&mut self, price: i64) -> DomainResult<()> {
-        if price < 0 {
+    pub fn set_allocated_price(&mut self, price: Amount) -> DomainResult<()> {
+        if price.is_negative() {
             return Err(DomainError::InvalidTransactionPrice);
         }
 
@@ -304,22 +304,23 @@ impl PerformanceObligation {
     }
 
     /// 収益を認識（IFRS 15 Step 5）
-    pub fn recognize_revenue(&mut self, amount: i64) -> DomainResult<()> {
-        if amount < 0 {
+    pub fn recognize_revenue(&mut self, amount: Amount) -> DomainResult<()> {
+        if amount.is_negative() {
             return Err(DomainError::InvalidTransactionPrice);
         }
 
         let allocated_price =
-            self.allocated_price.ok_or(DomainError::InvalidPerformanceObligation)?;
+            self.allocated_price.as_ref().ok_or(DomainError::InvalidPerformanceObligation)?;
 
-        if self.recognized_revenue + amount > allocated_price {
+        let new_recognized = &self.recognized_revenue + &amount;
+        if &new_recognized > allocated_price {
             return Err(DomainError::InvalidTransactionPrice);
         }
 
-        self.recognized_revenue += amount;
+        self.recognized_revenue = new_recognized;
 
         // 全額認識済の場合は履行義務充足
-        if self.recognized_revenue == allocated_price {
+        if &self.recognized_revenue == allocated_price {
             self.is_satisfied = true;
         }
 
@@ -328,8 +329,11 @@ impl PerformanceObligation {
     }
 
     /// 残存収益額を計算
-    pub fn remaining_revenue(&self) -> i64 {
-        self.allocated_price.unwrap_or(0) - self.recognized_revenue
+    pub fn remaining_revenue(&self) -> Amount {
+        self.allocated_price
+            .as_ref()
+            .map(|ap| ap - &self.recognized_revenue)
+            .unwrap_or_else(Amount::zero)
     }
 
     // Getters
@@ -345,8 +349,8 @@ impl PerformanceObligation {
         &self.standalone_selling_price
     }
 
-    pub fn allocated_price(&self) -> Option<i64> {
-        self.allocated_price
+    pub fn allocated_price(&self) -> Option<&Amount> {
+        self.allocated_price.as_ref()
     }
 
     pub fn recognition_timing(&self) -> &RecognitionTiming {
@@ -361,8 +365,8 @@ impl PerformanceObligation {
         &self.progress_rate
     }
 
-    pub fn recognized_revenue(&self) -> i64 {
-        self.recognized_revenue
+    pub fn recognized_revenue(&self) -> &Amount {
+        &self.recognized_revenue
     }
 
     pub fn is_satisfied(&self) -> bool {
@@ -396,13 +400,19 @@ mod tests {
 
     fn create_test_contract() -> Contract {
         let id = ContractId::new();
-        let transaction_price = TransactionPrice::new(1_000_000, 0, 0, 0).unwrap();
+        let transaction_price = TransactionPrice::new(
+            Amount::from_i64(1_000_000),
+            Amount::zero(),
+            Amount::zero(),
+            Amount::zero(),
+        )
+        .unwrap();
         Contract::new(id, "CUST001".to_string(), Utc::now(), transaction_price).unwrap()
     }
 
     fn create_test_performance_obligation() -> PerformanceObligation {
         let id = PerformanceObligationId::new();
-        let ssp = StandaloneSellingPrice::new(500_000, None).unwrap();
+        let ssp = StandaloneSellingPrice::new(Amount::from_i64(500_000), None).unwrap();
         let timing = RecognitionTiming::PointInTime { transfer_date: Utc::now() };
         PerformanceObligation::new(id, "Product Delivery".to_string(), ssp, timing, true).unwrap()
     }
@@ -412,13 +422,19 @@ mod tests {
         let contract = create_test_contract();
         assert_eq!(contract.customer_id(), "CUST001");
         assert_eq!(contract.status(), &ContractStatus::Identified);
-        assert_eq!(contract.transaction_price().total(), 1_000_000);
+        assert_eq!(contract.transaction_price().total().to_i64(), Some(1_000_000));
     }
 
     #[test]
     fn test_contract_invalid_customer_id() {
         let id = ContractId::new();
-        let transaction_price = TransactionPrice::new(1_000_000, 0, 0, 0).unwrap();
+        let transaction_price = TransactionPrice::new(
+            Amount::from_i64(1_000_000),
+            Amount::zero(),
+            Amount::zero(),
+            Amount::zero(),
+        )
+        .unwrap();
         let result = Contract::new(id, "".to_string(), Utc::now(), transaction_price);
         assert!(result.is_err());
     }
@@ -437,13 +453,13 @@ mod tests {
         let mut contract = create_test_contract();
 
         let id1 = PerformanceObligationId::new();
-        let ssp1 = StandaloneSellingPrice::new(600_000, None).unwrap();
+        let ssp1 = StandaloneSellingPrice::new(Amount::from_i64(600_000), None).unwrap();
         let timing1 = RecognitionTiming::PointInTime { transfer_date: Utc::now() };
         let obligation1 =
             PerformanceObligation::new(id1, "Product".to_string(), ssp1, timing1, true).unwrap();
 
         let id2 = PerformanceObligationId::new();
-        let ssp2 = StandaloneSellingPrice::new(400_000, None).unwrap();
+        let ssp2 = StandaloneSellingPrice::new(Amount::from_i64(400_000), None).unwrap();
         let timing2 = RecognitionTiming::PointInTime { transfer_date: Utc::now() };
         let obligation2 =
             PerformanceObligation::new(id2, "Service".to_string(), ssp2, timing2, true).unwrap();
@@ -454,8 +470,14 @@ mod tests {
         assert!(contract.allocate_transaction_price().is_ok());
 
         // 取引価格1,000,000を600,000:400,000の比率で配分
-        assert_eq!(contract.performance_obligations()[0].allocated_price(), Some(600_000));
-        assert_eq!(contract.performance_obligations()[1].allocated_price(), Some(400_000));
+        assert_eq!(
+            contract.performance_obligations()[0].allocated_price().unwrap().to_i64(),
+            Some(600_000)
+        );
+        assert_eq!(
+            contract.performance_obligations()[1].allocated_price().unwrap().to_i64(),
+            Some(400_000)
+        );
     }
 
     #[test]
@@ -468,11 +490,17 @@ mod tests {
     #[test]
     fn test_contract_modify() {
         let mut contract = create_test_contract();
-        let new_price = TransactionPrice::new(1_200_000, 0, 0, 0).unwrap();
+        let new_price = TransactionPrice::new(
+            Amount::from_i64(1_200_000),
+            Amount::zero(),
+            Amount::zero(),
+            Amount::zero(),
+        )
+        .unwrap();
 
         assert!(contract.modify(new_price).is_ok());
         assert_eq!(contract.status(), &ContractStatus::Modified);
-        assert_eq!(contract.transaction_price().total(), 1_200_000);
+        assert_eq!(contract.transaction_price().total().to_i64(), Some(1_200_000));
     }
 
     #[test]
@@ -480,8 +508,8 @@ mod tests {
         let mut contract = create_test_contract();
         let mut obligation = create_test_performance_obligation();
 
-        obligation.set_allocated_price(500_000).unwrap();
-        obligation.recognize_revenue(500_000).unwrap();
+        obligation.set_allocated_price(Amount::from_i64(500_000)).unwrap();
+        obligation.recognize_revenue(Amount::from_i64(500_000)).unwrap();
 
         contract.add_performance_obligation(obligation).unwrap();
 
@@ -493,32 +521,32 @@ mod tests {
     fn test_performance_obligation_creation() {
         let obligation = create_test_performance_obligation();
         assert_eq!(obligation.description(), "Product Delivery");
-        assert_eq!(obligation.standalone_selling_price().amount(), 500_000);
+        assert_eq!(obligation.standalone_selling_price().amount().to_i64(), Some(500_000));
         assert!(obligation.is_distinct());
     }
 
     #[test]
     fn test_performance_obligation_recognize_revenue() {
         let mut obligation = create_test_performance_obligation();
-        obligation.set_allocated_price(500_000).unwrap();
+        obligation.set_allocated_price(Amount::from_i64(500_000)).unwrap();
 
-        assert!(obligation.recognize_revenue(300_000).is_ok());
-        assert_eq!(obligation.recognized_revenue(), 300_000);
-        assert_eq!(obligation.remaining_revenue(), 200_000);
+        assert!(obligation.recognize_revenue(Amount::from_i64(300_000)).is_ok());
+        assert_eq!(obligation.recognized_revenue().to_i64(), Some(300_000));
+        assert_eq!(obligation.remaining_revenue().to_i64(), Some(200_000));
         assert!(!obligation.is_satisfied());
 
-        assert!(obligation.recognize_revenue(200_000).is_ok());
-        assert_eq!(obligation.recognized_revenue(), 500_000);
-        assert_eq!(obligation.remaining_revenue(), 0);
+        assert!(obligation.recognize_revenue(Amount::from_i64(200_000)).is_ok());
+        assert_eq!(obligation.recognized_revenue().to_i64(), Some(500_000));
+        assert!(obligation.remaining_revenue().is_zero());
         assert!(obligation.is_satisfied());
     }
 
     #[test]
     fn test_performance_obligation_excessive_revenue() {
         let mut obligation = create_test_performance_obligation();
-        obligation.set_allocated_price(500_000).unwrap();
+        obligation.set_allocated_price(Amount::from_i64(500_000)).unwrap();
 
-        assert!(obligation.recognize_revenue(600_000).is_err());
+        assert!(obligation.recognize_revenue(Amount::from_i64(600_000)).is_err());
     }
 
     #[test]

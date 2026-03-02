@@ -142,6 +142,45 @@ pub enum DomainError {
     #[error("[D-7003] Invalid monetary classification")]
     InvalidMonetaryClassification,
 
+    // Carrying Amount errors (D-8xxx)
+    #[error("[D-8001] Invalid carrying amount")]
+    InvalidCarryingAmount,
+
+    #[error("[D-8002] Invalid measurement basis")]
+    InvalidMeasurementBasis,
+
+    #[error("[D-8003] Invalid component type")]
+    InvalidComponentType,
+
+    #[error("[D-8004] Invalid measurement component")]
+    InvalidMeasurementComponent,
+
+    #[error("[D-8005] Invalid measurement change")]
+    InvalidMeasurementChange,
+
+    #[error("[D-8006] Invalid estimate change")]
+    InvalidEstimateChange,
+
+    #[error("[D-8007] Invalid presentation amount")]
+    InvalidPresentationAmount,
+
+    // Judgment Log errors (D-9xxx)
+    #[error("[D-9001] Invalid judgment log")]
+    InvalidJudgmentLog,
+
+    #[error("[D-9002] Invalid calculation version")]
+    InvalidCalculationVersion,
+
+    // Management Accounting errors (D-10xxx)
+    #[error("[D-10001] Invalid management accounting")]
+    InvalidManagementAccounting,
+
+    #[error("[D-10002] Invalid conversion")]
+    InvalidConversion,
+
+    #[error("[D-10003] Invalid KPI calculation")]
+    InvalidKpiCalculation,
+
     #[error("[D-9999] Unknown domain error: {0}")]
     Unknown(String),
 }

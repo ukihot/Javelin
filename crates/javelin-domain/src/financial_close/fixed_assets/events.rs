@@ -7,7 +7,7 @@ use super::values::{
     AssetCategory, AssetStatus, ComponentId, DepreciationMethod, FixedAssetId, MeasurementModel,
     UsefulLife,
 };
-use crate::event::DomainEvent;
+use crate::{common::Amount, event::DomainEvent};
 
 /// 固定資産イベント
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,34 +57,34 @@ pub enum FixedAssetEventType {
         name: String,
         account_code: String,
         acquisition_date: DateTime<Utc>,
-        acquisition_cost: i64,
+        acquisition_cost: Amount,
         measurement_model: MeasurementModel,
     },
     /// コンポーネント追加
     ComponentAdded {
         component_id: ComponentId,
         component_name: String,
-        cost: i64,
+        cost: Amount,
         useful_life: UsefulLife,
         depreciation_method: DepreciationMethod,
     },
     /// 償却記録
     DepreciationRecorded {
         component_id: ComponentId,
-        depreciation_amount: i64,
-        accumulated_depreciation: i64,
+        depreciation_amount: Amount,
+        accumulated_depreciation: Amount,
         period: String,
     },
     /// 再評価実施
-    AssetRevaluated { old_amount: i64, new_amount: i64, revaluation_surplus: i64 },
+    AssetRevaluated { old_amount: Amount, new_amount: Amount, revaluation_surplus: Amount },
     /// 減損損失計上
-    ImpairmentRecognized { impairment_loss: i64, recoverable_amount: i64, reason: String },
+    ImpairmentRecognized { impairment_loss: Amount, recoverable_amount: Amount, reason: String },
     /// 減損戻入計上
-    ImpairmentReversed { reversal_amount: i64, reason: String },
+    ImpairmentReversed { reversal_amount: Amount, reason: String },
     /// ステータス変更
     StatusChanged { old_status: AssetStatus, new_status: AssetStatus },
     /// 資産除却
-    AssetDisposed { disposal_date: DateTime<Utc>, disposal_amount: i64, carrying_amount: i64 },
+    AssetDisposed { disposal_date: DateTime<Utc>, disposal_amount: Amount, carrying_amount: Amount },
     /// CGU割当
     CguAssigned { cgu: String },
 }
@@ -103,7 +103,7 @@ mod tests {
                 name: "Test Asset".to_string(),
                 account_code: "1000".to_string(),
                 acquisition_date: Utc::now(),
-                acquisition_cost: 1_000_000,
+                acquisition_cost: Amount::from_i64(1_000_000),
                 measurement_model: MeasurementModel::CostModel,
             },
         );
@@ -123,7 +123,7 @@ mod tests {
             FixedAssetEventType::ComponentAdded {
                 component_id,
                 component_name: "Main Component".to_string(),
-                cost: 800_000,
+                cost: Amount::from_i64(800_000),
                 useful_life,
                 depreciation_method: DepreciationMethod::StraightLine,
             },
@@ -141,8 +141,8 @@ mod tests {
             asset_id,
             FixedAssetEventType::DepreciationRecorded {
                 component_id,
-                depreciation_amount: 150_000,
-                accumulated_depreciation: 150_000,
+                depreciation_amount: Amount::from_i64(150_000),
+                accumulated_depreciation: Amount::from_i64(150_000),
                 period: "2024-01".to_string(),
             },
         );
@@ -157,8 +157,8 @@ mod tests {
         let event = FixedAssetEvent::new(
             asset_id,
             FixedAssetEventType::ImpairmentRecognized {
-                impairment_loss: 100_000,
-                recoverable_amount: 900_000,
+                impairment_loss: Amount::from_i64(100_000),
+                recoverable_amount: Amount::from_i64(900_000),
                 reason: "Market value decline".to_string(),
             },
         );

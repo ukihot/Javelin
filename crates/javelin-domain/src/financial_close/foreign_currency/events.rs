@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::values::{Currency, ForeignCurrencyTransactionId, MonetaryClassification};
-use crate::event::DomainEvent;
+use crate::{common::Amount, event::DomainEvent};
 
 /// 外貨換算イベント
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,15 +58,19 @@ pub enum ForeignCurrencyEventType {
     /// 取引記録
     TransactionRecorded {
         foreign_currency: Currency,
-        foreign_amount: i64,
+        foreign_amount: Amount,
         transaction_rate: f64,
-        functional_amount: i64,
+        functional_amount: Amount,
         monetary_classification: MonetaryClassification,
     },
     /// 評価替え実施
-    Remeasured { closing_rate: f64, functional_amount_at_closing: i64, exchange_gain_loss: i64 },
+    Remeasured {
+        closing_rate: f64,
+        functional_amount_at_closing: Amount,
+        exchange_gain_loss: Amount,
+    },
     /// 為替差損益認識
-    ExchangeGainLossRecognized { amount: i64, is_gain: bool },
+    ExchangeGainLossRecognized { amount: Amount, is_gain: bool },
 }
 
 #[cfg(test)]
@@ -81,9 +85,9 @@ mod tests {
             transaction_id.clone(),
             ForeignCurrencyEventType::TransactionRecorded {
                 foreign_currency: Currency::USD,
-                foreign_amount: 1_000,
+                foreign_amount: Amount::from_i64(1_000),
                 transaction_rate: 150.0,
-                functional_amount: 150_000,
+                functional_amount: Amount::from_i64(150_000),
                 monetary_classification: MonetaryClassification::Monetary,
             },
         );
@@ -100,8 +104,8 @@ mod tests {
             transaction_id,
             ForeignCurrencyEventType::Remeasured {
                 closing_rate: 155.0,
-                functional_amount_at_closing: 155_000,
-                exchange_gain_loss: 5_000,
+                functional_amount_at_closing: Amount::from_i64(155_000),
+                exchange_gain_loss: Amount::from_i64(5_000),
             },
         );
 

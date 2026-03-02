@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
+    common::Amount,
     error::{DomainError, DomainResult},
     value_object::ValueObject,
 };
@@ -135,23 +136,23 @@ impl std::str::FromStr for ContractStatus {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TransactionPrice {
     /// 固定対価
-    fixed_consideration: i64,
+    fixed_consideration: Amount,
     /// 変動対価（見積額）
-    variable_consideration: i64,
+    variable_consideration: Amount,
     /// 重要な金融要素の調整額
-    financing_adjustment: i64,
+    financing_adjustment: Amount,
     /// 顧客に支払われる対価
-    consideration_payable_to_customer: i64,
+    consideration_payable_to_customer: Amount,
 }
 
 impl TransactionPrice {
     pub fn new(
-        fixed_consideration: i64,
-        variable_consideration: i64,
-        financing_adjustment: i64,
-        consideration_payable_to_customer: i64,
+        fixed_consideration: Amount,
+        variable_consideration: Amount,
+        financing_adjustment: Amount,
+        consideration_payable_to_customer: Amount,
     ) -> DomainResult<Self> {
-        if fixed_consideration < 0 {
+        if fixed_consideration.is_negative() {
             return Err(DomainError::InvalidTransactionPrice);
         }
 
@@ -164,31 +165,31 @@ impl TransactionPrice {
     }
 
     /// 合計取引価格を計算
-    pub fn total(&self) -> i64 {
-        self.fixed_consideration + self.variable_consideration + self.financing_adjustment
-            - self.consideration_payable_to_customer
+    pub fn total(&self) -> Amount {
+        &(&(&self.fixed_consideration + &self.variable_consideration) + &self.financing_adjustment)
+            - &self.consideration_payable_to_customer
     }
 
-    pub fn fixed_consideration(&self) -> i64 {
-        self.fixed_consideration
+    pub fn fixed_consideration(&self) -> &Amount {
+        &self.fixed_consideration
     }
 
-    pub fn variable_consideration(&self) -> i64 {
-        self.variable_consideration
+    pub fn variable_consideration(&self) -> &Amount {
+        &self.variable_consideration
     }
 
-    pub fn financing_adjustment(&self) -> i64 {
-        self.financing_adjustment
+    pub fn financing_adjustment(&self) -> &Amount {
+        &self.financing_adjustment
     }
 
-    pub fn consideration_payable_to_customer(&self) -> i64 {
-        self.consideration_payable_to_customer
+    pub fn consideration_payable_to_customer(&self) -> &Amount {
+        &self.consideration_payable_to_customer
     }
 }
 
 impl ValueObject for TransactionPrice {
     fn validate(&self) -> DomainResult<()> {
-        if self.fixed_consideration < 0 {
+        if self.fixed_consideration.is_negative() {
             return Err(DomainError::InvalidTransactionPrice);
         }
         Ok(())
@@ -198,21 +199,21 @@ impl ValueObject for TransactionPrice {
 /// 独立販売価格
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StandaloneSellingPrice {
-    amount: i64,
+    amount: Amount,
     estimation_method: Option<EstimationMethod>,
 }
 
 impl StandaloneSellingPrice {
-    pub fn new(amount: i64, estimation_method: Option<EstimationMethod>) -> DomainResult<Self> {
-        if amount < 0 {
+    pub fn new(amount: Amount, estimation_method: Option<EstimationMethod>) -> DomainResult<Self> {
+        if amount.is_negative() {
             return Err(DomainError::InvalidStandaloneSellingPrice);
         }
 
         Ok(Self { amount, estimation_method })
     }
 
-    pub fn amount(&self) -> i64 {
-        self.amount
+    pub fn amount(&self) -> &Amount {
+        &self.amount
     }
 
     pub fn estimation_method(&self) -> Option<&EstimationMethod> {
@@ -226,7 +227,7 @@ impl StandaloneSellingPrice {
 
 impl ValueObject for StandaloneSellingPrice {
     fn validate(&self) -> DomainResult<()> {
-        if self.amount < 0 {
+        if self.amount.is_negative() {
             return Err(DomainError::InvalidStandaloneSellingPrice);
         }
         Ok(())
@@ -239,7 +240,7 @@ pub enum EstimationMethod {
     /// 調整市場評価アプローチ
     AdjustedMarketAssessment,
     /// 予想コストに利益相当額を加算するアプローチ
-    ExpectedCostPlusMargin { cost: i64, margin_rate: u32 },
+    ExpectedCostPlusMargin { cost: Amount, margin_rate: u32 },
     /// 残余アプローチ
     Residual,
 }
@@ -381,27 +382,44 @@ mod tests {
 
     #[test]
     fn test_transaction_price_total() {
-        let price = TransactionPrice::new(1_000_000, 100_000, 50_000, 20_000).unwrap();
-        assert_eq!(price.total(), 1_130_000);
+        let price = TransactionPrice::new(
+            Amount::from_i64(1_000_000),
+            Amount::from_i64(100_000),
+            Amount::from_i64(50_000),
+            Amount::from_i64(20_000),
+        )
+        .unwrap();
+        assert_eq!(price.total().to_i64(), Some(1_130_000));
     }
 
     #[test]
     fn test_transaction_price_invalid() {
-        assert!(TransactionPrice::new(-1_000_000, 0, 0, 0).is_err());
+        assert!(
+            TransactionPrice::new(
+                Amount::from_i64(-1_000_000),
+                Amount::zero(),
+                Amount::zero(),
+                Amount::zero()
+            )
+            .is_err()
+        );
     }
 
     #[test]
     fn test_standalone_selling_price() {
-        let ssp = StandaloneSellingPrice::new(500_000, None).unwrap();
-        assert_eq!(ssp.amount(), 500_000);
+        let ssp = StandaloneSellingPrice::new(Amount::from_i64(500_000), None).unwrap();
+        assert_eq!(ssp.amount().to_i64(), Some(500_000));
         assert!(ssp.is_observable());
     }
 
     #[test]
     fn test_standalone_selling_price_with_estimation() {
         let ssp = StandaloneSellingPrice::new(
-            500_000,
-            Some(EstimationMethod::ExpectedCostPlusMargin { cost: 400_000, margin_rate: 25 }),
+            Amount::from_i64(500_000),
+            Some(EstimationMethod::ExpectedCostPlusMargin {
+                cost: Amount::from_i64(400_000),
+                margin_rate: 25,
+            }),
         )
         .unwrap();
         assert!(!ssp.is_observable());

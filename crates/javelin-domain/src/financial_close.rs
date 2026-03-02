@@ -2,11 +2,14 @@
 // financialCloseFinalReport.md 第2章 財務情報基盤に基づく
 
 pub mod accounting_period;
+pub mod calculation_version;
+pub mod carrying_amount;
 pub mod closing_events;
 pub mod company;
 pub mod fixed_assets;
 pub mod foreign_currency;
 pub mod journal_entry;
+pub mod judgment_log;
 pub mod ledger;
 pub mod revenue_recognition;
 pub mod valuation_service;
