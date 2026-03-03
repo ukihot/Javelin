@@ -318,7 +318,7 @@ impl InputMode {
 
 /// jjエスケープ検出器
 /// 変更モードで"jj"を入力すると非変更モードに戻る
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct JjEscapeDetector {
     last_char: Option<char>,
 }
