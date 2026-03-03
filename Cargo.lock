@@ -895,6 +895,7 @@ dependencies = [
  "javelin-domain",
  "javelin-infrastructure",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
 ]

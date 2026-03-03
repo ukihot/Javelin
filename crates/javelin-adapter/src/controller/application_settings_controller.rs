@@ -38,19 +38,16 @@ where
         request: LoadApplicationSettingsRequest,
     ) -> Result<LoadApplicationSettingsResponse, String> {
         // PresenterRegistryから該当ページのPresenterを取得
-        let presenter = self
-            .presenter_registry
-            .get_application_settings_presenter(page_id)
-            .ok_or_else(|| {
-                format!("Application settings presenter not found for page_id: {}", page_id)
-            })?;
+        let presenter =
+            self.presenter_registry.get_application_settings_presenter(page_id).ok_or_else(
+                || format!("Application settings presenter not found for page_id: {}", page_id),
+            )?;
 
         // 取得したPresenterを使って新しいInteractorを作成
-        let interactor =
-            javelin_application::interactor::LoadApplicationSettingsInteractor::new(
-                Arc::clone(&self.query_service),
-                (*presenter).clone(),
-            );
+        let interactor = javelin_application::interactor::LoadApplicationSettingsInteractor::new(
+            Arc::clone(&self.query_service),
+            (*presenter).clone(),
+        );
 
         // UseCaseに委譲
         use javelin_application::input_ports::LoadApplicationSettingsInputPort;

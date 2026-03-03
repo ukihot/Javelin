@@ -4,8 +4,7 @@
 use std::sync::Arc;
 
 use javelin_application::{
-    dtos::RegisterJournalEntryRequest,
-    query_service::JournalEntrySearchQueryService,
+    dtos::RegisterJournalEntryRequest, query_service::JournalEntrySearchQueryService,
 };
 use javelin_infrastructure::write::event_store::EventStore;
 

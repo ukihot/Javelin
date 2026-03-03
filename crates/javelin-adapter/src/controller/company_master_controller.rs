@@ -38,10 +38,10 @@ where
         request: LoadCompanyMasterRequest,
     ) -> Result<LoadCompanyMasterResponse, String> {
         // PresenterRegistryから該当ページのPresenterを取得
-        let presenter = self
-            .presenter_registry
-            .get_company_master_presenter(page_id)
-            .ok_or_else(|| format!("Company master presenter not found for page_id: {}", page_id))?;
+        let presenter =
+            self.presenter_registry.get_company_master_presenter(page_id).ok_or_else(|| {
+                format!("Company master presenter not found for page_id: {}", page_id)
+            })?;
 
         // 取得したPresenterを使って新しいInteractorを作成
         let interactor = javelin_application::interactor::LoadCompanyMasterInteractor::new(

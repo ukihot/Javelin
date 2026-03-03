@@ -38,10 +38,8 @@ where
         request: LoadAccountMasterRequest,
     ) -> Result<LoadAccountMasterResponse, String> {
         // PresenterRegistryから該当ページのPresenterを取得
-        let presenter = self
-            .presenter_registry
-            .get_account_master_presenter(page_id)
-            .ok_or_else(|| {
+        let presenter =
+            self.presenter_registry.get_account_master_presenter(page_id).ok_or_else(|| {
                 format!("Account master presenter not found for page_id: {}", page_id)
             })?;
 

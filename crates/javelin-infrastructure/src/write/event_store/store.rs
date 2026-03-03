@@ -238,7 +238,10 @@ impl EventStore {
         if let Some(callback) = callback_opt {
             println!("✓ Sending {} event notifications", stored_events.len());
             for event in stored_events {
-                println!("  - Notifying event: {} (seq: {})", event.event_type, event.global_sequence);
+                println!(
+                    "  - Notifying event: {} (seq: {})",
+                    event.event_type, event.global_sequence
+                );
                 let callback = Arc::clone(&callback);
                 tokio::spawn(async move {
                     callback(event).await;

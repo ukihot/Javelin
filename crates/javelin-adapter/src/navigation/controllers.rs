@@ -21,8 +21,9 @@ use crate::{
 };
 
 /// Type alias for AccountMasterController with concrete QueryService
-pub type AccountMasterControllerType =
-    AccountMasterController<javelin_infrastructure::read::account_master::AccountMasterQueryServiceImpl>;
+pub type AccountMasterControllerType = AccountMasterController<
+    javelin_infrastructure::read::account_master::AccountMasterQueryServiceImpl,
+>;
 
 /// Type alias for ApplicationSettingsController with concrete QueryService
 pub type ApplicationSettingsControllerType = ApplicationSettingsController<
@@ -30,8 +31,9 @@ pub type ApplicationSettingsControllerType = ApplicationSettingsController<
 >;
 
 /// Type alias for CompanyMasterController with concrete QueryService
-pub type CompanyMasterControllerType =
-    CompanyMasterController<javelin_infrastructure::read::company_master::CompanyMasterQueryServiceImpl>;
+pub type CompanyMasterControllerType = CompanyMasterController<
+    javelin_infrastructure::read::company_master::CompanyMasterQueryServiceImpl,
+>;
 
 /// Type alias for SubsidiaryAccountMasterController with concrete QueryService
 pub type SubsidiaryAccountMasterControllerType = SubsidiaryAccountMasterController<
@@ -39,16 +41,19 @@ pub type SubsidiaryAccountMasterControllerType = SubsidiaryAccountMasterControll
 >;
 
 /// Type alias for JournalEntryController with concrete QueryService
-pub type JournalEntryControllerType =
-    JournalEntryController<javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl>;
+pub type JournalEntryControllerType = JournalEntryController<
+    javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
+>;
 
 /// Type alias for JournalDetailController with concrete QueryService
-pub type JournalDetailControllerType =
-    JournalDetailController<javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl>;
+pub type JournalDetailControllerType = JournalDetailController<
+    javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
+>;
 
 /// Type alias for SearchController with concrete QueryService
-pub type SearchControllerType =
-    SearchController<javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl>;
+pub type SearchControllerType = SearchController<
+    javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
+>;
 
 /// Type alias for BatchHistoryController with concrete UseCase
 pub type BatchHistoryControllerType = BatchHistoryController<

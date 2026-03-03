@@ -63,7 +63,7 @@ impl ProjectionBuilderImpl {
     /// * `event` - 処理するイベント
     async fn process_event_internal(&self, event: &StoredEvent) -> ApplicationResult<()> {
         println!("✓ Processing event: {} (seq: {})", event.event_type, event.global_sequence);
-        
+
         // イベント種別に応じて適切なProjection更新メソッドを呼び出す
         match event.event_type.as_str() {
             "DraftCreated"

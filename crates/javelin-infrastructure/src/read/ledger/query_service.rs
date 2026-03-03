@@ -54,31 +54,52 @@ impl LedgerQueryServiceImpl {
 
     /// ProjectionDBから元帳エントリを取得
     async fn get_ledger_entries(&self) -> ApplicationResult<Vec<LedgerEntryReadModel>> {
-        let mut entries = Vec::with_capacity(1000);
-
         // ProjectionDBから元帳エントリを取得
-        // キー形式: "ledger:{account_code}:{sequence}"
-        // 簡易実装: 全勘定科目・全シーケンスをスキャン
-        for account_code in
-            &["1000", "1100", "1200", "2000", "2100", "3000", "4000", "5000", "6000", "7000"]
-        {
-            for seq in 0..10000 {
-                let key = format!("ledger:{}:{:08}", account_code, seq);
+        // キー形式: "ledger:{account_code}:{year}:{month}"
+        // プレフィックススキャンで全エントリを取得
+        let results = self
+            .projection_db
+            .scan_prefix("ledger:")
+            .await
+            .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
 
-                if let Some(data) = self
-                    .projection_db
-                    .get_projection(&key)
-                    .await
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?
-                {
-                    let entry: LedgerEntryReadModel = serde_json::from_slice(&data)
-                        .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+        let mut entries = Vec::new();
 
-                    entries.push(entry);
-                } else {
-                    // この勘定科目のデータが終わった
-                    break;
-                }
+        for (key, data) in results {
+            // キーから勘定科目コードを抽出: "ledger:{account_code}:{year}:{month}"
+            let parts: Vec<&str> = key.split(':').collect();
+            let account_code = if parts.len() >= 2 { parts[1] } else { continue };
+
+            // データは StoredLedgerData 形式で保存されている
+            #[derive(serde::Deserialize)]
+            struct StoredLedgerData {
+                entries: Vec<StoredLedgerEntry>,
+            }
+
+            #[derive(serde::Deserialize)]
+            struct StoredLedgerEntry {
+                transaction_date: String,
+                entry_number: String,
+                description: String,
+                debit_amount: f64,
+                credit_amount: f64,
+                balance: f64,
+            }
+
+            let ledger_data: StoredLedgerData = serde_json::from_slice(&data)
+                .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+            // StoredLedgerEntry を LedgerEntryReadModel に変換
+            for entry in ledger_data.entries {
+                entries.push(LedgerEntryReadModel {
+                    account_code: account_code.to_string(),
+                    transaction_date: entry.transaction_date,
+                    entry_number: entry.entry_number,
+                    description: entry.description,
+                    debit_amount: entry.debit_amount,
+                    credit_amount: entry.credit_amount,
+                    balance: entry.balance,
+                });
             }
         }
 

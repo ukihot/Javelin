@@ -55,7 +55,21 @@ impl SubsidiaryAccountMasterProjection {
     pub async fn get_all(
         &self,
     ) -> Result<Vec<SubsidiaryAccountMaster>, Box<dyn std::error::Error + Send + Sync>> {
-        Ok(Vec::new())
+        // ProjectionDBから全件取得（プレフィックススキャン）
+        let prefix = "subsidiary_account_master:";
+        let all_data = self.projection_db.scan_prefix(prefix).await.map_err(|e| {
+            Box::new(std::io::Error::other(e.to_string()))
+                as Box<dyn std::error::Error + Send + Sync>
+        })?;
+
+        let mut accounts = Vec::new();
+        for (_key, value) in all_data {
+            let stored: StoredSubsidiaryAccountMaster = serde_json::from_slice(&value)?;
+            let account = Self::from_stored(&stored)?;
+            accounts.push(account);
+        }
+
+        Ok(accounts)
     }
 
     /// コードで補助科目マスタを取得
