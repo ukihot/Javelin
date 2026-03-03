@@ -62,6 +62,8 @@ impl ProjectionBuilderImpl {
     /// # Arguments
     /// * `event` - 処理するイベント
     async fn process_event_internal(&self, event: &StoredEvent) -> ApplicationResult<()> {
+        println!("✓ Processing event: {} (seq: {})", event.event_type, event.global_sequence);
+        
         // イベント種別に応じて適切なProjection更新メソッドを呼び出す
         match event.event_type.as_str() {
             "DraftCreated"
@@ -72,7 +74,7 @@ impl ProjectionBuilderImpl {
             | "Deleted"
             | "Corrected"
             | "Reversed" => {
-                // 仕訳一覧Projectionを更新（Task 4.1で実装）
+                // 仕訳一覧Projectionを更新
                 self.update_journal_entry_list_projection(event).await?;
             }
             "AccountMasterCreated" | "AccountMasterUpdated" | "AccountMasterDeleted" => {
@@ -80,6 +82,7 @@ impl ProjectionBuilderImpl {
                 self.update_account_master_projection(event).await?;
             }
             _ => {
+                println!("  - Unknown event type, skipping");
                 // 未知のイベント種別はログに記録して無視
                 // 本番環境ではログ出力を追加すべき
             }

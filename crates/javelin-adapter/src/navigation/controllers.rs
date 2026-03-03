@@ -20,62 +20,35 @@ use crate::{
     },
 };
 
-/// Type alias for AccountMasterController with concrete UseCase
-pub type AccountMasterControllerType = AccountMasterController<
-    javelin_application::interactor::LoadAccountMasterInteractor<
-        javelin_infrastructure::read::account_master::AccountMasterQueryServiceImpl,
-        crate::presenter::AccountMasterPresenter,
-    >,
->;
+/// Type alias for AccountMasterController with concrete QueryService
+pub type AccountMasterControllerType =
+    AccountMasterController<javelin_infrastructure::read::account_master::AccountMasterQueryServiceImpl>;
 
-/// Type alias for ApplicationSettingsController with concrete UseCase
+/// Type alias for ApplicationSettingsController with concrete QueryService
 pub type ApplicationSettingsControllerType = ApplicationSettingsController<
-    javelin_application::interactor::LoadApplicationSettingsInteractor<
-        javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl,
-        crate::presenter::ApplicationSettingsPresenter,
-    >,
+    javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl,
 >;
 
-/// Type alias for CompanyMasterController with concrete UseCase
-pub type CompanyMasterControllerType = CompanyMasterController<
-    javelin_application::interactor::LoadCompanyMasterInteractor<
-        javelin_infrastructure::read::company_master::CompanyMasterQueryServiceImpl,
-        crate::presenter::CompanyMasterPresenter,
-    >,
->;
+/// Type alias for CompanyMasterController with concrete QueryService
+pub type CompanyMasterControllerType =
+    CompanyMasterController<javelin_infrastructure::read::company_master::CompanyMasterQueryServiceImpl>;
 
-/// Type alias for SubsidiaryAccountMasterController with concrete UseCase
+/// Type alias for SubsidiaryAccountMasterController with concrete QueryService
 pub type SubsidiaryAccountMasterControllerType = SubsidiaryAccountMasterController<
-    javelin_application::interactor::LoadSubsidiaryAccountMasterInteractor<
-        javelin_infrastructure::read::subsidiary_account_master::SubsidiaryAccountMasterQueryServiceImpl,
-        crate::presenter::SubsidiaryAccountMasterPresenter,
-    >,
+    javelin_infrastructure::read::subsidiary_account_master::SubsidiaryAccountMasterQueryServiceImpl,
 >;
 
-/// Type alias for JournalEntryController with concrete UseCase
-pub type JournalEntryControllerType = JournalEntryController<
-    javelin_application::interactor::RegisterJournalEntryInteractor<
-        javelin_infrastructure::write::event_store::EventStore,
-        crate::presenter::JournalEntryPresenter,
-        javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
-    >,
->;
+/// Type alias for JournalEntryController with concrete QueryService
+pub type JournalEntryControllerType =
+    JournalEntryController<javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl>;
 
-/// Type alias for JournalDetailController with concrete UseCase
-pub type JournalDetailControllerType = JournalDetailController<
-    javelin_application::interactor::GetJournalEntryDetailInteractor<
-        javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
-        crate::presenter::JournalEntryPresenter,
-    >,
->;
+/// Type alias for JournalDetailController with concrete QueryService
+pub type JournalDetailControllerType =
+    JournalDetailController<javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl>;
 
-/// Type alias for SearchController with concrete UseCase
-pub type SearchControllerType = SearchController<
-    javelin_application::interactor::SearchJournalEntryInteractor<
-        javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl,
-        crate::presenter::SearchPresenter,
-    >,
->;
+/// Type alias for SearchController with concrete QueryService
+pub type SearchControllerType =
+    SearchController<javelin_infrastructure::read::journal_entry::JournalEntrySearchQueryServiceImpl>;
 
 /// Type alias for BatchHistoryController with concrete UseCase
 pub type BatchHistoryControllerType = BatchHistoryController<

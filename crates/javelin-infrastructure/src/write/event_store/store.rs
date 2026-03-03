@@ -233,14 +233,19 @@ impl EventStore {
         .await
         .map_err(|e| InfrastructureError::LmdbError(e.to_string()))??;
 
-        // イベント通知を送信
-        if let Some(callback) = self.notification_callback.lock().unwrap().as_ref() {
+        // イベント通知を送信（非同期で実行）
+        let callback_opt = self.notification_callback.lock().unwrap().clone();
+        if let Some(callback) = callback_opt {
+            println!("✓ Sending {} event notifications", stored_events.len());
             for event in stored_events {
-                let callback = Arc::clone(callback);
+                println!("  - Notifying event: {} (seq: {})", event.event_type, event.global_sequence);
+                let callback = Arc::clone(&callback);
                 tokio::spawn(async move {
                     callback(event).await;
                 });
             }
+        } else {
+            println!("⚠ No notification callback registered");
         }
 
         Ok(last_sequence)

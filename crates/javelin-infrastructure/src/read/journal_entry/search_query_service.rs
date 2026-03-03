@@ -32,28 +32,22 @@ impl JournalEntrySearchQueryServiceImpl {
 
     /// ProjectionDBから仕訳エントリを取得
     async fn get_journal_entries(&self) -> ApplicationResult<Vec<JournalEntrySearchReadModel>> {
-        let mut entries = Vec::with_capacity(1000);
-
         // ProjectionDBから仕訳エントリを取得
         // キー形式: "journal_entry:{entry_id}"
-        // 簡易実装: シーケンシャルスキャン
-        for seq in 0..10000 {
-            let key = format!("journal_entry:{:08}", seq);
+        // プレフィックススキャンで全エントリを取得
+        let results = self
+            .projection_db
+            .scan_prefix("journal_entry:")
+            .await
+            .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
 
-            if let Some(data) = self
-                .projection_db
-                .get_projection(&key)
-                .await
-                .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?
-            {
-                let entry: JournalEntrySearchReadModel = serde_json::from_slice(&data)
-                    .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+        let mut entries = Vec::with_capacity(results.len());
 
-                entries.push(entry);
-            } else {
-                // データが終わった
-                break;
-            }
+        for (_key, data) in results {
+            let entry: JournalEntrySearchReadModel = serde_json::from_slice(&data)
+                .map_err(|e| ApplicationError::ProjectionDatabaseError(e.to_string()))?;
+
+            entries.push(entry);
         }
 
         Ok(entries)

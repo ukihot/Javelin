@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use javelin_application::input_ports::GetJournalEntryDetailUseCase;
+use javelin_application::query_service::JournalEntrySearchQueryService;
 
 use crate::navigation::PresenterRegistry;
 
@@ -11,21 +11,21 @@ use crate::navigation::PresenterRegistry;
 ///
 /// 仕訳詳細取得に関するすべての操作を受け付ける。
 /// ユースケースへの委譲のみを行い、ビジネスロジックは含まない。
-pub struct JournalDetailController<G>
+pub struct JournalDetailController<Q>
 where
-    G: GetJournalEntryDetailUseCase,
+    Q: JournalEntrySearchQueryService,
 {
-    get_detail_use_case: Arc<G>,
+    query_service: Arc<Q>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl<G> JournalDetailController<G>
+impl<Q> JournalDetailController<Q>
 where
-    G: GetJournalEntryDetailUseCase,
+    Q: JournalEntrySearchQueryService,
 {
     /// 新しいコントローラインスタンスを作成
-    pub fn new(get_detail_use_case: Arc<G>, presenter_registry: Arc<PresenterRegistry>) -> Self {
-        Self { get_detail_use_case, presenter_registry }
+    pub fn new(query_service: Arc<Q>, presenter_registry: Arc<PresenterRegistry>) -> Self {
+        Self { query_service, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
@@ -44,10 +44,23 @@ where
     /// * `Err(String)` - 取得失敗
     pub async fn handle_get_journal_entry_detail(
         &self,
-        _page_id: uuid::Uuid,
+        page_id: uuid::Uuid,
         entry_id: String,
     ) -> Result<(), String> {
+        // PresenterRegistryから該当ページのPresenterを取得
+        let presenter = self
+            .presenter_registry
+            .get_journal_entry_presenter(page_id)
+            .ok_or_else(|| format!("Journal entry presenter not found for page_id: {}", page_id))?;
+
+        // 取得したPresenterを使って新しいInteractorを作成
+        let interactor = javelin_application::interactor::GetJournalEntryDetailInteractor::new(
+            Arc::clone(&self.query_service),
+            presenter,
+        );
+
         // UseCaseに委譲
-        self.get_detail_use_case.execute(entry_id).await.map_err(|e| e.to_string())
+        use javelin_application::input_ports::GetJournalEntryDetailUseCase;
+        interactor.execute(entry_id).await.map_err(|e| e.to_string())
     }
 }

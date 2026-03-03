@@ -4,7 +4,8 @@
 use std::sync::Arc;
 
 use javelin_application::{
-    dtos::request::SearchCriteriaDto, input_ports::SearchJournalEntryUseCase,
+    dtos::request::SearchCriteriaDto,
+    query_service::JournalEntrySearchQueryService,
 };
 
 use crate::navigation::PresenterRegistry;
@@ -13,21 +14,21 @@ use crate::navigation::PresenterRegistry;
 ///
 /// 仕訳検索に関するすべての操作を受け付ける。
 /// ユースケースへの委譲のみを行い、ビジネスロジックは含まない。
-pub struct SearchController<S>
+pub struct SearchController<Q>
 where
-    S: SearchJournalEntryUseCase,
+    Q: JournalEntrySearchQueryService,
 {
-    search_use_case: Arc<S>,
+    query_service: Arc<Q>,
     presenter_registry: Arc<PresenterRegistry>,
 }
 
-impl<S> SearchController<S>
+impl<Q> SearchController<Q>
 where
-    S: SearchJournalEntryUseCase,
+    Q: JournalEntrySearchQueryService,
 {
     /// 新しいコントローラインスタンスを作成
-    pub fn new(search_use_case: Arc<S>, presenter_registry: Arc<PresenterRegistry>) -> Self {
-        Self { search_use_case, presenter_registry }
+    pub fn new(query_service: Arc<Q>, presenter_registry: Arc<PresenterRegistry>) -> Self {
+        Self { query_service, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
@@ -46,10 +47,23 @@ where
     /// * `Err(String)` - 検索失敗
     pub async fn handle_search(
         &self,
-        _page_id: uuid::Uuid,
+        page_id: uuid::Uuid,
         criteria: SearchCriteriaDto,
     ) -> Result<(), String> {
+        // PresenterRegistryから該当ページのPresenterを取得
+        let presenter = self
+            .presenter_registry
+            .get_search_presenter(page_id)
+            .ok_or_else(|| format!("Search presenter not found for page_id: {}", page_id))?;
+
+        // 取得したPresenterを使って新しいInteractorを作成
+        let interactor = javelin_application::interactor::SearchJournalEntryInteractor::new(
+            Arc::clone(&self.query_service),
+            presenter,
+        );
+
         // UseCaseに委譲
-        self.search_use_case.execute(criteria).await.map_err(|e| e.to_string())
+        use javelin_application::input_ports::SearchJournalEntryUseCase;
+        interactor.execute(criteria).await.map_err(|e| e.to_string())
     }
 }

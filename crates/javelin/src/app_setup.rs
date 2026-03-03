@@ -263,113 +263,46 @@ pub async fn setup_controllers(
     // PresenterRegistry
     let presenter_registry = Arc::new(PresenterRegistry::new());
 
-    // ダミーPresenterを作成（実際のPresenterは各PageStateで作成される）
-    let (dummy_account_master_tx, _) = tokio::sync::mpsc::unbounded_channel();
-    let dummy_account_master_presenter =
-        javelin_adapter::presenter::AccountMasterPresenter::new(dummy_account_master_tx);
-
-    let (dummy_application_settings_tx, _) = tokio::sync::mpsc::unbounded_channel();
-    let dummy_application_settings_presenter =
-        javelin_adapter::presenter::ApplicationSettingsPresenter::new(
-            dummy_application_settings_tx,
-        );
-
-    let (dummy_company_master_tx, _) = tokio::sync::mpsc::unbounded_channel();
-    let dummy_company_master_presenter =
-        javelin_adapter::presenter::CompanyMasterPresenter::new(dummy_company_master_tx);
-
-    let (dummy_subsidiary_account_master_tx, _) = tokio::sync::mpsc::unbounded_channel();
-    let dummy_subsidiary_account_master_presenter =
-        javelin_adapter::presenter::SubsidiaryAccountMasterPresenter::new(
-            dummy_subsidiary_account_master_tx,
-        );
-
-    // マスタInteractor構築
-    let load_account_master_interactor =
-        Arc::new(javelin_application::interactor::LoadAccountMasterInteractor::new(
-            Arc::clone(&account_master_query_service),
-            dummy_account_master_presenter,
-        ));
-
-    let load_application_settings_interactor =
-        Arc::new(javelin_application::interactor::LoadApplicationSettingsInteractor::new(
-            Arc::clone(&application_settings_master_query_service),
-            dummy_application_settings_presenter,
-        ));
-
-    let load_company_master_interactor =
-        Arc::new(javelin_application::interactor::LoadCompanyMasterInteractor::new(
-            Arc::clone(&company_master_query_service),
-            dummy_company_master_presenter,
-        ));
-
-    let load_subsidiary_account_master_interactor =
-        Arc::new(javelin_application::interactor::LoadSubsidiaryAccountMasterInteractor::new(
-            Arc::clone(&subsidiary_account_master_query_service),
-            dummy_subsidiary_account_master_presenter,
-        ));
-
-    // マスタコントローラ構築
+    // マスタコントローラ構築（QueryServiceを渡す）
     let account_master_controller =
         Arc::new(javelin_adapter::controller::AccountMasterController::new(
-            load_account_master_interactor,
+            Arc::clone(&account_master_query_service),
             Arc::clone(&presenter_registry),
         ));
     let application_settings_controller =
         Arc::new(javelin_adapter::controller::ApplicationSettingsController::new(
-            load_application_settings_interactor,
+            Arc::clone(&application_settings_master_query_service),
             Arc::clone(&presenter_registry),
         ));
     let company_master_controller =
         Arc::new(javelin_adapter::controller::CompanyMasterController::new(
-            load_company_master_interactor,
+            Arc::clone(&company_master_query_service),
             Arc::clone(&presenter_registry),
         ));
     let subsidiary_account_master_controller =
         Arc::new(javelin_adapter::controller::SubsidiaryAccountMasterController::new(
-            load_subsidiary_account_master_interactor,
+            Arc::clone(&subsidiary_account_master_query_service),
             Arc::clone(&presenter_registry),
         ));
 
-    // 仕訳関連Interactor構築
-    // ダミーPresenterを使用したInteractorを作成（実際のPresenterは各PageStateで作成される）
-    let (dummy_list_tx, _) = tokio::sync::mpsc::unbounded_channel();
-    let (dummy_detail_tx, _) = tokio::sync::mpsc::unbounded_channel();
-    let (dummy_result_tx, _) = tokio::sync::mpsc::unbounded_channel();
-    let (dummy_progress_tx, _) = tokio::sync::mpsc::unbounded_channel();
-    let dummy_journal_entry_presenter =
-        Arc::new(javelin_adapter::presenter::JournalEntryPresenter::new(
-            dummy_list_tx,
-            dummy_detail_tx,
-            dummy_result_tx,
-            dummy_progress_tx,
-        ));
-
-    let register_journal_entry_interactor =
-        Arc::new(javelin_application::interactor::RegisterJournalEntryInteractor::new(
-            Arc::clone(&event_store),
-            Arc::clone(&dummy_journal_entry_presenter),
-            Arc::clone(&search_query_service),
-        ));
-
-    let get_journal_entry_detail_interactor =
-        Arc::new(javelin_application::interactor::GetJournalEntryDetailInteractor::new(
-            Arc::clone(&search_query_service),
-            Arc::clone(&dummy_journal_entry_presenter),
-        ));
-
-    // 業務コントローラ構築
+    // 業務コントローラ構築（QueryServiceを渡す）
     let journal_entry_controller =
         Arc::new(javelin_adapter::controller::JournalEntryController::new(
-            register_journal_entry_interactor,
+            Arc::clone(&event_store),
+            Arc::clone(&search_query_service),
             Arc::clone(&presenter_registry),
         ));
 
     let journal_detail_controller =
         Arc::new(javelin_adapter::controller::JournalDetailController::new(
-            get_journal_entry_detail_interactor,
+            Arc::clone(&search_query_service),
             Arc::clone(&presenter_registry),
         ));
+
+    let search_controller = Arc::new(javelin_adapter::controller::SearchController::new(
+        Arc::clone(&search_query_service),
+        Arc::clone(&presenter_registry),
+    ));
 
     let ledger_controller = Arc::new(LedgerController::new(Arc::clone(&ledger_query_service)));
 
@@ -448,30 +381,6 @@ pub async fn setup_controllers(
             generate_comprehensive_financial_statements_interactor,
         ),
     );
-
-    // SearchInteractor構築
-    let (dummy_search_result_tx, _) = tokio::sync::mpsc::channel(100);
-    let (dummy_search_error_tx, _) = tokio::sync::mpsc::channel(100);
-    let (dummy_search_progress_tx, _) = tokio::sync::mpsc::channel(100);
-    let (dummy_search_execution_time_tx, _) = tokio::sync::mpsc::channel(100);
-    let dummy_search_presenter = Arc::new(javelin_adapter::presenter::SearchPresenter::new(
-        dummy_search_result_tx,
-        dummy_search_error_tx,
-        dummy_search_progress_tx,
-        dummy_search_execution_time_tx,
-    ));
-
-    let search_journal_entry_interactor =
-        Arc::new(javelin_application::interactor::SearchJournalEntryInteractor::new(
-            Arc::clone(&search_query_service),
-            Arc::clone(&dummy_search_presenter),
-        ));
-
-    // SearchController構築
-    let search_controller = Arc::new(javelin_adapter::controller::SearchController::new(
-        search_journal_entry_interactor,
-        Arc::clone(&presenter_registry),
-    ));
 
     // BatchHistoryInteractor構築
     let get_batch_history_interactor =
