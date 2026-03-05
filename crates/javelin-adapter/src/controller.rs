@@ -14,6 +14,7 @@ pub mod generate_comprehensive_financial_statements_controller;
 pub mod generate_financial_statements_controller;
 pub mod generate_note_draft_controller;
 pub mod generate_trial_balance_controller;
+pub mod invoice_print_controller;
 pub mod journal_detail_controller;
 pub mod journal_entry_controller;
 pub mod ledger_controller;
@@ -35,6 +36,7 @@ pub use generate_comprehensive_financial_statements_controller::GenerateComprehe
 pub use generate_financial_statements_controller::GenerateFinancialStatementsController;
 pub use generate_note_draft_controller::GenerateNoteDraftController;
 pub use generate_trial_balance_controller::GenerateTrialBalanceController;
+pub use invoice_print_controller::InvoicePrintController;
 // Re-export application layer DTOs for convenience
 pub use javelin_application::dtos::{
     request::{

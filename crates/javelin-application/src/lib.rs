@@ -80,6 +80,7 @@ pub mod input_ports {
     pub mod load_subsidiary_account_master;
     pub mod lock_closing_period;
     pub mod prepare_closing;
+    pub mod print_invoice_input_port;
     pub mod register_journal_entry;
     pub mod reject_journal_entry;
     pub mod reverse_journal_entry;
@@ -113,6 +114,7 @@ pub mod input_ports {
     pub use load_subsidiary_account_master::*;
     pub use lock_closing_period::*;
     pub use prepare_closing::*;
+    pub use print_invoice_input_port::*;
     pub use register_journal_entry::*;
     pub use reject_journal_entry::*;
     pub use reverse_journal_entry::*;

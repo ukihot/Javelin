@@ -4,14 +4,17 @@
 use std::{path::Path, sync::Arc};
 
 use javelin_adapter::{
-    PresenterRegistry, controller::LedgerController, navigation::Controllers,
-    presenter::LedgerPresenter,
+    PresenterRegistry,
+    controller::LedgerController,
+    navigation::Controllers,
+    presenter::{InvoicePrintPresenter, LedgerPresenter},
 };
 use javelin_application::{
     interactor::{
         AdjustAccountsInteractor, ApplyIfrsValuationInteractor, ConsolidateLedgerInteractor,
         GenerateFinancialStatementsInteractor, GenerateNoteDraftInteractor,
         GenerateTrialBalanceInteractor, LockClosingPeriodInteractor, PrepareClosingInteractor,
+        PrintInvoiceInteractor,
         closing::{
             EvaluateMaterialityInteractor, GenerateComprehensiveFinancialStatementsInteractor,
             VerifyLedgerConsistencyInteractor,
@@ -24,9 +27,11 @@ use javelin_infrastructure::{
     read::{
         batch_history::BatchHistoryQueryServiceImpl,
         infrastructure::{ProjectionBuilderImpl, ProjectionDb},
+        invoice::MockInvoiceQueryService,
         journal_entry::JournalEntrySearchQueryServiceImpl,
         ledger::LedgerQueryServiceImpl,
     },
+    shared::typst_invoice_printer::TypstInvoicePrinter,
     write::event_store::{ClosingEventStore, EventStore},
 };
 use tokio::sync::mpsc;
@@ -395,6 +400,27 @@ pub async fn setup_controllers(
             Arc::clone(&presenter_registry),
         ));
 
+    // InvoicePrint構築
+    // MockInvoiceQueryService
+    let mock_invoice_query_service = Arc::new(MockInvoiceQueryService);
+    // TypstInvoicePrinter
+    let typst_invoice_printer = Arc::new(TypstInvoicePrinter::default());
+    // InvoicePrintPresenter
+    let (invoice_print_tx, _invoice_print_rx) = tokio::sync::mpsc::unbounded_channel();
+    let invoice_print_presenter = Arc::new(InvoicePrintPresenter::new(invoice_print_tx));
+    // PrintInvoiceInteractor
+    let print_invoice_interactor = Arc::new(PrintInvoiceInteractor::new(
+        mock_invoice_query_service,
+        typst_invoice_printer,
+        Arc::clone(&invoice_print_presenter),
+    ));
+    // InvoicePrintController
+    let invoice_print_controller =
+        Arc::new(javelin_adapter::controller::InvoicePrintController::new(
+            print_invoice_interactor,
+            invoice_print_presenter,
+        ));
+
     // Phase 3 Presenters構築
     let (
         materiality_evaluation_result_tx,
@@ -454,6 +480,7 @@ pub async fn setup_controllers(
         ledger_controller,
         search_controller,
         batch_history_controller,
+        invoice_print_controller,
         materiality_evaluation_presenter,
         ledger_consistency_verification_presenter,
         comprehensive_financial_statements_presenter,

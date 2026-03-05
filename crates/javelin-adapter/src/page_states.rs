@@ -10,6 +10,7 @@ pub mod home_page_state;
 pub use home_page_state::HomePageState;
 
 // Route hierarchy modules
+pub mod billing;
 pub mod closing;
 pub mod closing_preparation;
 pub mod financial_statements;
@@ -25,6 +26,7 @@ pub mod note_draft_page_state;
 pub mod notes_menu_page_state;
 
 // Re-exports for backward compatibility
+pub use billing::InvoicePrintPageState;
 pub use closing::{
     AccountAdjustmentExecutionPageState, AdjustmentJournalListPageState,
     ClosingLockExecutionPageState, ClosingMenuPageState, ClosingPreparationExecutionPageState,

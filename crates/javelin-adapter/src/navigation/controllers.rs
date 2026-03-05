@@ -9,14 +9,14 @@ use crate::{
         ApplyIfrsValuationController, BatchHistoryController, CompanyMasterController,
         ConsolidateLedgerController, EvaluateMaterialityController,
         GenerateComprehensiveFinancialStatementsController, GenerateFinancialStatementsController,
-        GenerateNoteDraftController, GenerateTrialBalanceController, JournalDetailController,
-        JournalEntryController, LedgerController, LockClosingPeriodController,
-        PrepareClosingController, SearchController, SubsidiaryAccountMasterController,
-        VerifyLedgerConsistencyController,
+        GenerateNoteDraftController, GenerateTrialBalanceController, InvoicePrintController,
+        JournalDetailController, JournalEntryController, LedgerController,
+        LockClosingPeriodController, PrepareClosingController, SearchController,
+        SubsidiaryAccountMasterController, VerifyLedgerConsistencyController,
     },
     presenter::{
-        ComprehensiveFinancialStatementsPresenter, LedgerConsistencyVerificationPresenter,
-        MaterialityEvaluationPresenter,
+        ComprehensiveFinancialStatementsPresenter, InvoicePrintPresenter,
+        LedgerConsistencyVerificationPresenter, MaterialityEvaluationPresenter,
     },
 };
 
@@ -140,6 +140,16 @@ pub type GenerateComprehensiveFinancialStatementsControllerType =
 /// Type alias for LedgerController (no generics needed after refactoring)
 pub type LedgerControllerType = LedgerController;
 
+/// Type alias for InvoicePrintController with concrete types
+pub type InvoicePrintControllerType = InvoicePrintController<
+    javelin_application::interactor::PrintInvoiceInteractor<
+        javelin_infrastructure::read::invoice::MockInvoiceQueryService,
+        javelin_infrastructure::shared::typst_invoice_printer::TypstInvoicePrinter,
+        InvoicePrintPresenter,
+    >,
+    InvoicePrintPresenter,
+>;
+
 /// Container for all controllers
 ///
 /// Bundles all controllers into a single struct for easy passing to pages.
@@ -167,6 +177,7 @@ pub struct Controllers {
     pub ledger: Arc<LedgerControllerType>,
     pub search: Arc<SearchControllerType>,
     pub batch_history: Arc<BatchHistoryControllerType>,
+    pub invoice_print: Arc<InvoicePrintControllerType>,
     pub materiality_evaluation_presenter: Arc<MaterialityEvaluationPresenter>,
     pub ledger_consistency_verification_presenter: Arc<LedgerConsistencyVerificationPresenter>,
     pub comprehensive_financial_statements_presenter:
@@ -199,6 +210,7 @@ impl Controllers {
         ledger: Arc<LedgerControllerType>,
         search: Arc<SearchControllerType>,
         batch_history: Arc<BatchHistoryControllerType>,
+        invoice_print: Arc<InvoicePrintControllerType>,
         materiality_evaluation_presenter: Arc<MaterialityEvaluationPresenter>,
         ledger_consistency_verification_presenter: Arc<LedgerConsistencyVerificationPresenter>,
         comprehensive_financial_statements_presenter: Arc<
@@ -226,6 +238,7 @@ impl Controllers {
             ledger,
             search,
             batch_history,
+            invoice_print,
             materiality_evaluation_presenter,
             ledger_consistency_verification_presenter,
             comprehensive_financial_statements_presenter,
