@@ -1,7 +1,7 @@
 // ApplicationBuilder - アプリケーションのビルド
 // 責務: 各セットアップモジュールを呼び出してApplicationを構築
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use javelin_adapter::views::terminal_manager::TerminalManager;
 
@@ -30,8 +30,8 @@ impl ApplicationBuilder {
     }
 
     /// データディレクトリを設定
-    pub fn with_data_dir(mut self, path: PathBuf) -> Self {
-        self.data_dir = Some(path);
+    pub fn with_data_dir(mut self, path: &Path) -> Self {
+        self.data_dir = Some(path.to_path_buf());
         self
     }
 

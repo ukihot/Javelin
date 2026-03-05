@@ -3,7 +3,7 @@
 // 請求書テンプレートからTypstコードを生成する。
 // 実際のPDF生成は外部のtypstコマンドまたは将来的なtypstライブラリ統合で行う。
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use javelin_application::{
     dtos::response::PrintInvoiceResponse, error::ApplicationResult, output_ports::InvoicePrinter,
@@ -15,8 +15,8 @@ pub struct TypstInvoicePrinter {
 }
 
 impl TypstInvoicePrinter {
-    pub fn new(template_path: PathBuf) -> Self {
-        Self { template_path }
+    pub fn new(template_path: &Path) -> Self {
+        Self { template_path: template_path.to_path_buf() }
     }
 
     /// テンプレートファイルを読み込む
@@ -121,7 +121,7 @@ impl InvoicePrinter for TypstInvoicePrinter {
 
 impl Default for TypstInvoicePrinter {
     fn default() -> Self {
-        Self::new(PathBuf::from("crates/javelin-infrastructure/templates/invoice.typ"))
+        Self::new(Path::new("crates/javelin-infrastructure/templates/invoice.typ"))
     }
 }
 
@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_generate_typst_code() {
-        let printer = TypstInvoicePrinter::new(PathBuf::from("dummy.typ"));
+        let printer = TypstInvoicePrinter::new(Path::new("dummy.typ"));
         let invoice = create_test_invoice();
         let code = printer.generate_typst_code(&invoice);
 

@@ -5,7 +5,7 @@
 // - std::fmt::from_fn によるログ出力
 
 use std::{
-    path::{Path, PathBuf},
+    path::Path,
     sync::{Arc, Mutex},
 };
 
@@ -32,8 +32,6 @@ pub struct EventStore {
     env: Arc<Environment>,
     events_db: Database,
     meta_db: Database,
-    #[allow(dead_code)]
-    path: PathBuf,
     current_map_size: Arc<Mutex<usize>>,
     #[allow(dead_code)]
     durability_policy: DurabilityPolicy,
@@ -118,7 +116,6 @@ impl EventStore {
             env: Arc::new(env),
             events_db,
             meta_db,
-            path: path.to_path_buf(),
             current_map_size: Arc::new(Mutex::new(map_size)),
             durability_policy,
             notification_callback: Arc::new(Mutex::new(None)),
