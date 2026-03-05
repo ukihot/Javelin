@@ -4,7 +4,6 @@
 // Generic/Shared components
 pub mod home_page;
 pub mod menu_page;
-pub mod stub_page;
 
 // Route hierarchy modules
 pub mod billing;
