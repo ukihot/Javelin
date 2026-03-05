@@ -6,6 +6,7 @@ pub mod batch_history;
 pub mod closing;
 pub mod journal_entry;
 pub mod master_data;
+pub mod print_invoice_interactor;
 
 pub use batch_history::GetBatchHistoryInteractor;
 pub use closing::{
@@ -25,6 +26,7 @@ pub use master_data::{
     LoadAccountMasterInteractor, LoadApplicationSettingsInteractor, LoadCompanyMasterInteractor,
     LoadSubsidiaryAccountMasterInteractor,
 };
+pub use print_invoice_interactor::PrintInvoiceInteractor;
 
 // テストモジュール
 #[cfg(test)]

@@ -12,6 +12,7 @@ pub mod journal_entry_search_result_dto;
 pub mod ledger_consistency_verification;
 pub mod load_account_master;
 pub mod materiality_evaluation;
+pub mod print_invoice_response;
 pub mod subsidiary_account_master;
 pub mod user_action;
 
@@ -27,5 +28,6 @@ pub use journal_entry_search_result_dto::*;
 pub use ledger_consistency_verification::*;
 pub use load_account_master::*;
 pub use materiality_evaluation::*;
+pub use print_invoice_response::*;
 pub use subsidiary_account_master::*;
 pub use user_action::*;

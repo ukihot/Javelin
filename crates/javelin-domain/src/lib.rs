@@ -2,6 +2,7 @@
 // 依存方向: なし（外部依存禁止）
 
 pub mod batch;
+pub mod billing;
 pub mod common;
 pub mod entity;
 pub mod error;
