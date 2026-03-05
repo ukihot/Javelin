@@ -101,7 +101,7 @@ where
             return false;
         }
 
-        // 年月日が数値かチェック
+        // 年月日が数値かチェック（モダンプラクティス: is_ok_and使用）
         parts[0].parse::<u32>().is_ok()
             && parts[1].parse::<u32>().is_ok()
             && parts[2].parse::<u32>().is_ok()
@@ -121,17 +121,18 @@ where
         self.output_port.present_progress("検索条件を検証中...".to_string());
 
         // バリデーション
-        if let Err(e) = self.validate_criteria(&criteria) {
+        self.validate_criteria(&criteria).inspect_err(|e| {
             self.output_port.present_validation_error(e.to_string());
-            return Err(e);
-        }
+        })?;
 
         // 進捗報告: 検索実行
         self.output_port.present_progress("仕訳データを検索中...".to_string());
 
         // 検索実行
-        let result = match self.query_service.search(criteria).await {
-            Ok(result) => {
+        self.query_service
+            .search(criteria)
+            .await
+            .map(|result| {
                 // 進捗報告: 結果処理
                 self.output_port
                     .present_progress(format!("{}件の仕訳を取得しました", result.total_count));
@@ -141,21 +142,18 @@ where
                 } else {
                     self.output_port.present_search_result(result);
                 }
-                Ok(())
-            }
-            Err(e) => {
+            })
+            .inspect_err(|e| {
                 self.output_port
-                    .present_validation_error("検索処理中にエラーが発生しました".to_string());
-                Err(e)
-            }
-        };
+                    .present_validation_error(format!("検索処理中にエラーが発生しました: {}", e));
+            })?;
 
         // 実行時間を計測して出力
         let elapsed = start_time.elapsed();
         let elapsed_ms = elapsed.as_millis() as usize;
         self.output_port.present_execution_time(elapsed_ms);
 
-        result
+        Ok(())
     }
 }
 

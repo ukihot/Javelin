@@ -48,16 +48,18 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort> ApproveJournalEntryUs
 
         // 2. イベントをJournalEntryEventに変換
         // モダンプラクティス: イベント数で初期キャパシティを確保
-        let mut journal_events = Vec::with_capacity(events.len());
-        for event_json in events {
-            let event: JournalEntryEvent = serde_json::from_value(event_json).map_err(|e| {
-                ApplicationError::ValidationFailed(vec![format!(
-                    "Failed to deserialize event: {}",
-                    e
-                )])
-            })?;
-            journal_events.push(event);
-        }
+        let journal_events: Result<Vec<_>, _> = events
+            .into_iter()
+            .map(|event_json| {
+                serde_json::from_value(event_json).map_err(|e| {
+                    ApplicationError::ValidationFailed(vec![format!(
+                        "Failed to deserialize event: {}",
+                        e
+                    )])
+                })
+            })
+            .collect();
+        let journal_events = journal_events?;
 
         // 3. 最初のイベント（DraftCreated）から仕訳エンティティを作成
         let first_event = journal_events.first().ok_or_else(|| {

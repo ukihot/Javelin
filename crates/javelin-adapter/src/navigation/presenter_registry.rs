@@ -29,8 +29,8 @@ use uuid::Uuid;
 
 use crate::presenter::{
     AccountMasterPresenter, ApplicationSettingsPresenter, BatchHistoryPresenter,
-    CompanyMasterPresenter, FixedAssetPresenter, JournalEntryPresenter, LedgerPresenter,
-    SearchPresenter, SubsidiaryAccountMasterPresenter,
+    CompanyMasterPresenter, FixedAssetPresenter, InvoicePrintPresenter, JournalEntryPresenter,
+    LedgerPresenter, SearchPresenter, SubsidiaryAccountMasterPresenter,
 };
 
 /// Global registry mapping page instances to presenters
@@ -71,6 +71,7 @@ pub struct PresenterRegistry {
     batch_history_presenters: Arc<RwLock<HashMap<Uuid, Arc<BatchHistoryPresenter>>>>,
     ledger_presenters: Arc<RwLock<HashMap<Uuid, Arc<LedgerPresenter>>>>,
     fixed_asset_presenters: Arc<RwLock<HashMap<Uuid, Arc<FixedAssetPresenter>>>>,
+    invoice_print_presenters: Arc<RwLock<HashMap<Uuid, Arc<InvoicePrintPresenter>>>>,
 }
 
 impl PresenterRegistry {
@@ -86,6 +87,7 @@ impl PresenterRegistry {
             batch_history_presenters: Arc::new(RwLock::new(HashMap::new())),
             ledger_presenters: Arc::new(RwLock::new(HashMap::new())),
             fixed_asset_presenters: Arc::new(RwLock::new(HashMap::new())),
+            invoice_print_presenters: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -272,6 +274,27 @@ impl PresenterRegistry {
         self.fixed_asset_presenters.write().unwrap().remove(&id);
     }
 
+    // Invoice Print Presenter methods
+
+    /// Register an invoice print presenter for a page instance
+    pub fn register_invoice_print_presenter(
+        &self,
+        id: Uuid,
+        presenter: Arc<InvoicePrintPresenter>,
+    ) {
+        self.invoice_print_presenters.write().unwrap().insert(id, presenter);
+    }
+
+    /// Get an invoice print presenter by page instance ID
+    pub fn get_invoice_print_presenter(&self, id: Uuid) -> Option<Arc<InvoicePrintPresenter>> {
+        self.invoice_print_presenters.read().unwrap().get(&id).cloned()
+    }
+
+    /// Unregister an invoice print presenter
+    pub fn unregister_invoice_print_presenter(&self, id: Uuid) {
+        self.invoice_print_presenters.write().unwrap().remove(&id);
+    }
+
     // Utility methods
 
     /// Get the total number of registered presenters across all types
@@ -285,6 +308,7 @@ impl PresenterRegistry {
             + self.batch_history_presenters.read().unwrap().len()
             + self.ledger_presenters.read().unwrap().len()
             + self.fixed_asset_presenters.read().unwrap().len()
+            + self.invoice_print_presenters.read().unwrap().len()
     }
 
     /// Clear all registered presenters (useful for testing)
@@ -298,6 +322,7 @@ impl PresenterRegistry {
         self.batch_history_presenters.write().unwrap().clear();
         self.ledger_presenters.write().unwrap().clear();
         self.fixed_asset_presenters.write().unwrap().clear();
+        self.invoice_print_presenters.write().unwrap().clear();
     }
 }
 

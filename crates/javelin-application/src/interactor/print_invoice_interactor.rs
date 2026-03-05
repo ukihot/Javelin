@@ -42,55 +42,34 @@ where
     P: InvoicePrinter,
     O: InvoicePrintOutputPort,
 {
-    /// 請求書を印刷してPDFを生成
-    fn execute(&self, request: PrintInvoiceRequest) -> ApplicationResult<Vec<u8>> {
-        // 非同期処理を開始（output portへの通知のため）
-        let query_service = Arc::clone(&self.query_service);
-        let printer = Arc::clone(&self.printer);
-        let output_port = Arc::clone(&self.output_port);
-        let invoice_id = request.invoice_id.clone();
+    /// 請求書を印刷してPDFを生成・保存
+    fn execute(&self, request: PrintInvoiceRequest) -> ApplicationResult<()> {
+        let invoice_id = request.invoice_id;
 
-        // 同期的な実行（tokio::spawnは使わない）
+        // ヘルパー関数: 非同期通知を同期的に実行
+        let notify = |fut: std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>| {
+            tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(fut))
+        };
+
         // 印刷開始を通知
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current()
-                .block_on(async { output_port.notify_print_started().await })
-        });
+        notify(Box::pin(self.output_port.notify_print_started()));
 
         // 進捗通知: データ取得開始
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                output_port.notify_progress("請求書データを取得中...".to_string()).await
-            })
-        });
+        notify(Box::pin(
+            self.output_port.notify_progress("請求書データを取得中...".to_string()),
+        ));
 
         // 1. クエリサービスから請求書データを取得
-        let invoice = match query_service.find_by_id(&invoice_id) {
-            Ok(Some(inv)) => inv,
-            Ok(None) => {
-                let error_msg = format!("請求書が見つかりません: {}", invoice_id);
-                tokio::task::block_in_place(|| {
-                    tokio::runtime::Handle::current()
-                        .block_on(async { output_port.notify_print_error(error_msg.clone()).await })
-                });
-                return Err(ApplicationError::NotFound(error_msg));
-            }
-            Err(e) => {
-                let error_msg = format!("請求書データの取得に失敗しました: {:?}", e);
-                tokio::task::block_in_place(|| {
-                    tokio::runtime::Handle::current()
-                        .block_on(async { output_port.notify_print_error(error_msg.clone()).await })
-                });
-                return Err(e);
-            }
+        let Some(invoice) = self.query_service.find_by_id(&invoice_id)? else {
+            let error_msg = format!("請求書が見つかりません: {}", invoice_id);
+            notify(Box::pin(self.output_port.notify_print_error(error_msg.clone())));
+            return Err(ApplicationError::NotFound(error_msg));
         };
 
         // 進捗通知: データ変換中
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                output_port.notify_progress("請求書データを変換中...".to_string()).await
-            })
-        });
+        notify(Box::pin(
+            self.output_port.notify_progress("請求書データを変換中...".to_string()),
+        ));
 
         // 2. DTOに変換
         let response = PrintInvoiceResponse {
@@ -129,27 +108,37 @@ where
         };
 
         // 進捗通知: PDF生成中
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                output_port.notify_progress("PDFを生成中...".to_string()).await
-            })
-        });
+        notify(Box::pin(self.output_port.notify_progress("PDFを生成中...".to_string())));
 
         // 3. 印刷ドライバでPDF生成
-        match printer.print_to_pdf(&response) {
-            Ok(pdf_data) => {
-                // 成功通知はコントローラー側でファイル保存後に行う
-                Ok(pdf_data)
-            }
-            Err(e) => {
-                let error_msg = format!("PDF生成に失敗しました: {:?}", e);
-                tokio::task::block_in_place(|| {
-                    tokio::runtime::Handle::current()
-                        .block_on(async { output_port.notify_print_error(error_msg.clone()).await })
-                });
-                Err(e)
-            }
-        }
+        let pdf_data = self.printer.print_to_pdf(&response).map_err(|e| {
+            let error_msg = format!("PDF生成に失敗しました: {:?}", e);
+            notify(Box::pin(self.output_port.notify_print_error(error_msg.clone())));
+            e
+        })?;
+
+        // 進捗通知: ファイル保存中
+        notify(Box::pin(self.output_port.notify_progress("ファイルを保存中...".to_string())));
+
+        // 4. タイムスタンプ付きファイル名を生成
+        let timestamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+        let file_name = format!("invoice-{}.pdf", timestamp);
+        let output_dir =
+            std::env::current_dir().unwrap_or_else(|_| std::path::Path::new(".").to_path_buf());
+        let file_path = output_dir.join(&file_name);
+
+        // 5. ファイルに保存
+        std::fs::write(&file_path, pdf_data).map_err(|e| {
+            let error_msg = format!("ファイル保存に失敗しました: {}", e);
+            notify(Box::pin(self.output_port.notify_print_error(error_msg.clone())));
+            ApplicationError::Unknown(error_msg)
+        })?;
+
+        // 成功通知
+        notify(Box::pin(
+            self.output_port.notify_print_success(file_path.to_string_lossy().to_string()),
+        ));
+        Ok(())
     }
 }
 
@@ -236,18 +225,19 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_print_invoice_success() {
+    #[tokio::test]
+    async fn test_print_invoice_success() {
         let query_service = Arc::new(MockQueryService);
         let printer = Arc::new(MockPrinter);
         let output_port = Arc::new(MockOutputPort);
         let interactor = PrintInvoiceInteractor::new(query_service, printer, output_port);
 
         let request = PrintInvoiceRequest::new("test-id".to_string());
-        let result = interactor.execute(request);
+
+        // 同期的なexecuteをtokioランタイム内で実行
+        let result =
+            tokio::task::spawn_blocking(move || interactor.execute(request)).await.unwrap();
 
         assert!(result.is_ok());
-        let pdf = result.unwrap();
-        assert!(!pdf.is_empty());
     }
 }

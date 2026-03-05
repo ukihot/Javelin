@@ -81,6 +81,10 @@ pub enum Route {
     /// Clean event store
     MaintenanceCleanEventStore,
 
+    // ========== 販売管理 ==========
+    /// 請求書発行 (EXEC)
+    InvoicePrint,
+
     // ========== A. Primary Records ==========
     /// A-01: Primary Records Menu
     PrimaryRecordsMenu,

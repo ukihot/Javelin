@@ -66,7 +66,8 @@ impl VerifyLedgerConsistencyInteractor {
     fn generate_anomaly_alerts(
         changes: &[javelin_domain::financial_close::ledger::BalanceChange],
     ) -> Vec<AnomalyAlert> {
-        let mut alerts = Vec::new();
+        // モダンプラクティス: 事前にキャパシティを確保
+        let mut alerts = Vec::with_capacity(changes.len());
 
         for change in changes {
             // 変動率が50%以上の場合は警告

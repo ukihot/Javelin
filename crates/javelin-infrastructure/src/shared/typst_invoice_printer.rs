@@ -1,22 +1,37 @@
 // Typst請求書印刷ドライバ
 //
-// 請求書テンプレートからTypstコードを生成する。
-// 実際のPDF生成は外部のtypstコマンドまたは将来的なtypstライブラリ統合で行う。
+// 請求書テンプレートからTypstコードを生成し、PDFにコンパイルする。
 
 use std::path::{Path, PathBuf};
 
 use javelin_application::{
     dtos::response::PrintInvoiceResponse, error::ApplicationResult, output_ports::InvoicePrinter,
 };
+use typst::{
+    Library, LibraryExt, World,
+    diag::{FileError, FileResult},
+    foundations::{Bytes, Datetime},
+    syntax::{FileId, Source},
+    text::{Font, FontBook},
+    utils::LazyHash,
+};
+use typst_pdf::PdfOptions;
 
 /// Typst請求書印刷ドライバ
 pub struct TypstInvoicePrinter {
     template_path: PathBuf,
+    fonts_dir: PathBuf,
 }
 
 impl TypstInvoicePrinter {
     pub fn new(template_path: &Path) -> Self {
-        Self { template_path: template_path.to_path_buf() }
+        let fonts_dir = template_path
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("fonts"))
+            .unwrap_or_else(|| PathBuf::from("crates/javelin-infrastructure/fonts"));
+
+        Self { template_path: template_path.to_path_buf(), fonts_dir }
     }
 
     /// テンプレートファイルを読み込む
@@ -96,6 +111,72 @@ impl TypstInvoicePrinter {
             items_code
         )
     }
+
+    /// フォントを読み込む
+    fn load_fonts(&self) -> Vec<Font> {
+        let mut fonts = Vec::new();
+
+        // システムフォントとカスタムフォントを読み込む
+        if self.fonts_dir.exists()
+            && let Ok(entries) = std::fs::read_dir(&self.fonts_dir)
+        {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if (path.extension().and_then(|s| s.to_str()) == Some("ttf")
+                    || path.extension().and_then(|s| s.to_str()) == Some("otf"))
+                    && let Ok(data) = std::fs::read(&path)
+                {
+                    // Vec<u8>をBytesに変換してフォントを作成
+                    let bytes = Bytes::new(data);
+                    if let Some(font) = Font::new(bytes, 0) {
+                        fonts.push(font);
+                    }
+                }
+            }
+        }
+
+        fonts
+    }
+
+    /// TypstコードをPDFにコンパイル
+    fn compile_to_pdf(&self, typst_code: String) -> ApplicationResult<Vec<u8>> {
+        // フォントを読み込む
+        let fonts = self.load_fonts();
+        let font_book = FontBook::from_fonts(&fonts);
+
+        // Worldを作成
+        let world = SimpleWorld::new(typst_code, fonts, font_book);
+
+        // コンパイル
+        let result = typst::compile(&world);
+        let document = match result.output {
+            Ok(doc) => doc,
+            Err(errors) => {
+                let error_msg =
+                    errors.iter().map(|e| format!("{:?}", e)).collect::<Vec<_>>().join("\n");
+                return Err(javelin_application::error::ApplicationError::Unknown(format!(
+                    "Typst compilation failed: {}",
+                    error_msg
+                )));
+            }
+        };
+
+        // PDFに変換
+        let pdf_options = PdfOptions::default();
+        let pdf_result = typst_pdf::pdf(&document, &pdf_options);
+
+        match pdf_result {
+            Ok(pdf_data) => Ok(pdf_data),
+            Err(errors) => {
+                let error_msg =
+                    errors.iter().map(|e| format!("{:?}", e)).collect::<Vec<_>>().join("\n");
+                Err(javelin_application::error::ApplicationError::Unknown(format!(
+                    "PDF generation failed: {}",
+                    error_msg
+                )))
+            }
+        }
+    }
 }
 
 impl InvoicePrinter for TypstInvoicePrinter {
@@ -109,19 +190,69 @@ impl InvoicePrinter for TypstInvoicePrinter {
         // 3. テンプレートとデータを結合
         let full_code = format!("{}\n{}", template, typst_code);
 
-        // TODO: 実際のPDF生成
-        // 現在は生成されたTypstコードをバイト列として返す（開発用）
-        // 将来的には以下のいずれかで実装：
-        // - typstコマンドを外部プロセスとして実行
-        // - typst-rsなどのライブラリを使用
-        // - typst WebAssembly版を使用
-        Ok(full_code.into_bytes())
+        // 4. PDFにコンパイル
+        self.compile_to_pdf(full_code)
     }
 }
 
 impl Default for TypstInvoicePrinter {
     fn default() -> Self {
         Self::new(Path::new("crates/javelin-infrastructure/templates/invoice.typ"))
+    }
+}
+
+/// シンプルなTypst World実装
+struct SimpleWorld {
+    source: Source,
+    library: LazyHash<Library>,
+    book: LazyHash<FontBook>,
+    fonts: Vec<Font>,
+}
+
+impl SimpleWorld {
+    fn new(content: String, fonts: Vec<Font>, book: FontBook) -> Self {
+        let source = Source::detached(content);
+
+        Self {
+            source,
+            library: LazyHash::new(Library::default()),
+            book: LazyHash::new(book),
+            fonts,
+        }
+    }
+}
+
+impl World for SimpleWorld {
+    fn library(&self) -> &LazyHash<Library> {
+        &self.library
+    }
+
+    fn book(&self) -> &LazyHash<FontBook> {
+        &self.book
+    }
+
+    fn main(&self) -> FileId {
+        self.source.id()
+    }
+
+    fn source(&self, id: FileId) -> FileResult<Source> {
+        if id == self.source.id() {
+            Ok(self.source.clone())
+        } else {
+            Err(FileError::NotFound(id.vpath().as_rootless_path().to_path_buf()))
+        }
+    }
+
+    fn file(&self, id: FileId) -> FileResult<Bytes> {
+        Err(FileError::NotFound(id.vpath().as_rootless_path().to_path_buf()))
+    }
+
+    fn font(&self, index: usize) -> Option<Font> {
+        self.fonts.get(index).cloned()
+    }
+
+    fn today(&self, _offset: Option<i64>) -> Option<Datetime> {
+        Some(Datetime::from_ymd(2026, 3, 5).unwrap())
     }
 }
 

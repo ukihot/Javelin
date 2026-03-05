@@ -1,71 +1,47 @@
 // 請求書印刷コントローラー
 
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use javelin_application::{
     dtos::request::PrintInvoiceRequest, input_ports::PrintInvoiceInputPort,
-    output_ports::InvoicePrintOutputPort,
+    interactor::PrintInvoiceInteractor,
+};
+use javelin_infrastructure::{
+    read::invoice::MockInvoiceQueryService, shared::typst_invoice_printer::TypstInvoicePrinter,
 };
 
+use crate::presenter::InvoicePrintPresenter;
+
 /// 請求書印刷コントローラー
-pub struct InvoicePrintController<I, O>
-where
-    I: PrintInvoiceInputPort + 'static,
-    O: InvoicePrintOutputPort + 'static,
-{
-    input_port: Arc<I>,
-    output_port: Arc<O>,
+pub struct InvoicePrintController {
+    query_service: Arc<MockInvoiceQueryService>,
+    printer: Arc<TypstInvoicePrinter>,
 }
 
-impl<I, O> InvoicePrintController<I, O>
-where
-    I: PrintInvoiceInputPort + 'static,
-    O: InvoicePrintOutputPort + 'static,
-{
-    pub fn new(input_port: Arc<I>, output_port: Arc<O>) -> Self {
-        Self { input_port, output_port }
+impl InvoicePrintController {
+    pub fn new(
+        query_service: Arc<MockInvoiceQueryService>,
+        printer: Arc<TypstInvoicePrinter>,
+    ) -> Self {
+        Self { query_service, printer }
     }
 
-    /// 請求書を印刷してPDFを保存
-    pub fn print_invoice(&self, invoice_id: String, output_dir: PathBuf) {
-        let input_port = Arc::clone(&self.input_port);
-        let output_port = Arc::clone(&self.output_port);
+    /// 請求書を印刷（プレゼンターを受け取って動的にインタラクターを作成）
+    pub fn print_invoice_with_presenter(
+        &self,
+        invoice_id: String,
+        presenter: Arc<InvoicePrintPresenter>,
+    ) {
+        let query_service = Arc::clone(&self.query_service);
+        let printer = Arc::clone(&self.printer);
 
         tokio::spawn(async move {
-            // リクエストを作成
-            let request = PrintInvoiceRequest::new(invoice_id.clone());
+            // プレゼンターをOutput Portとして注入してインタラクターを作成（静的ディスパッチ）
+            let interactor = PrintInvoiceInteractor::new(query_service, printer, presenter);
 
-            // ユースケースを実行（内部でoutput_portに通知される）
-            match input_port.execute(request) {
-                Ok(pdf_data) => {
-                    // PDFをファイルに保存
-                    let file_name = format!("invoice_{}.pdf", invoice_id);
-                    let file_path = output_dir.join(&file_name);
-
-                    match std::fs::write(&file_path, pdf_data) {
-                        Ok(_) => {
-                            // ファイル保存成功を通知
-                            output_port
-                                .notify_print_success(file_path.to_string_lossy().to_string())
-                                .await;
-                        }
-                        Err(e) => {
-                            // ファイル保存失敗を通知
-                            output_port
-                                .notify_print_error(format!("ファイル保存失敗: {}", e))
-                                .await;
-                        }
-                    }
-                }
-                Err(_e) => {
-                    // エラーは既にinteractor内でoutput_portに通知済み
-                }
-            }
+            // リクエストを作成してInput Port経由で実行
+            let request = PrintInvoiceRequest::new(invoice_id);
+            let _ = interactor.execute(request);
         });
-    }
-
-    /// モックデータで請求書を印刷（開発用）
-    pub fn print_mock_invoice(&self, output_dir: PathBuf) {
-        self.print_invoice("mock-invoice-001".to_string(), output_dir);
     }
 }

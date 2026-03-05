@@ -15,8 +15,8 @@ use crate::{
         SubsidiaryAccountMasterController, VerifyLedgerConsistencyController,
     },
     presenter::{
-        ComprehensiveFinancialStatementsPresenter, InvoicePrintPresenter,
-        LedgerConsistencyVerificationPresenter, MaterialityEvaluationPresenter,
+        ComprehensiveFinancialStatementsPresenter, LedgerConsistencyVerificationPresenter,
+        MaterialityEvaluationPresenter,
     },
 };
 
@@ -141,14 +141,7 @@ pub type GenerateComprehensiveFinancialStatementsControllerType =
 pub type LedgerControllerType = LedgerController;
 
 /// Type alias for InvoicePrintController with concrete types
-pub type InvoicePrintControllerType = InvoicePrintController<
-    javelin_application::interactor::PrintInvoiceInteractor<
-        javelin_infrastructure::read::invoice::MockInvoiceQueryService,
-        javelin_infrastructure::shared::typst_invoice_printer::TypstInvoicePrinter,
-        InvoicePrintPresenter,
-    >,
-    InvoicePrintPresenter,
->;
+pub type InvoicePrintControllerType = InvoicePrintController;
 
 /// Container for all controllers
 ///

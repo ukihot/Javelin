@@ -45,16 +45,14 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, F: JournalEntryFinder
 {
     async fn execute(&self, request: CancelJournalEntryRequest) -> ApplicationResult<()> {
         // 1. 参照元伝票の検索
-        let reference_entry = self
-            .finder_service
-            .find_by_entry_number(&request.reference_entry_id)
-            .await?
-            .ok_or_else(|| {
-                ApplicationError::ValidationFailed(vec![format!(
-                    "参照元伝票が見つかりません: {}",
-                    request.reference_entry_id
-                )])
-            })?;
+        let Some(reference_entry) =
+            self.finder_service.find_by_entry_number(&request.reference_entry_id).await?
+        else {
+            return Err(ApplicationError::ValidationFailed(vec![format!(
+                "参照元伝票が見つかりません: {}",
+                request.reference_entry_id
+            )]));
+        };
 
         // 2. 参照元伝票のイベントストリームから明細を取得
         let reference_events = self
@@ -73,20 +71,17 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, F: JournalEntryFinder
         // 3. 参照元伝票の明細を取得（DraftCreatedイベントから）
         use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
 
-        let reference_lines = reference_events
-            .iter()
-            .find_map(|event_json| {
-                let event: JournalEntryEvent = serde_json::from_value(event_json.clone()).ok()?;
-                match event {
-                    JournalEntryEvent::DraftCreated { lines, .. } => Some(lines),
-                    _ => None,
-                }
-            })
-            .ok_or_else(|| {
-                ApplicationError::ValidationFailed(vec![
-                    "参照元伝票の明細が見つかりません".to_string(),
-                ])
-            })?;
+        let Some(reference_lines) = reference_events.iter().find_map(|event_json| {
+            let event: JournalEntryEvent = serde_json::from_value(event_json.clone()).ok()?;
+            match event {
+                JournalEntryEvent::DraftCreated { lines, .. } => Some(lines),
+                _ => None,
+            }
+        }) else {
+            return Err(ApplicationError::ValidationFailed(vec![
+                "参照元伝票の明細が見つかりません".to_string(),
+            ]));
+        };
 
         // 4. 取引日付のパース
         let transaction_date = NaiveDate::parse_from_str(&request.transaction_date, "%Y-%m-%d")

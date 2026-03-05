@@ -99,8 +99,9 @@ impl GenerateComprehensiveFinancialStatementsUseCase
         )?;
 
         // 財務諸表を生成
-        let mut generated_statements = Vec::new();
-        let mut domain_statements = Vec::new();
+        // モダンプラクティス: 事前にキャパシティを確保
+        let mut generated_statements = Vec::with_capacity(request.statement_types.len());
+        let mut domain_statements = Vec::with_capacity(request.statement_types.len());
 
         for statement_type in &request.statement_types {
             let domain_type = Self::convert_statement_type(statement_type);

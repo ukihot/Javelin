@@ -35,6 +35,11 @@ impl PageStateResolver {
                 Ok(Box::new(javelin_adapter::CleanEventStorePageState::new()))
             }
 
+            // ========== 販売管理 ==========
+            Route::InvoicePrint => Ok(Box::new(javelin_adapter::InvoicePrintPageState::new(
+                Arc::clone(&self.presenter_registry),
+            ))),
+
             // ========== A. Primary Records ==========
             Route::PrimaryRecordsMenu => {
                 Ok(Box::new(javelin_adapter::PrimaryRecordsMenuPageState::new()))

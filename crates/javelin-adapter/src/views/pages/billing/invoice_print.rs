@@ -1,139 +1,86 @@
 // 請求書印刷画面
 
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    Frame,
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
-    Frame,
 };
 
-use crate::{
-    page_states::billing::InvoicePrintPageState,
-    presenter::invoice_print_presenter::{InvoicePrintViewModel, PrintStatus},
-};
+use crate::views::layouts::{Breadcrumb, KeyBinding, MainLayout};
 
-/// 請求書印刷画面
 pub struct InvoicePrintPage {
-    current_view_model: Option<InvoicePrintViewModel>,
+    layout: MainLayout,
+    status_message: String,
 }
 
 impl InvoicePrintPage {
     pub fn new() -> Self {
-        Self { current_view_model: None }
+        let layout = MainLayout::new("請求書発行")
+            .with_breadcrumbs(vec![Breadcrumb::new("販売管理"), Breadcrumb::new("請求書発行")])
+            .with_key_bindings(vec![
+                KeyBinding::new("Enter", "印刷実行"),
+                KeyBinding::new("q/Esc", "戻る"),
+            ]);
+
+        Self { layout, status_message: "Enterキーで印刷を実行します".to_string() }
     }
 
-    /// ビューモデルを更新
-    pub fn update_view_model(&mut self, view_model: InvoicePrintViewModel) {
-        self.current_view_model = Some(view_model);
+    pub fn set_status(&mut self, message: impl Into<String>) {
+        self.status_message = message.into();
     }
 
-    /// 画面を描画
-    pub fn render(&self, frame: &mut Frame, area: Rect) {
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(3), // タイトル
-                Constraint::Min(5),    // メイン
-                Constraint::Length(3), // ステータス
-            ])
-            .split(area);
+    pub fn render(&mut self, frame: &mut Frame) {
+        self.layout.render(frame, false, |frame, area, _| {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(10), // 説明エリア
+                    Constraint::Min(5),     // ステータスエリア
+                ])
+                .split(area);
 
-        // タイトル
-        self.render_title(frame, chunks[0]);
+            // 説明エリア
+            let info_text = vec![
+                Line::from(vec![Span::styled(
+                    "請求書印刷機能",
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                )]),
+                Line::from(""),
+                Line::from("この画面では請求書をPDF形式で生成します。"),
+                Line::from(""),
+                Line::from(vec![Span::styled("操作方法:", Style::default().fg(Color::Yellow))]),
+                Line::from("  • Enterキー: モックデータで請求書を印刷"),
+                Line::from("  • q/Esc: 前の画面に戻る"),
+            ];
 
-        // メインコンテンツ
-        self.render_main_content(frame, chunks[1]);
+            let info_block = Paragraph::new(info_text)
+                .block(Block::default().borders(Borders::ALL).title("説明"))
+                .wrap(Wrap { trim: true });
 
-        // ステータス
-        self.render_status(frame, chunks[2]);
-    }
+            frame.render_widget(info_block, chunks[0]);
 
-    fn render_title(&self, frame: &mut Frame, area: Rect) {
-        let title = Paragraph::new("請求書印刷")
-            .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
-            .block(Block::default().borders(Borders::ALL));
-        frame.render_widget(title, area);
-    }
+            // ステータスエリア
+            let status_text = vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("ステータス: ", Style::default().fg(Color::Gray)),
+                    Span::styled(&self.status_message, Style::default().fg(Color::Green)),
+                ]),
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled("出力先: ", Style::default().fg(Color::Gray)),
+                    Span::styled("カレントディレクトリ", Style::default().fg(Color::White)),
+                ]),
+            ];
 
-    fn render_main_content(&self, frame: &mut Frame, area: Rect) {
-        let content = if let Some(ref vm) = self.current_view_model {
-            match &vm.status {
-                PrintStatus::Idle => {
-                    vec![
-                        Line::from(""),
-                        Line::from(Span::styled(
-                            "請求書印刷画面",
-                            Style::default().add_modifier(Modifier::BOLD),
-                        )),
-                        Line::from(""),
-                        Line::from("Enterキーを押すと、モック請求書を印刷します。"),
-                        Line::from(""),
-                        Line::from(Span::styled(
-                            "※ 現在は開発用のモックデータを使用しています",
-                            Style::default().fg(Color::Yellow),
-                        )),
-                    ]
-                }
-                PrintStatus::Printing => {
-                    vec![
-                        Line::from(""),
-                        Line::from(Span::styled(
-                            "印刷中...",
-                            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-                        )),
-                        Line::from(""),
-                        Line::from("請求書PDFを生成しています。"),
-                    ]
-                }
-                PrintStatus::Success { file_path } => {
-                    vec![
-                        Line::from(""),
-                        Line::from(Span::styled(
-                            "✓ 印刷成功",
-                            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
-                        )),
-                        Line::from(""),
-                        Line::from(format!("保存先: {}", file_path)),
-                        Line::from(""),
-                        Line::from("Enterキーで再度印刷できます。"),
-                    ]
-                }
-                PrintStatus::Error => {
-                    vec![
-                        Line::from(""),
-                        Line::from(Span::styled(
-                            "✗ 印刷失敗",
-                            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-                        )),
-                        Line::from(""),
-                        Line::from(&vm.message),
-                    ]
-                }
-            }
-        } else {
-            vec![Line::from("読み込み中...")]
-        };
+            let status_block = Paragraph::new(status_text)
+                .block(Block::default().borders(Borders::ALL).title("実行状態"))
+                .alignment(Alignment::Left);
 
-        let paragraph = Paragraph::new(content)
-            .block(Block::default().borders(Borders::ALL).title("印刷情報"))
-            .wrap(Wrap { trim: true });
-
-        frame.render_widget(paragraph, area);
-    }
-
-    fn render_status(&self, frame: &mut Frame, area: Rect) {
-        let status_text = if let Some(ref vm) = self.current_view_model {
-            vm.message.clone()
-        } else {
-            "準備中...".to_string()
-        };
-
-        let status = Paragraph::new(status_text)
-            .style(Style::default().fg(Color::Gray))
-            .block(Block::default().borders(Borders::ALL).title("ステータス"));
-
-        frame.render_widget(status, area);
+            frame.render_widget(status_block, chunks[1]);
+        });
     }
 }
 

@@ -7,6 +7,7 @@ pub mod menu_page;
 pub mod stub_page;
 
 // Route hierarchy modules
+pub mod billing;
 pub mod closing;
 pub mod closing_preparation;
 pub mod financial_statements;
@@ -18,6 +19,8 @@ pub mod master_management;
 pub mod primary_records;
 
 // Re-exports for backward compatibility (explicit to avoid ambiguous glob re-exports)
+// Billing
+pub use billing::InvoicePrintPage;
 // Closing
 pub use closing::{
     AdjustmentJournalListPage, ClosingPage, ComprehensiveFinancialStatementsPage,

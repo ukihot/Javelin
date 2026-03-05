@@ -4,17 +4,14 @@
 use std::{path::Path, sync::Arc};
 
 use javelin_adapter::{
-    PresenterRegistry,
-    controller::LedgerController,
-    navigation::Controllers,
-    presenter::{InvoicePrintPresenter, LedgerPresenter},
+    PresenterRegistry, controller::LedgerController, navigation::Controllers,
+    presenter::LedgerPresenter,
 };
 use javelin_application::{
     interactor::{
         AdjustAccountsInteractor, ApplyIfrsValuationInteractor, ConsolidateLedgerInteractor,
         GenerateFinancialStatementsInteractor, GenerateNoteDraftInteractor,
         GenerateTrialBalanceInteractor, LockClosingPeriodInteractor, PrepareClosingInteractor,
-        PrintInvoiceInteractor,
         closing::{
             EvaluateMaterialityInteractor, GenerateComprehensiveFinancialStatementsInteractor,
             VerifyLedgerConsistencyInteractor,
@@ -405,20 +402,11 @@ pub async fn setup_controllers(
     let mock_invoice_query_service = Arc::new(MockInvoiceQueryService);
     // TypstInvoicePrinter
     let typst_invoice_printer = Arc::new(TypstInvoicePrinter::default());
-    // InvoicePrintPresenter
-    let (invoice_print_tx, _invoice_print_rx) = tokio::sync::mpsc::unbounded_channel();
-    let invoice_print_presenter = Arc::new(InvoicePrintPresenter::new(invoice_print_tx));
-    // PrintInvoiceInteractor
-    let print_invoice_interactor = Arc::new(PrintInvoiceInteractor::new(
-        mock_invoice_query_service,
-        typst_invoice_printer,
-        Arc::clone(&invoice_print_presenter),
-    ));
-    // InvoicePrintController
+    // InvoicePrintController（プレゼンターは動的に注入されるため、ここでは作成しない）
     let invoice_print_controller =
         Arc::new(javelin_adapter::controller::InvoicePrintController::new(
-            print_invoice_interactor,
-            invoice_print_presenter,
+            mock_invoice_query_service,
+            typst_invoice_printer,
         ));
 
     // Phase 3 Presenters構築

@@ -60,7 +60,7 @@ where
             .map(|acc| AccountMasterItem {
                 code: acc.code().value().to_string(),
                 name: acc.name().value().to_string(),
-                account_type: format!("{:?}", acc.account_type()),
+                account_type: acc.account_type().as_str().to_string(),
             })
             .collect();
 

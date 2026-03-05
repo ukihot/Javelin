@@ -19,6 +19,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
+typst = "0.14"
+typst-pdf = "0.14"
+comemo = "0.5"
 
 [dev-dependencies]
 serial_test = "3.2"

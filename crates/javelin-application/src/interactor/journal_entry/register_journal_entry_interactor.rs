@@ -53,24 +53,10 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
         let date_str = &request.transaction_date;
         let transaction_date = if date_str.contains('-') {
             // YYYY-MM-DD形式
-            match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                Ok(date) => date,
-                Err(e) => {
-                    let error_msg = format!("日付形式が不正です: {} (エラー: {})", date_str, e);
-                    self.output_port.notify_error(error_msg.clone()).await;
-                    return Err(ApplicationError::ValidationFailed(vec![error_msg]));
-                }
-            }
+            NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
         } else if date_str.len() == 8 {
             // YYYYMMDD形式
-            match NaiveDate::parse_from_str(date_str, "%Y%m%d") {
-                Ok(date) => date,
-                Err(e) => {
-                    let error_msg = format!("日付形式が不正です: {} (エラー: {})", date_str, e);
-                    self.output_port.notify_error(error_msg.clone()).await;
-                    return Err(ApplicationError::ValidationFailed(vec![error_msg]));
-                }
-            }
+            NaiveDate::parse_from_str(date_str, "%Y%m%d")
         } else {
             let error_msg = format!(
                 "日付形式が不正です: {} (YYYY-MM-DD または YYYYMMDD 形式で入力してください)",
@@ -78,16 +64,26 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
             );
             self.output_port.notify_error(error_msg.clone()).await;
             return Err(ApplicationError::ValidationFailed(vec![error_msg]));
-        };
+        }
+        .map_err(|e| {
+            let error_msg = format!("日付形式が不正です: {} (エラー: {})", date_str, e);
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    self.output_port.notify_error(error_msg.clone()).await;
+                })
+            });
+            ApplicationError::ValidationFailed(vec![error_msg])
+        })?;
 
-        let transaction_date = match TransactionDate::new(transaction_date) {
-            Ok(date) => date,
-            Err(e) => {
-                let error_msg = format!("取引日付が無効です: {}", e);
-                self.output_port.notify_error(error_msg.clone()).await;
-                return Err(ApplicationError::DomainError(e));
-            }
-        };
+        let transaction_date = TransactionDate::new(transaction_date).map_err(|e| {
+            let error_msg = format!("取引日付が無効です: {}", e);
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    self.output_port.notify_error(error_msg.clone()).await;
+                })
+            });
+            ApplicationError::DomainError(e)
+        })?;
 
         // 進捗通知: 入力検証完了
         self.output_port.notify_progress("入力データを検証しました".to_string()).await;
@@ -108,57 +104,69 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
                 })?;
 
             // ドメインサービスを使って次の伝票番号を生成
-            match VoucherNumberDomainService::generate_next(fiscal_year, &existing_voucher_numbers)
-            {
-                Ok(vn) => {
+            VoucherNumberDomainService::generate_next(fiscal_year, &existing_voucher_numbers)
+                .map(|vn| {
                     // 進捗通知: 伝票番号採番完了
-                    self.output_port
-                        .notify_progress(format!("伝票番号を採番しました: {}", vn))
-                        .await;
+                    tokio::task::block_in_place(|| {
+                        tokio::runtime::Handle::current().block_on(async {
+                            self.output_port
+                                .notify_progress(format!("伝票番号を採番しました: {}", vn))
+                                .await;
+                        })
+                    });
                     vn
-                }
-                Err(e) => {
+                })
+                .map_err(|e| {
                     let error_msg = format!("伝票番号の採番に失敗しました: {}", e);
-                    self.output_port.notify_error(error_msg.clone()).await;
-                    return Err(ApplicationError::DomainError(e));
-                }
-            }
+                    tokio::task::block_in_place(|| {
+                        tokio::runtime::Handle::current().block_on(async {
+                            self.output_port.notify_error(error_msg.clone()).await;
+                        })
+                    });
+                    ApplicationError::DomainError(e)
+                })?
         } else {
             request.voucher_number.clone()
         };
 
-        let voucher_number = match VoucherNumber::new(voucher_number_str) {
-            Ok(vn) => vn,
-            Err(e) => {
-                let error_msg = format!("伝票番号が無効です: {}", e);
-                self.output_port.notify_error(error_msg.clone()).await;
-                return Err(ApplicationError::DomainError(e));
-            }
-        };
+        let voucher_number = VoucherNumber::new(voucher_number_str).map_err(|e| {
+            let error_msg = format!("伝票番号が無効です: {}", e);
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    self.output_port.notify_error(error_msg.clone()).await;
+                })
+            });
+            ApplicationError::DomainError(e)
+        })?;
 
         // 3. ユーザーIDの作成
         let user_id = UserId::new(request.user_id.clone());
 
         // 4. 仕訳明細の作成
         let lines: Result<Vec<_>, _> = request.lines.iter().map(|dto| dto.try_into()).collect();
-        let lines = match lines {
-            Ok(l) => l,
-            Err(e) => {
-                let error_msg = format!("仕訳明細の作成に失敗しました: {}", e);
-                self.output_port.notify_error(error_msg.clone()).await;
-                return Err(e);
-            }
-        };
+        let lines = lines.map_err(|e| {
+            let error_msg = format!("仕訳明細の作成に失敗しました: {}", e);
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    self.output_port.notify_error(error_msg.clone()).await;
+                })
+            });
+            e
+        })?;
 
         // 進捗通知: 仕訳明細作成完了
         self.output_port.notify_progress("仕訳明細を作成しました".to_string()).await;
 
         // 5. 借貸バランスチェック
-        if let Err(e) = JournalEntryDomainService::validate_balance(&lines) {
+        JournalEntryDomainService::validate_balance(&lines).map_err(|e| {
             let error_msg = format!("借貸バランスが一致しません: {}", e);
-            self.output_port.notify_error(error_msg.clone()).await;
-            return Err(ApplicationError::DomainError(e));
-        }
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    self.output_port.notify_error(error_msg.clone()).await;
+                })
+            });
+            ApplicationError::DomainError(e)
+        })?;
 
         // 進捗通知: 借貸バランス検証完了
         self.output_port.notify_progress("借貸バランスを検証しました".to_string()).await;
@@ -167,20 +175,17 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
         let entry_id = JournalEntryId::new(uuid::Uuid::new_v4().to_string());
 
         // 7. 仕訳エンティティの作成（Draft状態）
-        let journal_entry = match JournalEntry::new(
-            entry_id.clone(),
-            transaction_date,
-            voucher_number,
-            lines,
-            user_id,
-        ) {
-            Ok(je) => je,
-            Err(e) => {
+        let journal_entry =
+            JournalEntry::new(entry_id.clone(), transaction_date, voucher_number, lines, user_id)
+                .map_err(|e| {
                 let error_msg = format!("仕訳エンティティの作成に失敗しました: {}", e);
-                self.output_port.notify_error(error_msg.clone()).await;
-                return Err(ApplicationError::DomainError(e));
-            }
-        };
+                tokio::task::block_in_place(|| {
+                    tokio::runtime::Handle::current().block_on(async {
+                        self.output_port.notify_error(error_msg.clone()).await;
+                    })
+                });
+                ApplicationError::DomainError(e)
+            })?;
 
         // 進捗通知: 仕訳エンティティ作成完了
         self.output_port
@@ -191,12 +196,18 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
         let events = journal_entry.events();
 
         // 9. イベントストアへの保存
-        if let Err(e) = self.event_repository.append_events(entry_id.value(), events.to_vec()).await
-        {
-            let error_msg = format!("イベントストアへの保存に失敗しました: {}", e);
-            self.output_port.notify_error(error_msg.clone()).await;
-            return Err(ApplicationError::DomainError(e));
-        }
+        self.event_repository
+            .append_events(entry_id.value(), events.to_vec())
+            .await
+            .map_err(|e| {
+                let error_msg = format!("イベントストアへの保存に失敗しました: {}", e);
+                tokio::task::block_in_place(|| {
+                    tokio::runtime::Handle::current().block_on(async {
+                        self.output_port.notify_error(error_msg.clone()).await;
+                    })
+                });
+                ApplicationError::DomainError(e)
+            })?;
 
         // 進捗通知: イベントストア保存完了
         self.output_port
