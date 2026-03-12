@@ -1,5 +1,7 @@
-// 共通の値オブジェクトとユーティリティ
+// Common - 共通値オブジェクトとトレイト
 
-pub mod amount;
+pub mod money;
+pub mod repository_base;
 
-pub use amount::Amount;
+pub use money::*;
+pub use repository_base::*;

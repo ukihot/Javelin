@@ -110,9 +110,9 @@ impl PageState for JournalEntryPageState {
                 let page_id = self.id;
 
                 tokio::spawn(async move {
-                    use javelin_application::dtos::request::LoadAccountMasterRequest;
+                    use javelin_application::dtos::request::FetchAccountMasterRequest;
 
-                    let request = LoadAccountMasterRequest { filter: None, active_only: true };
+                    let request = FetchAccountMasterRequest { filter: None, active_only: true };
 
                     let _ = controller.handle_load_account_master(page_id, request).await;
                 });

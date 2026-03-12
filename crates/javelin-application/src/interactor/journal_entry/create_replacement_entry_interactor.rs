@@ -6,12 +6,11 @@ use std::sync::Arc;
 use chrono::NaiveDate;
 use javelin_domain::{
     entity::EntityId,
-    financial_close::journal_entry::{
+    journal_entry::{
         entities::{JournalEntry, JournalEntryId},
-        services::JournalEntryDomainService,
+        repositories::JournalEntryRepository,
         values::{TransactionDate, UserId, VoucherNumber},
     },
-    repositories::JournalEntryRepository,
 };
 
 use crate::{
@@ -27,7 +26,7 @@ pub struct CreateReplacementEntryInteractor<
     O: JournalEntryOutputPort,
     F: JournalEntryFinderService,
 > {
-    event_repository: Arc<R>,
+    journal_entry_repository: Arc<R>,
     output_port: Arc<O>,
     finder_service: Arc<F>,
 }
@@ -35,8 +34,12 @@ pub struct CreateReplacementEntryInteractor<
 impl<R: JournalEntryRepository, O: JournalEntryOutputPort, F: JournalEntryFinderService>
     CreateReplacementEntryInteractor<R, O, F>
 {
-    pub fn new(event_repository: Arc<R>, output_port: Arc<O>, finder_service: Arc<F>) -> Self {
-        Self { event_repository, output_port, finder_service }
+    pub fn new(
+        journal_entry_repository: Arc<R>,
+        output_port: Arc<O>,
+        finder_service: Arc<F>,
+    ) -> Self {
+        Self { journal_entry_repository, output_port, finder_service }
     }
 }
 
@@ -72,17 +75,15 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, F: JournalEntryFinder
         let lines: Result<Vec<_>, _> = request.lines.iter().map(|dto| dto.try_into()).collect();
         let lines = lines?;
 
-        JournalEntryDomainService::validate_balance(&lines)
-            .map_err(ApplicationError::DomainError)?;
+        // JournalEntry::new() 内部でバランスチェックが行われる
 
         let entry_id = JournalEntryId::new(uuid::Uuid::new_v4().to_string());
         let journal_entry =
             JournalEntry::new(entry_id.clone(), transaction_date, voucher_number, lines, user_id)
                 .map_err(ApplicationError::DomainError)?;
 
-        let events = journal_entry.events();
-        self.event_repository
-            .append_events(entry_id.value(), events.to_vec())
+        self.journal_entry_repository
+            .save(&journal_entry)
             .await
             .map_err(ApplicationError::DomainError)?;
 

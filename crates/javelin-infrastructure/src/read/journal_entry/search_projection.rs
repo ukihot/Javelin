@@ -1,7 +1,7 @@
 // 仕訳検索用Projection
 // JournalEntryEventから検索用ReadModelを構築
 
-use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
+use javelin_domain::journal_entry::events::JournalEntryEvent;
 use serde::{Deserialize, Serialize};
 
 use crate::{error::InfrastructureResult, read::infrastructure::traits::Apply};
@@ -269,7 +269,7 @@ impl Apply<JournalEntryEvent> for JournalEntrySearchProjection {
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
-    use javelin_domain::financial_close::journal_entry::events::JournalEntryLineDto;
+    use javelin_domain::journal_entry::events::JournalEntryLineDto;
 
     use super::*;
 

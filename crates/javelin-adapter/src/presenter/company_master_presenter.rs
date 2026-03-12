@@ -2,7 +2,7 @@
 // 会社マスタの出力を整形してビューに渡す
 
 use javelin_application::{
-    dtos::response::LoadCompanyMasterResponse, output_ports::CompanyMasterOutputPort,
+    dtos::response::FetchCompanyMasterResponse, output_ports::CompanyMasterOutputPort,
 };
 use tokio::sync::mpsc;
 
@@ -51,7 +51,7 @@ impl CompanyMasterPresenter {
 
 #[allow(async_fn_in_trait)]
 impl CompanyMasterOutputPort for CompanyMasterPresenter {
-    async fn present_company_master(&self, response: &LoadCompanyMasterResponse) {
+    async fn present_company_master(&self, response: &FetchCompanyMasterResponse) {
         let companies = response
             .companies
             .iter()

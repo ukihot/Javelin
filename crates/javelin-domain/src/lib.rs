@@ -1,14 +1,22 @@
-// Domain Layer - 業務ルール / 集約整合性保証
-// 依存方向: なし（外部依存禁止）
+// Javelin Domain Layer
+// ドメイン駆動設計に基づく集約構造
 
-pub mod batch;
-pub mod billing;
+// 共通モジュール
 pub mod common;
-pub mod entity;
 pub mod error;
 pub mod event;
-pub mod financial_close;
-pub mod masters;
-pub mod repositories;
-pub mod service;
+
+// 基本トレイト（全集約で使用）
+pub mod entity;
 pub mod value_object;
+
+// 集約モジュール
+// 各集約は entities, values, repositories で構成
+pub mod chart_of_accounts;
+pub mod company;
+pub mod journal_entry;
+
+// Re-exports
+pub use common::*;
+pub use error::*;
+pub use event::*;

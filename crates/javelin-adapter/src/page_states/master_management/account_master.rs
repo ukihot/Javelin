@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use javelin_application::dtos::request::LoadAccountMasterRequest;
+use javelin_application::dtos::request::FetchAccountMasterRequest;
 use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
@@ -127,7 +127,7 @@ impl PageState for AccountMasterPageState {
             let page_id = self.id;
 
             tokio::spawn(async move {
-                let request = LoadAccountMasterRequest { filter: None, active_only: true };
+                let request = FetchAccountMasterRequest { filter: None, active_only: true };
                 let _ = controller.handle_load_account_master(page_id, request).await;
             });
         }

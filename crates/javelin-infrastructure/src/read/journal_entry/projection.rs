@@ -1,7 +1,7 @@
 // JournalEntryProjection実装
 // 仕訳一覧表示用のReadModel
 
-use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
+use javelin_domain::journal_entry::events::JournalEntryEvent;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -65,7 +65,7 @@ impl JournalEntryProjection {
 
     /// 明細から合計金額を計算
     fn calculate_totals(
-        lines: &[javelin_domain::financial_close::journal_entry::events::JournalEntryLineDto],
+        lines: &[javelin_domain::journal_entry::events::JournalEntryLineDto],
     ) -> (f64, f64) {
         let mut total_debit = 0.0;
         let mut total_credit = 0.0;
@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn test_calculate_totals() {
-        use javelin_domain::financial_close::journal_entry::events::JournalEntryLineDto;
+        use javelin_domain::journal_entry::events::JournalEntryLineDto;
 
         let lines = vec![
             JournalEntryLineDto {

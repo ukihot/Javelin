@@ -5,14 +5,26 @@ use std::sync::Arc;
 
 use crate::{
     controller::{
-        AccountMasterController, AdjustAccountsController, ApplicationSettingsController,
-        ApplyIfrsValuationController, BatchHistoryController, CompanyMasterController,
-        ConsolidateLedgerController, EvaluateMaterialityController,
-        GenerateComprehensiveFinancialStatementsController, GenerateFinancialStatementsController,
-        GenerateNoteDraftController, GenerateTrialBalanceController, InvoicePrintController,
-        JournalDetailController, JournalEntryController, LedgerController,
-        LockClosingPeriodController, PrepareClosingController, SearchController,
-        SubsidiaryAccountMasterController, VerifyLedgerConsistencyController,
+        AccountMasterController, // AdjustAccountsController, // Disabled
+        // ApplicationSettingsController, // Disabled
+        // ApplyIfrsValuationController, // Disabled
+        // BatchHistoryController, // Disabled
+        CompanyMasterController,
+        ConsolidateLedgerController,
+        EvaluateMaterialityController,
+        GenerateComprehensiveFinancialStatementsController,
+        GenerateFinancialStatementsController,
+        GenerateNoteDraftController,
+        GenerateTrialBalanceController,
+        InvoicePrintController,
+        JournalDetailController,
+        JournalEntryController,
+        LedgerController,
+        // LockClosingPeriodController, // Disabled
+        PrepareClosingController,
+        SearchController,
+        SubsidiaryAccountMasterController,
+        VerifyLedgerConsistencyController,
     },
     presenter::{
         ComprehensiveFinancialStatementsPresenter, LedgerConsistencyVerificationPresenter,
@@ -26,9 +38,10 @@ pub type AccountMasterControllerType = AccountMasterController<
 >;
 
 /// Type alias for ApplicationSettingsController with concrete QueryService
-pub type ApplicationSettingsControllerType = ApplicationSettingsController<
-    javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl,
->;
+// DISABLED: ApplicationSettings aggregate has been removed
+// pub type ApplicationSettingsControllerType = ApplicationSettingsController<
+//     javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl,
+// >;
 
 /// Type alias for CompanyMasterController with concrete QueryService
 pub type CompanyMasterControllerType = CompanyMasterController<
@@ -56,11 +69,12 @@ pub type SearchControllerType = SearchController<
 >;
 
 /// Type alias for BatchHistoryController with concrete UseCase
-pub type BatchHistoryControllerType = BatchHistoryController<
-    javelin_application::interactor::GetBatchHistoryInteractor<
-        javelin_infrastructure::read::batch_history::BatchHistoryQueryServiceImpl,
-    >,
->;
+// DISABLED: GetBatchHistoryInteractor not found
+// pub type BatchHistoryControllerType = BatchHistoryController<
+//     javelin_application::interactor::GetBatchHistoryInteractor<
+//         javelin_infrastructure::read::batch_history::BatchHistoryQueryServiceImpl,
+//     >,
+// >;
 
 /// Type alias for ConsolidateLedgerController with concrete UseCase
 pub type ConsolidateLedgerControllerType = ConsolidateLedgerController<
@@ -77,11 +91,12 @@ pub type PrepareClosingControllerType = PrepareClosingController<
 >;
 
 /// Type alias for LockClosingPeriodController with concrete UseCase
-pub type LockClosingPeriodControllerType = LockClosingPeriodController<
-    javelin_application::interactor::LockClosingPeriodInteractor<
-        javelin_infrastructure::write::event_store::ClosingEventStore,
-    >,
->;
+// DISABLED: ClosingEventStore not found
+// pub type LockClosingPeriodControllerType = LockClosingPeriodController<
+//     javelin_application::interactor::LockClosingPeriodInteractor<
+//         javelin_infrastructure::write::event_store::ClosingEventStore,
+//     >,
+// >;
 
 /// Type alias for GenerateTrialBalanceController with concrete UseCase
 pub type GenerateTrialBalanceControllerType = GenerateTrialBalanceController<
@@ -98,21 +113,23 @@ pub type GenerateNoteDraftControllerType = GenerateNoteDraftController<
 >;
 
 /// Type alias for AdjustAccountsController with concrete UseCase
-pub type AdjustAccountsControllerType = AdjustAccountsController<
-    javelin_application::interactor::AdjustAccountsInteractor<
-        javelin_infrastructure::write::event_store::ClosingEventStore,
-        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
-    >,
->;
+// DISABLED: ClosingEventStore not found - wrong generic count
+// pub type AdjustAccountsControllerType = AdjustAccountsController<
+//     javelin_application::interactor::AdjustAccountsInteractor<
+//         javelin_infrastructure::write::event_store::ClosingEventStore,
+//         javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+//     >,
+// >;
 
 /// Type alias for ApplyIfrsValuationController with concrete UseCase
-pub type ApplyIfrsValuationControllerType = ApplyIfrsValuationController<
-    javelin_application::interactor::ApplyIfrsValuationInteractor<
-        javelin_infrastructure::write::event_store::ClosingEventStore,
-        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
-        crate::presenter::LedgerPresenter,
-    >,
->;
+// DISABLED: ClosingEventStore not found - wrong generic count
+// pub type ApplyIfrsValuationControllerType = ApplyIfrsValuationController<
+//     javelin_application::interactor::ApplyIfrsValuationInteractor<
+//         javelin_infrastructure::write::event_store::ClosingEventStore,
+//         javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+//         crate::presenter::LedgerPresenter,
+//     >,
+// >;
 
 /// Type alias for GenerateFinancialStatementsController with concrete UseCase
 pub type GenerateFinancialStatementsControllerType = GenerateFinancialStatementsController<
@@ -123,18 +140,24 @@ pub type GenerateFinancialStatementsControllerType = GenerateFinancialStatements
 
 /// Type alias for EvaluateMaterialityController with concrete UseCase
 pub type EvaluateMaterialityControllerType = EvaluateMaterialityController<
-    javelin_application::interactor::closing::EvaluateMaterialityInteractor,
+    javelin_application::interactor::closing::EvaluateMaterialityInteractor<
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+    >,
 >;
 
 /// Type alias for VerifyLedgerConsistencyController with concrete UseCase
 pub type VerifyLedgerConsistencyControllerType = VerifyLedgerConsistencyController<
-    javelin_application::interactor::closing::VerifyLedgerConsistencyInteractor,
+    javelin_application::interactor::closing::VerifyLedgerConsistencyInteractor<
+        javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+    >,
 >;
 
 /// Type alias for GenerateComprehensiveFinancialStatementsController with concrete UseCase
 pub type GenerateComprehensiveFinancialStatementsControllerType =
     GenerateComprehensiveFinancialStatementsController<
-        javelin_application::interactor::closing::GenerateComprehensiveFinancialStatementsInteractor,
+        javelin_application::interactor::closing::GenerateComprehensiveFinancialStatementsInteractor<
+            javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
+        >,
     >;
 
 /// Type alias for LedgerController (no generics needed after refactoring)
@@ -150,18 +173,18 @@ pub type InvoicePrintControllerType = InvoicePrintController;
 /// add new controllers without changing existing page implementations.
 pub struct Controllers {
     pub account_master: Arc<AccountMasterControllerType>,
-    pub application_settings: Arc<ApplicationSettingsControllerType>,
+    // pub application_settings: Arc<ApplicationSettingsControllerType>, // Disabled
     pub company_master: Arc<CompanyMasterControllerType>,
     pub subsidiary_account_master: Arc<SubsidiaryAccountMasterControllerType>,
     pub journal_entry: Arc<JournalEntryControllerType>,
     pub journal_detail: Arc<JournalDetailControllerType>,
     pub consolidate_ledger: Arc<ConsolidateLedgerControllerType>,
     pub prepare_closing: Arc<PrepareClosingControllerType>,
-    pub lock_closing_period: Arc<LockClosingPeriodControllerType>,
+    // pub lock_closing_period: Arc<LockClosingPeriodControllerType>, // Disabled
     pub generate_trial_balance: Arc<GenerateTrialBalanceControllerType>,
     pub generate_note_draft: Arc<GenerateNoteDraftControllerType>,
-    pub adjust_accounts: Arc<AdjustAccountsControllerType>,
-    pub apply_ifrs_valuation: Arc<ApplyIfrsValuationControllerType>,
+    // pub adjust_accounts: Arc<AdjustAccountsControllerType>, // Disabled
+    // pub apply_ifrs_valuation: Arc<ApplyIfrsValuationControllerType>, // Disabled
     pub generate_financial_statements: Arc<GenerateFinancialStatementsControllerType>,
     pub evaluate_materiality: Arc<EvaluateMaterialityControllerType>,
     pub verify_ledger_consistency: Arc<VerifyLedgerConsistencyControllerType>,
@@ -169,7 +192,7 @@ pub struct Controllers {
         Arc<GenerateComprehensiveFinancialStatementsControllerType>,
     pub ledger: Arc<LedgerControllerType>,
     pub search: Arc<SearchControllerType>,
-    pub batch_history: Arc<BatchHistoryControllerType>,
+    // pub batch_history: Arc<BatchHistoryControllerType>, // Disabled
     pub invoice_print: Arc<InvoicePrintControllerType>,
     pub materiality_evaluation_presenter: Arc<MaterialityEvaluationPresenter>,
     pub ledger_consistency_verification_presenter: Arc<LedgerConsistencyVerificationPresenter>,
@@ -182,18 +205,18 @@ impl Controllers {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         account_master: Arc<AccountMasterControllerType>,
-        application_settings: Arc<ApplicationSettingsControllerType>,
+        // application_settings: Arc<ApplicationSettingsControllerType>, // Disabled
         company_master: Arc<CompanyMasterControllerType>,
         subsidiary_account_master: Arc<SubsidiaryAccountMasterControllerType>,
         journal_entry: Arc<JournalEntryControllerType>,
         journal_detail: Arc<JournalDetailControllerType>,
         consolidate_ledger: Arc<ConsolidateLedgerControllerType>,
         prepare_closing: Arc<PrepareClosingControllerType>,
-        lock_closing_period: Arc<LockClosingPeriodControllerType>,
+        // lock_closing_period: Arc<LockClosingPeriodControllerType>, // Disabled
         generate_trial_balance: Arc<GenerateTrialBalanceControllerType>,
         generate_note_draft: Arc<GenerateNoteDraftControllerType>,
-        adjust_accounts: Arc<AdjustAccountsControllerType>,
-        apply_ifrs_valuation: Arc<ApplyIfrsValuationControllerType>,
+        // adjust_accounts: Arc<AdjustAccountsControllerType>, // Disabled
+        // apply_ifrs_valuation: Arc<ApplyIfrsValuationControllerType>, // Disabled
         generate_financial_statements: Arc<GenerateFinancialStatementsControllerType>,
         evaluate_materiality: Arc<EvaluateMaterialityControllerType>,
         verify_ledger_consistency: Arc<VerifyLedgerConsistencyControllerType>,
@@ -202,7 +225,7 @@ impl Controllers {
         >,
         ledger: Arc<LedgerControllerType>,
         search: Arc<SearchControllerType>,
-        batch_history: Arc<BatchHistoryControllerType>,
+        // batch_history: Arc<BatchHistoryControllerType>, // Disabled
         invoice_print: Arc<InvoicePrintControllerType>,
         materiality_evaluation_presenter: Arc<MaterialityEvaluationPresenter>,
         ledger_consistency_verification_presenter: Arc<LedgerConsistencyVerificationPresenter>,
@@ -212,25 +235,25 @@ impl Controllers {
     ) -> Self {
         Self {
             account_master,
-            application_settings,
+            // application_settings, // Disabled
             company_master,
             subsidiary_account_master,
             journal_entry,
             journal_detail,
             consolidate_ledger,
             prepare_closing,
-            lock_closing_period,
+            // lock_closing_period, // Disabled
             generate_trial_balance,
             generate_note_draft,
-            adjust_accounts,
-            apply_ifrs_valuation,
+            // adjust_accounts, // Disabled
+            // apply_ifrs_valuation, // Disabled
             generate_financial_statements,
             evaluate_materiality,
             verify_ledger_consistency,
             generate_comprehensive_financial_statements,
             ledger,
             search,
-            batch_history,
+            // batch_history, // Disabled
             invoice_print,
             materiality_evaluation_presenter,
             ledger_consistency_verification_presenter,

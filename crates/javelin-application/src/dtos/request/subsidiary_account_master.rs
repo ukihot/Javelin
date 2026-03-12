@@ -2,7 +2,7 @@
 
 /// 補助科目マスタ取得リクエスト
 #[derive(Debug, Clone)]
-pub struct LoadSubsidiaryAccountMasterRequest {
+pub struct FetchSubsidiaryAccountMasterRequest {
     /// フィルタ条件（オプション）
     pub filter: Option<String>,
     /// アクティブのみ取得

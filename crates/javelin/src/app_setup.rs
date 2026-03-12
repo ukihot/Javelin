@@ -37,7 +37,7 @@ use crate::app_error::{AppError, AppResult};
 
 /// マスタデータの初期化（イベントが0件の場合のみ）
 async fn initialize_master_data(event_store: &Arc<EventStore>) -> AppResult<()> {
-    use javelin_domain::masters::{AccountMasterEvent, AccountType};
+    use javelin_domain::chart_of_accounts::{AccountMasterEvent, AccountType};
 
     // イベントが既に存在する場合はスキップ
     let latest_sequence =

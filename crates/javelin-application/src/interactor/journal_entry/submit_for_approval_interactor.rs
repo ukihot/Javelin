@@ -2,11 +2,7 @@
 
 use std::sync::Arc;
 
-use javelin_domain::{
-    entity::EntityId,
-    financial_close::journal_entry::{events::JournalEntryEvent, values::UserId},
-    repositories::JournalEntryRepository,
-};
+use javelin_domain::journal_entry::{repositories::JournalEntryRepository, values::UserId};
 
 use crate::{
     dtos::{SubmitForApprovalRequest, SubmitForApprovalResponse},
@@ -16,13 +12,13 @@ use crate::{
 };
 
 pub struct SubmitForApprovalInteractor<R: JournalEntryRepository, O: JournalEntryOutputPort> {
-    event_repository: Arc<R>,
+    journal_entry_repository: Arc<R>,
     output_port: Arc<O>,
 }
 
 impl<R: JournalEntryRepository, O: JournalEntryOutputPort> SubmitForApprovalInteractor<R, O> {
-    pub fn new(event_repository: Arc<R>, output_port: Arc<O>) -> Self {
-        Self { event_repository, output_port }
+    pub fn new(journal_entry_repository: Arc<R>, output_port: Arc<O>) -> Self {
+        Self { journal_entry_repository, output_port }
     }
 }
 
@@ -34,24 +30,35 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort> SubmitForApprovalUseC
             .notify_progress(format!("承認申請を開始: {}", request.entry_id))
             .await;
 
-        // 承認申請イベントを生成
+        // 1. Repository の load() で集約を復元
+        let mut journal_entry = self
+            .journal_entry_repository
+            .load(&request.entry_id)
+            .await
+            .map_err(ApplicationError::DomainError)?
+            .ok_or_else(|| {
+                ApplicationError::ValidationFailed(vec![format!(
+                    "Journal entry not found: {}",
+                    request.entry_id
+                )])
+            })?;
+
+        // 2. 承認申請処理を実行（集約内部でイベントが生成される）
         let user_id = UserId::new(request.user_id.clone());
+        journal_entry
+            .submit_for_approval(user_id)
+            .map_err(ApplicationError::DomainError)?;
 
-        let event = JournalEntryEvent::ApprovalRequested {
-            entry_id: request.entry_id.clone(),
-            requested_by: user_id.value().to_string(),
-            requested_at: chrono::Utc::now(),
-        };
-
-        // イベントストアへの保存
-        self.event_repository
-            .append_events(&request.entry_id, vec![event])
+        // 3. Repository の save() で永続化
+        self.journal_entry_repository
+            .save(&journal_entry)
             .await
             .map_err(ApplicationError::DomainError)?;
 
+        // 4. レスポンスを作成
         let response = SubmitForApprovalResponse {
             entry_id: request.entry_id,
-            status: "PendingApproval".to_string(),
+            status: journal_entry.status().as_str().to_string(),
             submitted_at: chrono::Utc::now().to_rfc3339(),
         };
         self.output_port.present_submit_for_approval_result(response).await;

@@ -3,9 +3,13 @@
 use std::{path::Path, sync::Arc};
 
 use javelin_domain::{
+    common::RepositoryBase,
+    company::{
+        entities::CompanyMaster,
+        repositories::CompanyMasterRepository,
+        values::{CompanyCode, CompanyName},
+    },
     error::DomainResult,
-    masters::{CompanyCode, CompanyMaster, CompanyName},
-    repositories::CompanyMasterRepository,
 };
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction};
 use serde::{Deserialize, Serialize};
@@ -87,7 +91,11 @@ impl CompanyMasterRepositoryImpl {
     }
 }
 
-impl CompanyMasterRepository for CompanyMasterRepositoryImpl {
+// CompanyMasterRepository trait implementation
+impl CompanyMasterRepository for CompanyMasterRepositoryImpl {}
+
+// RepositoryBase trait implementation
+impl RepositoryBase<CompanyMaster> for CompanyMasterRepositoryImpl {
     async fn save(&self, company_master: &CompanyMaster) -> DomainResult<()> {
         let stored = Self::to_stored(company_master);
         let value = serde_json::to_vec(&stored)
@@ -110,21 +118,34 @@ impl CompanyMasterRepository for CompanyMasterRepositoryImpl {
         Ok(())
     }
 
-    async fn delete(&self, code: &CompanyCode) -> DomainResult<()> {
+    async fn load(&self, id: &str) -> DomainResult<Option<CompanyMaster>> {
         let env = Arc::clone(&self.env);
         let db = self.db;
-        let key = code.value().to_string();
+        let key = id.to_string();
 
-        tokio::task::spawn_blocking(move || {
-            let mut txn = env.begin_rw_txn()?;
-            txn.del(db, &key, None)?;
-            txn.commit()?;
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
+        let result = tokio::task::spawn_blocking(move || {
+            let txn = env.begin_ro_txn()?;
+            match txn.get(db, &key) {
+                Ok(bytes) => {
+                    let stored: StoredCompanyMaster = serde_json::from_slice(bytes)?;
+                    Ok(Some(stored))
+                }
+                Err(lmdb::Error::NotFound) => Ok(None),
+                Err(e) => Err(e.into()),
+            }
         })
         .await
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+        .map_err(|e: Box<dyn std::error::Error + Send + Sync>| {
+            javelin_domain::error::DomainError::RepositoryError(e.to_string())
+        })?;
 
-        Ok(())
+        match result {
+            Some(stored) => {
+                let company = Self::from_stored(&stored)?;
+                Ok(Some(company))
+            }
+            None => Ok(None),
+        }
     }
 }

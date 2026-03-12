@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// アプリケーション設定取得レスポンス
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoadApplicationSettingsResponse {
+pub struct FetchApplicationSettingsResponse {
     pub user_options: UserOptionsDto,
     pub system_settings: SystemSettingsDto,
 }

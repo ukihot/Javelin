@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use javelin_domain::masters::{CompanyCode, CompanyMaster, CompanyName};
+use javelin_domain::company::{CompanyCode, CompanyMaster, CompanyName};
 use serde::{Deserialize, Serialize};
 
 use crate::read::infrastructure::db::ProjectionDb;

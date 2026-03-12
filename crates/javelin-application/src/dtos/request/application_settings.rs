@@ -2,7 +2,7 @@
 
 /// アプリケーション設定取得リクエスト
 #[derive(Debug, Clone)]
-pub struct LoadApplicationSettingsRequest;
+pub struct FetchApplicationSettingsRequest;
 
 /// アプリケーション設定更新リクエスト
 #[derive(Debug, Clone)]

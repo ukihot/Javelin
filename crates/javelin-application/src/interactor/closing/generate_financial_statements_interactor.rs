@@ -1,17 +1,13 @@
 // GenerateFinancialStatementsInteractor - 財務諸表生成処理
-// 責務: 制度開示資料作成
+// 責務: 貸借対照表・損益計算書の生成
 
 use std::sync::Arc;
 
 use crate::{
-    dtos::{
-        FinancialIndicatorsDto, GenerateFinancialStatementsRequest,
-        GenerateFinancialStatementsResponse, StatementOfCashFlowsDto,
-        StatementOfChangesInEquityDto, StatementOfFinancialPositionDto, StatementOfProfitOrLossDto,
-    },
+    dtos::{GenerateFinancialStatementsRequest, GenerateFinancialStatementsResponse},
     error::ApplicationResult,
     input_ports::GenerateFinancialStatementsUseCase,
-    query_service::ledger_query_service::{GetTrialBalanceQuery, LedgerQueryService},
+    query_service::ledger_query_service::LedgerQueryService,
 };
 
 pub struct GenerateFinancialStatementsInteractor<Q>
@@ -36,74 +32,69 @@ where
 {
     async fn execute(
         &self,
-        request: GenerateFinancialStatementsRequest,
+        _request: GenerateFinancialStatementsRequest,
     ) -> ApplicationResult<GenerateFinancialStatementsResponse> {
-        // 試算表を取得して財務諸表を生成
-        let trial_balance = self
-            .ledger_query_service
-            .get_trial_balance(GetTrialBalanceQuery {
-                period_year: request.fiscal_year as u32,
-                period_month: request.period,
-            })
-            .await?;
-
-        // 実装: 試算表から財務諸表を生成
-        let total_assets = trial_balance.total_debit;
-        let total_liabilities = trial_balance.total_credit * 0.5;
-        let equity = total_assets - total_liabilities;
+        // TODO: 財務諸表生成処理の実装
+        // 1. 試算表から貸借対照表を生成
+        // 2. 試算表から損益計算書を生成
+        // 3. キャッシュフロー計算書を生成
 
         Ok(GenerateFinancialStatementsResponse {
-            statement_of_financial_position: StatementOfFinancialPositionDto {
-                current_assets: total_assets * 0.5,
-                current_assets_currency: "JPY".to_string(),
-                non_current_assets: total_assets * 0.5,
-                non_current_assets_currency: "JPY".to_string(),
-                current_liabilities: total_liabilities * 0.6,
-                current_liabilities_currency: "JPY".to_string(),
-                non_current_liabilities: total_liabilities * 0.4,
-                non_current_liabilities_currency: "JPY".to_string(),
-                equity,
-                equity_currency: "JPY".to_string(),
-            },
-            statement_of_profit_or_loss: StatementOfProfitOrLossDto {
-                revenue: 20000000.0,
-                revenue_currency: "JPY".to_string(),
-                cost_of_sales: 12000000.0,
-                cost_of_sales_currency: "JPY".to_string(),
-                gross_profit: 8000000.0,
-                gross_profit_currency: "JPY".to_string(),
-                operating_expenses: 5000000.0,
-                operating_expenses_currency: "JPY".to_string(),
-                operating_profit: 3000000.0,
-                operating_profit_currency: "JPY".to_string(),
-                net_profit: 2000000.0,
-                net_profit_currency: "JPY".to_string(),
-            },
-            statement_of_changes_in_equity: StatementOfChangesInEquityDto {
-                opening_balance: equity * 0.9,
-                opening_balance_currency: "JPY".to_string(),
-                net_profit: 2000000.0,
-                net_profit_currency: "JPY".to_string(),
-                dividends: 1000000.0,
-                dividends_currency: "JPY".to_string(),
-                closing_balance: equity,
-                closing_balance_currency: "JPY".to_string(),
-            },
-            statement_of_cash_flows: StatementOfCashFlowsDto {
-                operating_activities: 3000000.0,
-                operating_activities_currency: "JPY".to_string(),
-                investing_activities: -1000000.0,
-                investing_activities_currency: "JPY".to_string(),
-                financing_activities: -500000.0,
-                financing_activities_currency: "JPY".to_string(),
-                net_change_in_cash: 1500000.0,
-                net_change_in_cash_currency: "JPY".to_string(),
-            },
-            financial_indicators: FinancialIndicatorsDto {
-                roe: 0.286,
-                roa: 0.133,
-                current_ratio: 1.67,
-                debt_to_equity_ratio: 1.14,
+            statement_of_financial_position:
+                crate::dtos::response::closing_process::StatementOfFinancialPositionDto {
+                    current_assets: 0.0,
+                    current_assets_currency: "JPY".to_string(),
+                    non_current_assets: 0.0,
+                    non_current_assets_currency: "JPY".to_string(),
+                    current_liabilities: 0.0,
+                    current_liabilities_currency: "JPY".to_string(),
+                    non_current_liabilities: 0.0,
+                    non_current_liabilities_currency: "JPY".to_string(),
+                    equity: 0.0,
+                    equity_currency: "JPY".to_string(),
+                },
+            statement_of_profit_or_loss:
+                crate::dtos::response::closing_process::StatementOfProfitOrLossDto {
+                    revenue: 0.0,
+                    revenue_currency: "JPY".to_string(),
+                    cost_of_sales: 0.0,
+                    cost_of_sales_currency: "JPY".to_string(),
+                    gross_profit: 0.0,
+                    gross_profit_currency: "JPY".to_string(),
+                    operating_expenses: 0.0,
+                    operating_expenses_currency: "JPY".to_string(),
+                    operating_profit: 0.0,
+                    operating_profit_currency: "JPY".to_string(),
+                    net_profit: 0.0,
+                    net_profit_currency: "JPY".to_string(),
+                },
+            statement_of_changes_in_equity:
+                crate::dtos::response::closing_process::StatementOfChangesInEquityDto {
+                    opening_balance: 0.0,
+                    opening_balance_currency: "JPY".to_string(),
+                    net_profit: 0.0,
+                    net_profit_currency: "JPY".to_string(),
+                    dividends: 0.0,
+                    dividends_currency: "JPY".to_string(),
+                    closing_balance: 0.0,
+                    closing_balance_currency: "JPY".to_string(),
+                },
+            statement_of_cash_flows:
+                crate::dtos::response::closing_process::StatementOfCashFlowsDto {
+                    operating_activities: 0.0,
+                    operating_activities_currency: "JPY".to_string(),
+                    investing_activities: 0.0,
+                    investing_activities_currency: "JPY".to_string(),
+                    financing_activities: 0.0,
+                    financing_activities_currency: "JPY".to_string(),
+                    net_change_in_cash: 0.0,
+                    net_change_in_cash_currency: "JPY".to_string(),
+                },
+            financial_indicators: crate::dtos::response::closing_process::FinancialIndicatorsDto {
+                roe: 0.0,
+                roa: 0.0,
+                current_ratio: 0.0,
+                debt_to_equity_ratio: 0.0,
             },
             cross_check_passed: true,
         })

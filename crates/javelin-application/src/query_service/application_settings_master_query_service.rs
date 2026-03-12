@@ -1,15 +1,9 @@
 // アプリケーション設定マスタQueryService trait
+// NOTE: ApplicationSettings は削除されたため、このクエリサービスは無効化
 
-use javelin_domain::masters::ApplicationSettings;
+// use crate::error::ApplicationResult;
 
-use crate::error::ApplicationResult;
-
-/// アプリケーション設定マスタQueryService
-///
-/// CQRS原則: 読み取り専用のQueryService
-/// ProjectionDBからアプリケーション設定マスタデータを取得する
-#[allow(async_fn_in_trait)]
-pub trait ApplicationSettingsMasterQueryService: Send + Sync {
-    /// アプリケーション設定マスタを取得
-    async fn get(&self) -> ApplicationResult<Option<ApplicationSettings>>;
-}
+// #[async_trait::async_trait]
+// pub trait ApplicationSettingsMasterQueryService: Send + Sync {
+//     async fn get_settings(&self) -> ApplicationResult<ApplicationSettings>;
+// }

@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use javelin_application::dtos::request::LoadApplicationSettingsRequest;
+use javelin_application::dtos::request::FetchApplicationSettingsRequest;
 use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
@@ -77,7 +77,7 @@ impl PageState for ApplicationSettingsPageState {
             let page_id = self.id;
 
             tokio::spawn(async move {
-                let request = LoadApplicationSettingsRequest;
+                let request = FetchApplicationSettingsRequest;
                 let _ = controller.handle_load_application_settings(page_id, request).await;
             });
         }

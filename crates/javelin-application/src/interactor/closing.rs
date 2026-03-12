@@ -1,4 +1,4 @@
-// Closing Interactors - 月次決算処理
+// Closing Interactors - 決算処理インタラクタ
 
 mod adjust_accounts_interactor;
 mod apply_ifrs_valuation_interactor;

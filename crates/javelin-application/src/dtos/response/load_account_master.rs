@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// 勘定科目マスタ取得レスポンス
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoadAccountMasterResponse {
+pub struct FetchAccountMasterResponse {
     /// 勘定科目リスト
     pub accounts: Vec<AccountMasterItem>,
 }

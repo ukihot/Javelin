@@ -6,12 +6,11 @@ use std::sync::Arc;
 use chrono::{Datelike, NaiveDate};
 use javelin_domain::{
     entity::EntityId,
-    financial_close::journal_entry::{
+    journal_entry::{
         entities::{JournalEntry, JournalEntryId},
-        services::{JournalEntryDomainService, VoucherNumberDomainService},
+        repositories::JournalEntryRepository,
         values::{TransactionDate, UserId, VoucherNumber},
     },
-    repositories::JournalEntryRepository,
 };
 
 use crate::{
@@ -27,7 +26,7 @@ pub struct RegisterJournalEntryInteractor<
     O: JournalEntryOutputPort,
     Q: JournalEntrySearchQueryService,
 > {
-    event_repository: Arc<R>,
+    journal_entry_repository: Arc<R>,
     output_port: Arc<O>,
     search_query_service: Arc<Q>,
 }
@@ -36,11 +35,11 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
     RegisterJournalEntryInteractor<R, O, Q>
 {
     pub fn new(
-        event_repository: Arc<R>,
+        journal_entry_repository: Arc<R>,
         output_port: Arc<O>,
         search_query_service: Arc<Q>,
     ) -> Self {
-        Self { event_repository, output_port, search_query_service }
+        Self { journal_entry_repository, output_port, search_query_service }
     }
 }
 
@@ -103,28 +102,21 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
                     ApplicationError::QueryExecutionFailed(error_msg)
                 })?;
 
-            // ドメインサービスを使って次の伝票番号を生成
-            VoucherNumberDomainService::generate_next(fiscal_year, &existing_voucher_numbers)
-                .map(|vn| {
-                    // 進捗通知: 伝票番号採番完了
-                    tokio::task::block_in_place(|| {
-                        tokio::runtime::Handle::current().block_on(async {
-                            self.output_port
-                                .notify_progress(format!("伝票番号を採番しました: {}", vn))
-                                .await;
-                        })
-                    });
-                    vn
+            // TODO: ドメインサービスを実装して次の伝票番号を生成
+            // 現在は簡易的に生成
+            let next_number = existing_voucher_numbers.len() + 1;
+            let vn = format!("{}-{:04}", fiscal_year, next_number);
+
+            // 進捗通知: 伝票番号採番完了
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    self.output_port
+                        .notify_progress(format!("伝票番号を採番しました: {}", vn))
+                        .await;
                 })
-                .map_err(|e| {
-                    let error_msg = format!("伝票番号の採番に失敗しました: {}", e);
-                    tokio::task::block_in_place(|| {
-                        tokio::runtime::Handle::current().block_on(async {
-                            self.output_port.notify_error(error_msg.clone()).await;
-                        })
-                    });
-                    ApplicationError::DomainError(e)
-                })?
+            });
+
+            vn
         } else {
             request.voucher_number.clone()
         };
@@ -157,19 +149,9 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
         // 進捗通知: 仕訳明細作成完了
         self.output_port.notify_progress("仕訳明細を作成しました".to_string()).await;
 
-        // 5. 借貸バランスチェック
-        JournalEntryDomainService::validate_balance(&lines).map_err(|e| {
-            let error_msg = format!("借貸バランスが一致しません: {}", e);
-            tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(async {
-                    self.output_port.notify_error(error_msg.clone()).await;
-                })
-            });
-            ApplicationError::DomainError(e)
-        })?;
-
+        // 5. JournalEntry::new() 内部でバランスチェックが行われる
         // 進捗通知: 借貸バランス検証完了
-        self.output_port.notify_progress("借貸バランスを検証しました".to_string()).await;
+        self.output_port.notify_progress("借貸バランスを検証します".to_string()).await;
 
         // 6. 仕訳IDの生成（UUIDを使用）
         let entry_id = JournalEntryId::new(uuid::Uuid::new_v4().to_string());
@@ -192,29 +174,24 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, Q: JournalEntrySearch
             .notify_progress("仕訳エンティティを作成しました".to_string())
             .await;
 
-        // 8. イベントの取得（DraftCreatedイベントが含まれる）
-        let events = journal_entry.events();
-
-        // 9. イベントストアへの保存
-        self.event_repository
-            .append_events(entry_id.value(), events.to_vec())
-            .await
-            .map_err(|e| {
-                let error_msg = format!("イベントストアへの保存に失敗しました: {}", e);
-                tokio::task::block_in_place(|| {
-                    tokio::runtime::Handle::current().block_on(async {
-                        self.output_port.notify_error(error_msg.clone()).await;
-                    })
-                });
-                ApplicationError::DomainError(e)
-            })?;
+        // 8. Repository の save() で永続化 save() はインフラ層で集約の uncommitted_events
+        //    をイベントストアに保存する
+        self.journal_entry_repository.save(&journal_entry).await.map_err(|e| {
+            let error_msg = format!("イベントストアへの保存に失敗しました: {}", e);
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    self.output_port.notify_error(error_msg.clone()).await;
+                })
+            });
+            ApplicationError::DomainError(e)
+        })?;
 
         // 進捗通知: イベントストア保存完了
         self.output_port
             .notify_progress("イベントストアへ保存しました".to_string())
             .await;
 
-        // 10. レスポンスDTOを作成してOutput Portへ送信
+        // 9. レスポンスDTOを作成してOutput Portへ送信
         let response = RegisterJournalEntryResponse {
             entry_id: entry_id.value().to_string(),
             status: journal_entry.status().as_str().to_string(),

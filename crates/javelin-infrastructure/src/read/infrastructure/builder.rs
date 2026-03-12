@@ -424,7 +424,7 @@ impl ProjectionBuilderImpl {
                 };
 
                 // 新しいエントリを追加
-                use javelin_domain::financial_close::journal_entry::values::DebitCredit;
+                use javelin_domain::journal_entry::values::DebitCredit;
                 let side_enum = side.parse::<DebitCredit>().ok();
                 let debit_amount = if matches!(side_enum, Some(DebitCredit::Debit)) {
                     amount
@@ -506,7 +506,7 @@ impl ProjectionBuilderImpl {
                 let side = line["side"].as_str().unwrap_or("");
                 let amount = line["amount"].as_f64().unwrap_or(0.0);
 
-                use javelin_domain::financial_close::journal_entry::values::DebitCredit;
+                use javelin_domain::journal_entry::values::DebitCredit;
                 let side_enum = side.parse::<DebitCredit>().ok();
                 let debit_amount = if matches!(side_enum, Some(DebitCredit::Debit)) {
                     amount

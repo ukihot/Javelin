@@ -2,7 +2,7 @@
 // アプリケーション設定の出力を整形してビューに渡す
 
 use javelin_application::{
-    dtos::response::LoadApplicationSettingsResponse, output_ports::ApplicationSettingsOutputPort,
+    dtos::response::FetchApplicationSettingsResponse, output_ports::ApplicationSettingsOutputPort,
 };
 use tokio::sync::mpsc;
 
@@ -65,7 +65,7 @@ impl ApplicationSettingsPresenter {
 
 #[allow(async_fn_in_trait)]
 impl ApplicationSettingsOutputPort for ApplicationSettingsPresenter {
-    async fn present_application_settings(&self, response: &LoadApplicationSettingsResponse) {
+    async fn present_application_settings(&self, response: &FetchApplicationSettingsResponse) {
         let view_model = ApplicationSettingsViewModel {
             default_company_code: response.user_options.default_company_code.clone(),
             language: response.user_options.language.clone(),

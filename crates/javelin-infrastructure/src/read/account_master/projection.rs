@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use javelin_domain::masters::{AccountCode, AccountMaster, AccountName, AccountType};
+use javelin_domain::chart_of_accounts::{AccountCode, AccountMaster, AccountName, AccountType};
 use serde::{Deserialize, Serialize};
 
 use crate::read::infrastructure::db::ProjectionDb;

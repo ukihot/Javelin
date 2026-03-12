@@ -1,6 +1,8 @@
 // 補助科目マスタQueryService trait
 
-use javelin_domain::masters::{AccountCode, SubsidiaryAccountCode, SubsidiaryAccountMaster};
+use javelin_domain::chart_of_accounts::{
+    AccountCode, SubsidiaryAccountCode, SubsidiaryAccountMaster,
+};
 
 use crate::error::ApplicationResult;
 

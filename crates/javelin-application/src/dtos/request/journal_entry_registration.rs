@@ -1,13 +1,11 @@
 // 仕訳登録ユースケース - Request DTOs
 
-use javelin_domain::financial_close::{
-    AccountCode,
+use javelin_domain::{
+    chart_of_accounts::AccountCode,
+    common::{Currency, Money},
     journal_entry::{
         entities::JournalEntryLine,
-        values::{
-            Amount, Currency, DebitCredit, DepartmentCode, Description, LineNumber, SubAccountCode,
-            TaxType,
-        },
+        values::{DebitCredit, DepartmentCode, Description, LineNumber, SubAccountCode, TaxType},
     },
 };
 
@@ -69,12 +67,10 @@ impl TryFrom<&JournalEntryLineDto> for JournalEntryLine {
                 )])
             })?;
 
-        let currency = dto
-            .currency
-            .parse::<Currency>()
-            .map_err(|e| ApplicationError::ValidationFailed(vec![e]))?;
+        let currency =
+            dto.currency.parse::<Currency>().map_err(|e| ApplicationError::DomainError(e))?;
 
-        let amount = Amount::new(dto.amount, currency.clone()).map_err(|e| {
+        let amount = Money::from_str(&dto.amount.to_string(), currency).map_err(|e| {
             ApplicationError::ValidationFailed(vec![format!("Invalid amount: {:?}", e)])
         })?;
 
@@ -83,7 +79,7 @@ impl TryFrom<&JournalEntryLineDto> for JournalEntryLine {
             .parse::<TaxType>()
             .map_err(|e| ApplicationError::ValidationFailed(vec![e]))?;
 
-        let tax_amount = Amount::new(dto.tax_amount, currency).map_err(|e| {
+        let tax_amount = Money::from_str(&dto.tax_amount.to_string(), currency).map_err(|e| {
             ApplicationError::ValidationFailed(vec![format!("Invalid tax amount: {:?}", e)])
         })?;
 
@@ -111,13 +107,11 @@ impl TryFrom<&JournalEntryLineDto> for JournalEntryLine {
     }
 }
 
-impl TryFrom<&javelin_domain::financial_close::journal_entry::events::JournalEntryLineDto>
-    for JournalEntryLineDto
-{
+impl TryFrom<&javelin_domain::journal_entry::events::JournalEntryLineDto> for JournalEntryLineDto {
     type Error = ApplicationError;
 
     fn try_from(
-        domain_dto: &javelin_domain::financial_close::journal_entry::events::JournalEntryLineDto,
+        domain_dto: &javelin_domain::journal_entry::events::JournalEntryLineDto,
     ) -> Result<Self, Self::Error> {
         Ok(JournalEntryLineDto {
             line_number: domain_dto.line_number,

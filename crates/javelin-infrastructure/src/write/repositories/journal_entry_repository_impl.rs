@@ -4,20 +4,24 @@
 use std::sync::Arc;
 
 use javelin_domain::{
-    error::DomainResult, financial_close::journal_entry::events::JournalEntryEvent,
-    repositories::RepositoryBase,
+    common::RepositoryBase,
+    error::DomainResult,
+    journal_entry::{
+        entities::JournalEntry, events::JournalEntryEvent, repositories::JournalEntryRepository,
+    },
 };
 
-use crate::{
-    error::{InfrastructureError, InfrastructureResult},
-    event_store::EventStore,
-    types::{ExpectedVersion, Sequence},
-};
+use crate::{types::ExpectedVersion, write::event_store::EventStore};
 
 /// JournalEntryRepository実装
 ///
 /// Event Sourcingパターンに基づき、仕訳伝票のイベントを
 /// EventStoreに永続化する。
+///
+/// # Architecture
+/// - Command側: Aggregateのロードと保存
+/// - EventStoreを使ってイベント再生と保存
+/// - Query側はQueryServiceで実装（このリポジトリには含まない）
 pub struct JournalEntryRepositoryImpl {
     event_store: Arc<EventStore>,
 }
@@ -27,130 +31,83 @@ impl JournalEntryRepositoryImpl {
     pub fn new(event_store: Arc<EventStore>) -> Self {
         Self { event_store }
     }
-
-    /// イベントストリームから仕訳伝票を復元
-    ///
-    /// 指定された集約IDのすべてのイベントを読み込み、
-    /// 仕訳伝票の現在の状態を復元する。
-    pub async fn load_events(
-        &self,
-        entry_id: &str,
-    ) -> InfrastructureResult<Vec<JournalEntryEvent>> {
-        let agg_id = crate::types::AggregateId::parse(entry_id)
-            .map_err(InfrastructureError::DeserializationFailed)?;
-        let stream = self.event_store.stream_aggregate_events(agg_id, Sequence::new(0));
-
-        // モダンプラクティス: 初期キャパシティを確保
-        let mut events = Vec::with_capacity(16);
-        for event_result in stream.iter() {
-            let stored_event = event_result?;
-            let event: JournalEntryEvent = serde_json::from_slice(&stored_event.payload)
-                .map_err(|e| InfrastructureError::DeserializationFailed(e.to_string()))?;
-            events.push(event);
-        }
-
-        Ok(events)
-    }
-
-    /// 最新バージョンを取得
-    ///
-    /// 指定された集約IDの最新バージョン番号を取得する。
-    pub async fn get_latest_version(&self, entry_id: &str) -> InfrastructureResult<u64> {
-        let events = self.load_events(entry_id).await?;
-        Ok(events.len() as u64)
-    }
 }
 
-impl RepositoryBase for JournalEntryRepositoryImpl {
-    type Event = JournalEntryEvent;
+// JournalEntryRepository trait implementation
+impl JournalEntryRepository for JournalEntryRepositoryImpl {}
 
-    async fn append(&self, event: Self::Event) -> DomainResult<()> {
-        let event_type = event.event_type();
-        let aggregate_id = event.aggregate_id();
-        let payload = serde_json::to_vec(&event)
-            .map_err(|e| javelin_domain::error::DomainError::SerializationFailed(e.to_string()))?;
+// RepositoryBase trait implementation
+impl RepositoryBase<JournalEntry> for JournalEntryRepositoryImpl {
+    async fn save(&self, aggregate: &JournalEntry) -> DomainResult<()> {
+        // 集約から未コミットイベントを取得
+        let uncommitted_events = aggregate.uncommitted_events();
 
-        // バージョン管理（簡易実装）
-        let version = self.get_latest_version(aggregate_id).await.map_err(|e| {
-            javelin_domain::error::DomainError::RepositoryError(format!(
-                "Failed to get version: {}",
-                e
-            ))
-        })? + 1;
+        if uncommitted_events.is_empty() {
+            return Ok(()); // 変更がない場合は何もしない
+        }
 
-        self.event_store
-            .append_event(event_type, aggregate_id, version, ExpectedVersion::any(), &payload)
-            .await
-            .map_err(|e| {
-                javelin_domain::error::DomainError::RepositoryError(format!(
-                    "Failed to append event: {}",
-                    e
-                ))
+        // イベントをEventStoreに保存
+        for event in uncommitted_events {
+            let event_type = event.event_type();
+            let aggregate_id = event.aggregate_id();
+            let payload = serde_json::to_vec(&event).map_err(|e| {
+                javelin_domain::error::DomainError::SerializationFailed(e.to_string())
             })?;
+
+            // バージョン管理: EventStoreが自動的にシーケンス番号を管理
+            let version = self
+                .event_store
+                .get_events(aggregate_id)
+                .await
+                .map(|events| events.len() as u64 + 1)
+                .unwrap_or(1);
+
+            self.event_store
+                .append_event(event_type, aggregate_id, version, ExpectedVersion::any(), &payload)
+                .await
+                .map_err(|e| {
+                    javelin_domain::error::DomainError::RepositoryError(format!(
+                        "Failed to append event: {}",
+                        e
+                    ))
+                })?;
+        }
 
         Ok(())
     }
 
-    async fn append_events<T>(&self, aggregate_id: &str, events: Vec<T>) -> DomainResult<u64>
-    where
-        T: serde::Serialize + Send + 'static,
-    {
-        self.event_store
-            .append(aggregate_id, events)
-            .await
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))
-    }
+    async fn load(&self, id: &str) -> DomainResult<Option<JournalEntry>> {
+        // EventStoreからイベントを取得
+        let stored_events = self.event_store.get_events(id).await.map_err(|e| {
+            javelin_domain::error::DomainError::RepositoryError(format!(
+                "Failed to get events: {}",
+                e
+            ))
+        })?;
 
-    async fn get_events(&self, aggregate_id: &str) -> DomainResult<Vec<serde_json::Value>> {
-        let events = self
-            .event_store
-            .get_events(aggregate_id)
-            .await
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+        if stored_events.is_empty() {
+            return Ok(None);
+        }
 
-        events
+        // イベントをデシリアライズ
+        let events: Vec<JournalEntryEvent> = stored_events
             .into_iter()
-            .map(|stored_event| {
-                serde_json::to_value(&stored_event.payload)
-                    .or_else(|_| serde_json::from_slice(&stored_event.payload))
-                    .map_err(|e| {
-                        javelin_domain::error::DomainError::RepositoryError(format!(
-                            "Failed to convert event: {}",
-                            e
-                        ))
-                    })
+            .map(|stored| {
+                serde_json::from_slice(&stored.payload).map_err(|e| {
+                    javelin_domain::error::DomainError::RepositoryError(format!(
+                        "Failed to deserialize event: {}",
+                        e
+                    ))
+                })
             })
-            .collect()
-    }
+            .collect::<Result<Vec<_>, _>>()?;
 
-    async fn get_all_events(&self, from_sequence: u64) -> DomainResult<Vec<serde_json::Value>> {
-        let events = self
-            .event_store
-            .get_all_events(from_sequence)
-            .await
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        events
-            .into_iter()
-            .map(|stored_event| {
-                serde_json::to_value(&stored_event.payload)
-                    .or_else(|_| serde_json::from_slice(&stored_event.payload))
-                    .map_err(|e| {
-                        javelin_domain::error::DomainError::RepositoryError(format!(
-                            "Failed to convert event: {}",
-                            e
-                        ))
-                    })
-            })
-            .collect()
-    }
-
-    async fn get_latest_sequence(&self) -> DomainResult<u64> {
-        self.event_store
-            .get_latest_sequence()
-            .await
-            .map(|seq| seq.as_u64())
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))
+        // TODO: イベントから集約を復元する機能を実装
+        // 現在はイベントソーシングの復元機能が未実装
+        // 一時的にエラーを返す
+        Err(javelin_domain::error::DomainError::RepositoryError(
+            "Event sourcing reconstruction not yet implemented".to_string(),
+        ))
     }
 }
 
@@ -162,70 +119,70 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_append_and_load_events() {
+    async fn test_save_and_load_aggregate() {
         let temp_dir = TempDir::new().unwrap();
         let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
         let repo = JournalEntryRepositoryImpl::new(event_store);
 
-        // イベント追加
-        let event = JournalEntryEvent::DraftCreated {
-            entry_id: "JE001".to_string(),
-            transaction_date: "2024-01-01".to_string(),
-            voucher_number: "V001".to_string(),
-            lines: vec![],
-            created_by: "user1".to_string(),
-            created_at: Utc::now(),
-        };
+        // 集約を作成
+        let entry = JournalEntry::create(
+            "JE001".to_string(),
+            "2024-01-01".to_string(),
+            "V001".to_string(),
+            vec![],
+            "user1".to_string(),
+        )
+        .unwrap();
 
-        repo.append(event.clone()).await.unwrap();
+        // 保存
+        repo.save(&entry).await.unwrap();
 
-        // イベント読み込み
-        let events = repo.load_events("JE001").await.unwrap();
-        assert_eq!(events.len(), 1);
-        assert_eq!(events[0], event);
+        // ロード
+        let loaded = repo.load("JE001").await.unwrap();
+        assert!(loaded.is_some());
+        let loaded_entry = loaded.unwrap();
+        assert_eq!(loaded_entry.entry_id(), "JE001");
     }
 
     #[tokio::test]
-    async fn test_multiple_events() {
+    async fn test_load_nonexistent_aggregate() {
         let temp_dir = TempDir::new().unwrap();
         let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
         let repo = JournalEntryRepositoryImpl::new(event_store);
 
-        let entry_id = "JE002";
+        // 存在しない集約をロード
+        let loaded = repo.load("NONEXISTENT").await.unwrap();
+        assert!(loaded.is_none());
+    }
 
-        // 複数イベント追加
-        let event1 = JournalEntryEvent::DraftCreated {
-            entry_id: entry_id.to_string(),
-            transaction_date: "2024-01-01".to_string(),
-            voucher_number: "V002".to_string(),
-            lines: vec![],
-            created_by: "user1".to_string(),
-            created_at: Utc::now(),
-        };
+    #[tokio::test]
+    async fn test_multiple_saves() {
+        let temp_dir = TempDir::new().unwrap();
+        let event_store = Arc::new(EventStore::new(temp_dir.path()).await.unwrap());
+        let repo = JournalEntryRepositoryImpl::new(event_store);
 
-        let event2 = JournalEntryEvent::ApprovalRequested {
-            entry_id: entry_id.to_string(),
-            requested_by: "user1".to_string(),
-            requested_at: Utc::now(),
-        };
+        // 集約を作成して保存
+        let mut entry = JournalEntry::create(
+            "JE002".to_string(),
+            "2024-01-01".to_string(),
+            "V002".to_string(),
+            vec![],
+            "user1".to_string(),
+        )
+        .unwrap();
 
-        let event3 = JournalEntryEvent::Posted {
-            entry_id: entry_id.to_string(),
-            entry_number: "EN-2024-001".to_string(),
-            posted_by: "approver1".to_string(),
-            posted_at: Utc::now(),
-        };
+        repo.save(&entry).await.unwrap();
 
-        repo.append(event1).await.unwrap();
-        repo.append(event2).await.unwrap();
-        repo.append(event3).await.unwrap();
+        // 承認申請
+        entry.request_approval("user1".to_string()).unwrap();
+        repo.save(&entry).await.unwrap();
 
-        // イベント読み込み
-        let events = repo.load_events(entry_id).await.unwrap();
-        assert_eq!(events.len(), 3);
+        // 記帳
+        entry.post("EN-2024-001".to_string(), "approver1".to_string()).unwrap();
+        repo.save(&entry).await.unwrap();
 
-        // バージョン確認
-        let version = repo.get_latest_version(entry_id).await.unwrap();
-        assert_eq!(version, 3);
+        // ロードして状態を確認
+        let loaded = repo.load("JE002").await.unwrap().unwrap();
+        assert_eq!(loaded.status(), javelin_domain::journal_entry::values::JournalStatus::Posted);
     }
 }

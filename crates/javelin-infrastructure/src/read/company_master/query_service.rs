@@ -6,7 +6,7 @@ use javelin_application::{
     error::{ApplicationError, ApplicationResult},
     query_service::CompanyMasterQueryService,
 };
-use javelin_domain::masters::{CompanyCode, CompanyMaster};
+use javelin_domain::company::{CompanyCode, CompanyMaster};
 
 use super::projection::CompanyMasterProjection;
 use crate::read::infrastructure::db::ProjectionDb;

@@ -1,6 +1,6 @@
 // 会社マスタQueryService trait
 
-use javelin_domain::masters::{CompanyCode, CompanyMaster};
+use javelin_domain::company::{CompanyCode, CompanyMaster};
 
 use crate::error::ApplicationResult;
 

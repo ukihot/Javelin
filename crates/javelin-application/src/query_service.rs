@@ -25,7 +25,8 @@ pub trait QueryService: Send + Sync {
 
 // Re-export for convenience
 pub use account_master_query_service::*;
-pub use application_settings_master_query_service::*;
+// pub use application_settings_master_query_service::*; // Disabled: ApplicationSettings
+// aggregate removed
 pub use batch_history_query_service::*;
 pub use company_master_query_service::*;
 pub use invoice_query_service::*;

@@ -56,7 +56,7 @@ impl AccountingPeriod {
 }
 
 /// 金額（円）
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Amount {
     value: i64, // 円単位
 }
@@ -89,31 +89,8 @@ impl Amount {
 }
 
 /// 勘定科目コード
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AccountCode {
-    code: String,
-}
-
-impl ValueObject for AccountCode {
-    fn validate(&self) -> DomainResult<()> {
-        if self.code.is_empty() {
-            return Err(DomainError::InvalidAccountCode);
-        }
-        Ok(())
-    }
-}
-
-impl AccountCode {
-    pub fn new(code: String) -> DomainResult<Self> {
-        let account_code = Self { code };
-        account_code.validate()?;
-        Ok(account_code)
-    }
-
-    pub fn code(&self) -> &str {
-        &self.code
-    }
-}
+// 新しい場所から再エクスポート
+pub use crate::chart_of_accounts::AccountCode;
 
 #[cfg(test)]
 pub mod accounting_period_tests;

@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use javelin_domain::masters::{
+use javelin_domain::chart_of_accounts::{
     AccountCode, SubsidiaryAccountCode, SubsidiaryAccountMaster, SubsidiaryAccountName,
 };
 use serde::{Deserialize, Serialize};

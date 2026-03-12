@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use javelin_application::{
-    dtos::{request::LoadCompanyMasterRequest, response::LoadCompanyMasterResponse},
+    dtos::{request::FetchCompanyMasterRequest, response::FetchCompanyMasterResponse},
     query_service::CompanyMasterQueryService,
 };
 
@@ -35,8 +35,8 @@ where
     pub async fn handle_load_company_master(
         &self,
         page_id: uuid::Uuid,
-        request: LoadCompanyMasterRequest,
-    ) -> Result<LoadCompanyMasterResponse, String> {
+        request: FetchCompanyMasterRequest,
+    ) -> Result<FetchCompanyMasterResponse, String> {
         // PresenterRegistryから該当ページのPresenterを取得
         let presenter =
             self.presenter_registry.get_company_master_presenter(page_id).ok_or_else(|| {
@@ -44,13 +44,13 @@ where
             })?;
 
         // 取得したPresenterを使って新しいInteractorを作成
-        let interactor = javelin_application::interactor::LoadCompanyMasterInteractor::new(
+        let interactor = javelin_application::interactor::FetchCompanyMasterInteractor::new(
             Arc::clone(&self.query_service),
             (*presenter).clone(),
         );
 
         // UseCaseに委譲
-        use javelin_application::input_ports::LoadCompanyMasterInputPort;
+        use javelin_application::input_ports::FetchCompanyMasterInputPort;
         interactor.execute(request).await.map_err(|e| e.to_string())
     }
 }

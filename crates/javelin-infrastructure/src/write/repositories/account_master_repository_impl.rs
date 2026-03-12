@@ -3,10 +3,13 @@
 use std::{path::Path, sync::Arc};
 
 use javelin_domain::{
+    chart_of_accounts::{
+        entities::AccountMaster,
+        repositories::AccountMasterRepository,
+        values::{AccountCode, AccountName, AccountType},
+    },
+    common::RepositoryBase,
     error::DomainResult,
-    event::DomainEvent,
-    masters::{AccountCode, AccountMaster, AccountMasterEvent, AccountName, AccountType},
-    repositories::AccountMasterRepository,
 };
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction};
 use serde::{Deserialize, Serialize};
@@ -360,7 +363,11 @@ impl AccountMasterRepositoryImpl {
     }
 }
 
-impl AccountMasterRepository for AccountMasterRepositoryImpl {
+// AccountMasterRepository trait implementation
+impl AccountMasterRepository for AccountMasterRepositoryImpl {}
+
+// RepositoryBase trait implementation
+impl RepositoryBase<AccountMaster> for AccountMasterRepositoryImpl {
     async fn save(&self, account_master: &AccountMaster) -> DomainResult<()> {
         let stored = Self::to_stored(account_master);
         let value = serde_json::to_vec(&stored)
@@ -381,64 +388,39 @@ impl AccountMasterRepository for AccountMasterRepositoryImpl {
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
 
-        // イベントを発行
-        let event = AccountMasterEvent::AccountMasterCreated {
-            code: account_master.code().value().to_string(),
-            name: account_master.name().value().to_string(),
-            account_type: account_master.account_type(),
-            is_active: account_master.is_active(),
-        };
-
-        let payload = serde_json::to_vec(&event)
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        self.event_store
-            .append_event(
-                event.event_type(),
-                event.aggregate_id(),
-                event.version(),
-                ExpectedVersion::any(),
-                &payload,
-            )
-            .await
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+        // AccountMaster does not use event sourcing - direct LMDB storage only
 
         Ok(())
     }
 
-    async fn delete(&self, code: &AccountCode) -> DomainResult<()> {
+    async fn load(&self, id: &str) -> DomainResult<Option<AccountMaster>> {
         let env = Arc::clone(&self.env);
         let db = self.db;
-        let key = code.value().to_string();
+        let key = id.to_string();
 
-        // LMDBから削除
-        tokio::task::spawn_blocking(move || {
-            let mut txn = env.begin_rw_txn()?;
-            txn.del(db, &key, None)?;
-            txn.commit()?;
-            Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
+        let result = tokio::task::spawn_blocking(move || {
+            let txn = env.begin_ro_txn()?;
+            match txn.get(db, &key) {
+                Ok(bytes) => {
+                    let stored: StoredAccountMaster = serde_json::from_slice(bytes)?;
+                    Ok(Some(stored))
+                }
+                Err(lmdb::Error::NotFound) => Ok(None),
+                Err(e) => Err(e.into()),
+            }
         })
         .await
         .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
-        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
+        .map_err(|e: Box<dyn std::error::Error + Send + Sync>| {
+            javelin_domain::error::DomainError::RepositoryError(e.to_string())
+        })?;
 
-        // イベントを発行
-        let event = AccountMasterEvent::AccountMasterDeleted { code: code.value().to_string() };
-
-        let payload = serde_json::to_vec(&event)
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        self.event_store
-            .append_event(
-                event.event_type(),
-                event.aggregate_id(),
-                event.version(),
-                ExpectedVersion::any(),
-                &payload,
-            )
-            .await
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        Ok(())
+        match result {
+            Some(stored) => {
+                let account = Self::from_stored(&stored)?;
+                Ok(Some(account))
+            }
+            None => Ok(None),
+        }
     }
 }

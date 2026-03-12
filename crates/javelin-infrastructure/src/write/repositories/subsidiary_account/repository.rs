@@ -3,9 +3,13 @@
 use std::{path::Path, sync::Arc};
 
 use javelin_domain::{
+    chart_of_accounts::{
+        entities::SubsidiaryAccountMaster,
+        repositories::SubsidiaryAccountMasterRepository,
+        values::{AccountCode, SubsidiaryAccountCode, SubsidiaryAccountName},
+    },
+    common::RepositoryBase,
     error::DomainResult,
-    masters::{AccountCode, SubsidiaryAccountCode, SubsidiaryAccountMaster, SubsidiaryAccountName},
-    repositories::SubsidiaryAccountMasterRepository,
 };
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction};
 use serde::{Deserialize, Serialize};
@@ -100,7 +104,7 @@ impl SubsidiaryAccountMasterRepositoryImpl {
     }
 }
 
-impl SubsidiaryAccountMasterRepository for SubsidiaryAccountMasterRepositoryImpl {
+impl RepositoryBase<SubsidiaryAccountMaster> for SubsidiaryAccountMasterRepositoryImpl {
     async fn save(&self, account_master: &SubsidiaryAccountMaster) -> DomainResult<()> {
         let stored = Self::to_stored(account_master);
         let value = serde_json::to_vec(&stored)
@@ -123,7 +127,34 @@ impl SubsidiaryAccountMasterRepository for SubsidiaryAccountMasterRepositoryImpl
         Ok(())
     }
 
-    async fn delete(&self, code: &SubsidiaryAccountCode) -> DomainResult<()> {
+    async fn load(&self, id: &str) -> DomainResult<Option<SubsidiaryAccountMaster>> {
+        let env = Arc::clone(&self.env);
+        let db = self.db;
+        let key = id.to_string();
+
+        tokio::task::spawn_blocking(move || {
+            let txn = env.begin_ro_txn()?;
+            match txn.get(db, &key) {
+                Ok(value) => {
+                    let stored: StoredSubsidiaryAccountMaster = serde_json::from_slice(value)?;
+                    let account = Self::from_stored(&stored)?;
+                    Ok::<_, Box<dyn std::error::Error + Send + Sync>>(Some(account))
+                }
+                Err(lmdb::Error::NotFound) => Ok(None),
+                Err(e) => Err(e.into()),
+            }
+        })
+        .await
+        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?
+        .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))
+    }
+}
+
+impl SubsidiaryAccountMasterRepository for SubsidiaryAccountMasterRepositoryImpl {}
+
+// Additional methods specific to SubsidiaryAccountMaster
+impl SubsidiaryAccountMasterRepositoryImpl {
+    pub async fn delete(&self, code: &SubsidiaryAccountCode) -> DomainResult<()> {
         let env = Arc::clone(&self.env);
         let db = self.db;
         let key = code.value().to_string();

@@ -2,7 +2,7 @@
 
 /// 会社マスタ取得リクエスト
 #[derive(Debug, Clone)]
-pub struct LoadCompanyMasterRequest {
+pub struct FetchCompanyMasterRequest {
     /// フィルタ条件（オプション）
     pub filter: Option<String>,
     /// アクティブのみ取得

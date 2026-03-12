@@ -3,13 +3,13 @@
 
 use std::sync::Arc;
 
-use javelin_domain::{error::DomainResult, repositories::RepositoryBase};
+use javelin_domain::error::DomainResult;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{InfrastructureError, InfrastructureResult},
     event_store::EventStore,
-    types::{ExpectedVersion, Sequence},
+    types::Sequence,
 };
 
 /// 会計期間ドメインイベント
@@ -101,97 +101,33 @@ impl AccountingPeriodRepositoryImpl {
     }
 }
 
-impl RepositoryBase for AccountingPeriodRepositoryImpl {
-    type Event = AccountingPeriodEvent;
-
-    async fn append(&self, event: Self::Event) -> DomainResult<()> {
-        let event_type = event.event_type();
-        let aggregate_id = event.aggregate_id();
-        let payload = serde_json::to_vec(&event)
-            .map_err(|e| javelin_domain::error::DomainError::SerializationFailed(e.to_string()))?;
-
-        let version = self.get_latest_version(aggregate_id).await.map_err(|e| {
-            javelin_domain::error::DomainError::RepositoryError(format!(
-                "Failed to get version: {}",
-                e
-            ))
-        })? + 1;
-
-        self.event_store
-            .append_event(event_type, aggregate_id, version, ExpectedVersion::any(), &payload)
-            .await
-            .map_err(|e| {
-                javelin_domain::error::DomainError::RepositoryError(format!(
-                    "Failed to append event: {}",
-                    e
-                ))
-            })?;
-
-        Ok(())
-    }
-
-    async fn append_events<T>(&self, aggregate_id: &str, events: Vec<T>) -> DomainResult<u64>
-    where
-        T: serde::Serialize + Send + 'static,
-    {
-        self.event_store
-            .append(aggregate_id, events)
-            .await
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))
-    }
-
-    async fn get_events(&self, aggregate_id: &str) -> DomainResult<Vec<serde_json::Value>> {
-        let events = self
-            .event_store
-            .get_events(aggregate_id)
-            .await
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        events
-            .into_iter()
-            .map(|stored_event| {
-                serde_json::to_value(&stored_event.payload)
-                    .or_else(|_| serde_json::from_slice(&stored_event.payload))
-                    .map_err(|e| {
-                        javelin_domain::error::DomainError::RepositoryError(format!(
-                            "Failed to convert event: {}",
-                            e
-                        ))
-                    })
-            })
-            .collect()
-    }
-
-    async fn get_all_events(&self, from_sequence: u64) -> DomainResult<Vec<serde_json::Value>> {
-        let events = self
-            .event_store
-            .get_all_events(from_sequence)
-            .await
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
-
-        events
-            .into_iter()
-            .map(|stored_event| {
-                serde_json::to_value(&stored_event.payload)
-                    .or_else(|_| serde_json::from_slice(&stored_event.payload))
-                    .map_err(|e| {
-                        javelin_domain::error::DomainError::RepositoryError(format!(
-                            "Failed to convert event: {}",
-                            e
-                        ))
-                    })
-            })
-            .collect()
-    }
-
-    async fn get_latest_sequence(&self) -> DomainResult<u64> {
-        self.event_store
-            .get_latest_sequence()
-            .await
-            .map(|seq| seq.as_u64())
-            .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))
-    }
-}
+// DISABLED: Old RepositoryBase interface - AccountingPeriod should not use event sourcing
+// impl RepositoryBase for AccountingPeriodRepositoryImpl {
+// type Event = AccountingPeriodEvent;
+//
+// async fn append(&self, event: Self::Event) -> DomainResult<()> {
+// ... implementation commented out ...
+// }
+//
+// async fn append_events<T>(&self, aggregate_id: &str, events: Vec<T>) -> DomainResult<u64>
+// where
+// T: serde::Serialize + Send + 'static,
+// {
+// ... implementation commented out ...
+// }
+//
+// async fn get_events(&self, aggregate_id: &str) -> DomainResult<Vec<serde_json::Value>> {
+// ... implementation commented out ...
+// }
+//
+// async fn get_all_events(&self, from_sequence: u64) -> DomainResult<Vec<serde_json::Value>> {
+// ... implementation commented out ...
+// }
+//
+// async fn get_latest_sequence(&self) -> DomainResult<u64> {
+// ... implementation commented out ...
+// }
+// }
 
 // DomainEventトレイト実装
 impl javelin_domain::event::DomainEvent for AccountingPeriodEvent {

@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use javelin_domain::financial_close::journal_entry::events::JournalEntryEvent;
+use javelin_domain::journal_entry::events::JournalEntryEvent;
 
 use crate::{error::InfrastructureResult, read::journal_entry::JournalEntryProjectionWorker};
 

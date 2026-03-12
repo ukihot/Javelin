@@ -1,6 +1,6 @@
 // 勘定科目マスタQueryService trait
 
-use javelin_domain::masters::{AccountCode, AccountMaster};
+use javelin_domain::chart_of_accounts::{AccountCode, AccountMaster};
 
 use crate::error::ApplicationResult;
 

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use javelin_application::{
     dtos::RegisterJournalEntryRequest, query_service::JournalEntrySearchQueryService,
 };
-use javelin_infrastructure::write::event_store::EventStore;
+use javelin_infrastructure::write::repositories::JournalEntryRepositoryImpl;
 
 use crate::navigation::PresenterRegistry;
 
@@ -18,7 +18,7 @@ pub struct JournalEntryController<Q>
 where
     Q: JournalEntrySearchQueryService,
 {
-    event_store: Arc<EventStore>,
+    journal_entry_repository: Arc<JournalEntryRepositoryImpl>,
     query_service: Arc<Q>,
     presenter_registry: Arc<PresenterRegistry>,
 }
@@ -29,11 +29,11 @@ where
 {
     /// 新しいコントローラインスタンスを作成
     pub fn new(
-        event_store: Arc<EventStore>,
+        journal_entry_repository: Arc<JournalEntryRepositoryImpl>,
         query_service: Arc<Q>,
         presenter_registry: Arc<PresenterRegistry>,
     ) -> Self {
-        Self { event_store, query_service, presenter_registry }
+        Self { journal_entry_repository, query_service, presenter_registry }
     }
 
     /// PresenterRegistryへの参照を取得
@@ -63,7 +63,7 @@ where
 
         // 取得したPresenterを使って新しいInteractorを作成
         let interactor = javelin_application::interactor::RegisterJournalEntryInteractor::new(
-            Arc::clone(&self.event_store),
+            Arc::clone(&self.journal_entry_repository),
             presenter,
             Arc::clone(&self.query_service),
         );

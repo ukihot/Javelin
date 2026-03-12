@@ -2,17 +2,17 @@
 // 責務: ドメイン操作調整
 // 利用対象: Entity / ValueObject / DomainService / RepositoryTrait
 
-pub mod batch_history;
 pub mod closing;
 pub mod journal_entry;
 pub mod master_data;
 pub mod print_invoice_interactor;
 
-pub use batch_history::GetBatchHistoryInteractor;
 pub use closing::{
     AdjustAccountsInteractor, ApplyIfrsValuationInteractor, ConsolidateLedgerInteractor,
+    EvaluateMaterialityInteractor, GenerateComprehensiveFinancialStatementsInteractor,
     GenerateFinancialStatementsInteractor, GenerateNoteDraftInteractor,
     GenerateTrialBalanceInteractor, LockClosingPeriodInteractor, PrepareClosingInteractor,
+    VerifyLedgerConsistencyInteractor,
 };
 pub use journal_entry::{
     ApproveJournalEntryInteractor, CancelJournalEntryInteractor, CorrectJournalEntryInteractor,
@@ -23,8 +23,10 @@ pub use journal_entry::{
     SearchJournalEntryInteractor, SubmitForApprovalInteractor, UpdateDraftJournalEntryInteractor,
 };
 pub use master_data::{
-    LoadAccountMasterInteractor, LoadApplicationSettingsInteractor, LoadCompanyMasterInteractor,
-    LoadSubsidiaryAccountMasterInteractor,
+    FetchAccountMasterInteractor,
+    // FetchApplicationSettingsInteractor, // NOTE: ApplicationSettings 集約が削除されたため無効化
+    FetchCompanyMasterInteractor,
+    FetchSubsidiaryAccountMasterInteractor,
 };
 pub use print_invoice_interactor::PrintInvoiceInteractor;
 

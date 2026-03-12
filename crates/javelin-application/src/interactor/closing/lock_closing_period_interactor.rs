@@ -1,50 +1,37 @@
 // LockClosingPeriodInteractor - 締日固定処理
 // 責務: 取引データのロック処理
 
-use std::sync::Arc;
-
-use javelin_domain::repositories::RepositoryBase;
-
 use crate::{
     dtos::{LockClosingPeriodRequest, LockClosingPeriodResponse},
     error::ApplicationResult,
     input_ports::LockClosingPeriodUseCase,
 };
 
-pub struct LockClosingPeriodInteractor<R>
-where
-    R: RepositoryBase,
-{
-    event_repository: Arc<R>,
+pub struct LockClosingPeriodInteractor {
+    // NOTE: 現在はイベントストアを直接使用せず、簡易実装
 }
 
-impl<R> LockClosingPeriodInteractor<R>
-where
-    R: RepositoryBase,
-{
-    pub fn new(event_repository: Arc<R>) -> Self {
-        Self { event_repository }
+impl LockClosingPeriodInteractor {
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
-impl<R> LockClosingPeriodUseCase for LockClosingPeriodInteractor<R>
-where
-    R: RepositoryBase,
-{
+impl Default for LockClosingPeriodInteractor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl LockClosingPeriodUseCase for LockClosingPeriodInteractor {
     async fn execute(
         &self,
         request: LockClosingPeriodRequest,
     ) -> ApplicationResult<LockClosingPeriodResponse> {
-        // イベントストアから最新シーケンスを取得
-        let latest_sequence = self
-            .event_repository
-            .get_latest_sequence()
-            .await
-            .map_err(|e| crate::error::ApplicationError::EventStoreError(e.to_string()))?;
-
-        // 実装: 締日固定処理（イベント追記）
+        // 実装: 締日固定処理
+        // TODO: 実際のロック処理を実装
         Ok(LockClosingPeriodResponse {
-            locked_entries_count: latest_sequence as usize,
+            locked_entries_count: 0,
             locked_at: chrono::Utc::now().to_rfc3339(),
             audit_log_id: format!("LOCK-{}-{:02}", request.fiscal_year, request.period),
         })

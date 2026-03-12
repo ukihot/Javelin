@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use javelin_application::dtos::request::LoadSubsidiaryAccountMasterRequest;
+use javelin_application::dtos::request::FetchSubsidiaryAccountMasterRequest;
 use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
@@ -127,7 +127,7 @@ impl PageState for SubsidiaryAccountMasterPageState {
 
             tokio::spawn(async move {
                 let request =
-                    LoadSubsidiaryAccountMasterRequest { filter: None, active_only: true };
+                    FetchSubsidiaryAccountMasterRequest { filter: None, active_only: true };
                 let _ = controller.handle_load_subsidiary_account_master(page_id, request).await;
             });
         }

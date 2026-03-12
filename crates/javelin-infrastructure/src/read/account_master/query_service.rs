@@ -6,7 +6,7 @@ use javelin_application::{
     error::{ApplicationError, ApplicationResult},
     query_service::AccountMasterQueryService,
 };
-use javelin_domain::masters::{AccountCode, AccountMaster};
+use javelin_domain::chart_of_accounts::{AccountCode, AccountMaster};
 
 use super::projection::AccountMasterProjection;
 use crate::read::infrastructure::db::ProjectionDb;

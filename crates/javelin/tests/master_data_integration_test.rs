@@ -9,7 +9,7 @@ use javelin_application::{
         AccountMasterQueryService, CompanyMasterQueryService, SubsidiaryAccountMasterQueryService,
     },
 };
-use javelin_domain::masters::AccountMasterEvent;
+use javelin_domain::chart_of_accounts::AccountMasterEvent;
 use javelin_infrastructure::{
     read::{
         account_master::AccountMasterQueryServiceImpl,
@@ -59,7 +59,7 @@ async fn register_account_master(
     event_store: &Arc<EventStore>,
     code: &str,
     name: &str,
-    account_type: javelin_domain::masters::AccountType,
+    account_type: javelin_domain::chart_of_accounts::AccountType,
 ) {
     use javelin_domain::event::DomainEvent;
 
@@ -94,21 +94,21 @@ async fn test_account_master_load_with_scan_prefix() {
         &event_store,
         "1100",
         "現金及び現金同等物",
-        javelin_domain::masters::AccountType::Asset,
+        javelin_domain::chart_of_accounts::AccountType::Asset,
     )
     .await;
     register_account_master(
         &event_store,
         "1110",
         "営業債権",
-        javelin_domain::masters::AccountType::Asset,
+        javelin_domain::chart_of_accounts::AccountType::Asset,
     )
     .await;
     register_account_master(
         &event_store,
         "4100",
         "売上収益",
-        javelin_domain::masters::AccountType::Revenue,
+        javelin_domain::chart_of_accounts::AccountType::Revenue,
     )
     .await;
 
@@ -140,14 +140,14 @@ async fn test_projection_db_scan_prefix_consistency() {
         &event_store,
         "2100",
         "営業債務",
-        javelin_domain::masters::AccountType::Liability,
+        javelin_domain::chart_of_accounts::AccountType::Liability,
     )
     .await;
     register_account_master(
         &event_store,
         "2110",
         "社債及び借入金",
-        javelin_domain::masters::AccountType::Liability,
+        javelin_domain::chart_of_accounts::AccountType::Liability,
     )
     .await;
 
@@ -204,7 +204,7 @@ async fn test_account_master_get_by_code() {
         &event_store,
         "3100",
         "資本金",
-        javelin_domain::masters::AccountType::Equity,
+        javelin_domain::chart_of_accounts::AccountType::Equity,
     )
     .await;
 
@@ -216,7 +216,7 @@ async fn test_account_master_get_by_code() {
 
     // QueryServiceを使って特定のコードで取得
     let query_service = AccountMasterQueryServiceImpl::new(Arc::clone(&projection_db));
-    let code = javelin_domain::masters::AccountCode::new("3100").expect("Valid code");
+    let code = javelin_domain::chart_of_accounts::AccountCode::new("3100").expect("Valid code");
     let account = query_service.get_by_code(&code).await.expect("Get by code should succeed");
 
     assert!(account.is_some(), "Should find account with code 3100");

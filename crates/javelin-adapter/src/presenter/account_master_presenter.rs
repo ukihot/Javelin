@@ -2,7 +2,7 @@
 // 勘定科目マスタの出力を整形してビューに渡す
 
 use javelin_application::{
-    dtos::response::LoadAccountMasterResponse, output_ports::AccountMasterOutputPort,
+    dtos::response::FetchAccountMasterResponse, output_ports::AccountMasterOutputPort,
 };
 use tokio::sync::mpsc;
 
@@ -55,7 +55,7 @@ impl AccountMasterPresenter {
 
 #[allow(async_fn_in_trait)]
 impl AccountMasterOutputPort for AccountMasterPresenter {
-    async fn present_account_master(&self, response: &LoadAccountMasterResponse) {
+    async fn present_account_master(&self, response: &FetchAccountMasterResponse) {
         let accounts = response
             .accounts
             .iter()

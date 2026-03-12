@@ -2,7 +2,7 @@
 // 補助科目マスタの出力を整形してビューに渡す
 
 use javelin_application::{
-    dtos::response::LoadSubsidiaryAccountMasterResponse,
+    dtos::response::FetchSubsidiaryAccountMasterResponse,
     output_ports::SubsidiaryAccountMasterOutputPort,
 };
 use tokio::sync::mpsc;
@@ -55,7 +55,7 @@ impl SubsidiaryAccountMasterPresenter {
 impl SubsidiaryAccountMasterOutputPort for SubsidiaryAccountMasterPresenter {
     async fn present_subsidiary_account_master(
         &self,
-        response: &LoadSubsidiaryAccountMasterResponse,
+        response: &FetchSubsidiaryAccountMasterResponse,
     ) {
         let accounts = response
             .accounts

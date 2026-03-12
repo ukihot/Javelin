@@ -5,9 +5,8 @@
 mod tests {
     use std::sync::Arc;
 
-    use javelin_domain::{
-        financial_close::journal_entry::events::JournalEntryEvent,
-        repositories::MockJournalEntryRepository,
+    use javelin_domain::journal_entry::{
+        events::JournalEntryEvent, repositories::MockJournalEntryRepository,
     };
     use tokio::sync::mpsc;
 

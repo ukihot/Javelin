@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// 会社マスタ取得レスポンス
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoadCompanyMasterResponse {
+pub struct FetchCompanyMasterResponse {
     pub companies: Vec<CompanyMasterItem>,
 }
 
