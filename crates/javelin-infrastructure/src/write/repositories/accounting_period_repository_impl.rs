@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use javelin_domain::error::DomainResult;
 use serde::{Deserialize, Serialize};
 
 use crate::{

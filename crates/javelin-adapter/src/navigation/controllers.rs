@@ -112,7 +112,7 @@ pub type GenerateNoteDraftControllerType = GenerateNoteDraftController<
     >,
 >;
 
-/// Type alias for AdjustAccountsController with concrete UseCase
+// /// Type alias for AdjustAccountsController with concrete UseCase
 // DISABLED: ClosingEventStore not found - wrong generic count
 // pub type AdjustAccountsControllerType = AdjustAccountsController<
 //     javelin_application::interactor::AdjustAccountsInteractor<
@@ -120,8 +120,8 @@ pub type GenerateNoteDraftControllerType = GenerateNoteDraftController<
 //         javelin_infrastructure::read::ledger::LedgerQueryServiceImpl,
 //     >,
 // >;
-
-/// Type alias for ApplyIfrsValuationController with concrete UseCase
+//
+// /// Type alias for ApplyIfrsValuationController with concrete UseCase
 // DISABLED: ClosingEventStore not found - wrong generic count
 // pub type ApplyIfrsValuationControllerType = ApplyIfrsValuationController<
 //     javelin_application::interactor::ApplyIfrsValuationInteractor<

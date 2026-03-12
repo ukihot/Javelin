@@ -77,7 +77,7 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort, F: JournalEntryFinder
 
         // TODO: ドメインサービスで反転処理を実装する必要がある
         // 現在は元の明細をそのまま使用（実際には借方/貸方を反転する必要がある）
-        let lines: Vec<_> = reference_lines.iter().cloned().collect();
+        let lines: Vec<_> = reference_lines.to_vec();
 
         // 4. 取引日付のパース
         let transaction_date = NaiveDate::parse_from_str(&request.transaction_date, "%Y-%m-%d")

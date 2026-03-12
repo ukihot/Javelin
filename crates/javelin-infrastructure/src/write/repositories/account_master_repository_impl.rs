@@ -14,7 +14,7 @@ use javelin_domain::{
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction};
 use serde::{Deserialize, Serialize};
 
-use crate::{types::ExpectedVersion, write::event_store::EventStore};
+use crate::write::event_store::EventStore;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct StoredAccountMaster {

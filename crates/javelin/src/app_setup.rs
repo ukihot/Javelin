@@ -19,117 +19,27 @@ use javelin_application::{
     },
     projection_builder::ProjectionBuilder,
 };
-use javelin_domain::event::DomainEvent;
 use javelin_infrastructure::{
     read::{
-        batch_history::BatchHistoryQueryServiceImpl,
+        // batch_history::BatchHistoryQueryServiceImpl, // Disabled
         infrastructure::{ProjectionBuilderImpl, ProjectionDb},
         invoice::MockInvoiceQueryService,
         journal_entry::JournalEntrySearchQueryServiceImpl,
         ledger::LedgerQueryServiceImpl,
     },
     shared::typst_invoice_printer::TypstInvoicePrinter,
-    write::event_store::{ClosingEventStore, EventStore},
+    write::event_store::EventStore, // ClosingEventStore removed
 };
 use tokio::sync::mpsc;
 
 use crate::app_error::{AppError, AppResult};
 
 /// マスタデータの初期化（イベントが0件の場合のみ）
-async fn initialize_master_data(event_store: &Arc<EventStore>) -> AppResult<()> {
-    use javelin_domain::chart_of_accounts::{AccountMasterEvent, AccountType};
+async fn initialize_master_data(_event_store: &Arc<EventStore>) -> AppResult<()> {
+    // DISABLED: AccountMaster no longer uses event sourcing
+    // Master data should be initialized through direct repository calls, not events
 
-    // イベントが既に存在する場合はスキップ
-    let latest_sequence =
-        event_store.get_latest_sequence().await.map(|seq| seq.as_u64()).unwrap_or(0);
-    if latest_sequence > 0 {
-        return Ok(());
-    }
-
-    println!("✓ Initializing master data with IFRS template...");
-
-    // IFRSベースの勘定科目テンプレート
-    let accounts = vec![
-        // 資産の部 - 流動資産
-        ("1100", "現金及び現金同等物", AccountType::Asset),
-        ("1110", "営業債権及びその他の債権", AccountType::Asset),
-        ("1120", "棚卸資産", AccountType::Asset),
-        ("1130", "その他の金融資産（流動）", AccountType::Asset),
-        ("1140", "その他の流動資産", AccountType::Asset),
-        // 資産の部 - 非流動資産
-        ("1200", "有形固定資産", AccountType::Asset),
-        ("1210", "使用権資産", AccountType::Asset),
-        ("1220", "のれん", AccountType::Asset),
-        ("1230", "無形資産", AccountType::Asset),
-        ("1240", "持分法で会計処理されている投資", AccountType::Asset),
-        ("1250", "その他の金融資産（非流動）", AccountType::Asset),
-        ("1260", "繰延税金資産", AccountType::Asset),
-        ("1270", "その他の非流動資産", AccountType::Asset),
-        // 負債の部 - 流動負債
-        ("2100", "営業債務及びその他の債務", AccountType::Liability),
-        ("2110", "社債及び借入金（流動）", AccountType::Liability),
-        ("2120", "リース負債（流動）", AccountType::Liability),
-        ("2130", "その他の金融負債（流動）", AccountType::Liability),
-        ("2140", "未払法人所得税", AccountType::Liability),
-        ("2150", "引当金（流動）", AccountType::Liability),
-        ("2160", "その他の流動負債", AccountType::Liability),
-        // 負債の部 - 非流動負債
-        ("2200", "社債及び借入金（非流動）", AccountType::Liability),
-        ("2210", "リース負債（非流動）", AccountType::Liability),
-        ("2220", "その他の金融負債（非流動）", AccountType::Liability),
-        ("2230", "退職給付に係る負債", AccountType::Liability),
-        ("2240", "引当金（非流動）", AccountType::Liability),
-        ("2250", "繰延税金負債", AccountType::Liability),
-        ("2260", "その他の非流動負債", AccountType::Liability),
-        // 資本の部
-        ("3100", "資本金", AccountType::Equity),
-        ("3110", "資本剰余金", AccountType::Equity),
-        ("3120", "利益剰余金", AccountType::Equity),
-        ("3130", "自己株式", AccountType::Equity),
-        ("3140", "その他の資本の構成要素", AccountType::Equity),
-        ("3150", "非支配持分", AccountType::Equity),
-        // 収益の部
-        ("4100", "売上収益", AccountType::Revenue),
-        ("4200", "その他の収益", AccountType::Revenue),
-        ("4300", "金融収益", AccountType::Revenue),
-        ("4400", "持分法による投資利益", AccountType::Revenue),
-        // 費用の部
-        ("5100", "売上原価", AccountType::Expense),
-        ("5200", "販売費及び一般管理費", AccountType::Expense),
-        ("5300", "研究開発費", AccountType::Expense),
-        ("5400", "その他の費用", AccountType::Expense),
-        ("5500", "金融費用", AccountType::Expense),
-        ("5600", "持分法による投資損失", AccountType::Expense),
-        ("5700", "法人所得税費用", AccountType::Expense),
-    ];
-
-    for (code, name, account_type) in &accounts {
-        let event = AccountMasterEvent::AccountMasterCreated {
-            code: code.to_string(),
-            name: name.to_string(),
-            account_type: *account_type,
-            is_active: true,
-        };
-
-        let payload = serde_json::to_vec(&event).map_err(|e| {
-            AppError::InitializationFailed(Box::new(std::io::Error::other(e.to_string())))
-        })?;
-
-        event_store
-            .append_event(
-                event.event_type(),
-                event.aggregate_id(),
-                event.version(),
-                javelin_infrastructure::shared::types::ExpectedVersion::any(),
-                &payload,
-            )
-            .await
-            .map_err(|e| {
-                AppError::InitializationFailed(Box::new(std::io::Error::other(e.to_string())))
-            })?;
-    }
-
-    println!("✓ Master data initialized ({} accounts)", accounts.len());
+    println!("✓ Master data initialization disabled (AccountMaster doesn't use event sourcing)");
 
     Ok(())
 }
@@ -175,9 +85,6 @@ pub async fn setup_infrastructure(data_dir: &Path) -> AppResult<InfrastructureCo
     let notification_handler =
         projection_builder.clone().create_event_notification_handler(infra_error_sender);
     event_store.set_notification_callback(notification_handler);
-
-    // 初期データの投入（イベントが0件の場合のみ）
-    initialize_master_data(&event_store).await?;
 
     // Projection再構築チェック
     check_and_rebuild_projections(&event_store, &projection_db, &projection_builder).await?;
@@ -237,8 +144,8 @@ pub async fn setup_controllers(
     let ledger_query_service = Arc::new(LedgerQueryServiceImpl::new(Arc::clone(&projection_db)));
     let search_query_service =
         Arc::new(JournalEntrySearchQueryServiceImpl::new(Arc::clone(&projection_db)));
-    let batch_history_query_service =
-        Arc::new(BatchHistoryQueryServiceImpl::new(Arc::clone(&projection_db)));
+    // let batch_history_query_service =
+    //     Arc::new(BatchHistoryQueryServiceImpl::new(Arc::clone(&projection_db))); // Disabled
 
     // 個別マスタQueryService構築
     let account_master_query_service = Arc::new(
@@ -251,11 +158,11 @@ pub async fn setup_controllers(
             Arc::clone(&projection_db),
         ),
     );
-    let application_settings_master_query_service = Arc::new(
-        javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl::new(
-            Arc::clone(&projection_db),
-        ),
-    );
+    // let application_settings_master_query_service = Arc::new(
+    //     javelin_infrastructure::read::application_settings_master::ApplicationSettingsMasterQueryServiceImpl::new(
+    //         Arc::clone(&projection_db),
+    //     ),
+    // ); // Disabled: ApplicationSettings aggregate removed
     let subsidiary_account_master_query_service = Arc::new(
         javelin_infrastructure::read::subsidiary_account_master::SubsidiaryAccountMasterQueryServiceImpl::new(
             Arc::clone(&projection_db),
@@ -271,11 +178,11 @@ pub async fn setup_controllers(
             Arc::clone(&account_master_query_service),
             Arc::clone(&presenter_registry),
         ));
-    let application_settings_controller =
-        Arc::new(javelin_adapter::controller::ApplicationSettingsController::new(
-            Arc::clone(&application_settings_master_query_service),
-            Arc::clone(&presenter_registry),
-        ));
+    // let application_settings_controller =
+    //     Arc::new(javelin_adapter::controller::ApplicationSettingsController::new(
+    //         Arc::clone(&application_settings_master_query_service),
+    //         Arc::clone(&presenter_registry),
+    //     )); // Disabled: ApplicationSettings aggregate removed
     let company_master_controller =
         Arc::new(javelin_adapter::controller::CompanyMasterController::new(
             Arc::clone(&company_master_query_service),
@@ -288,9 +195,14 @@ pub async fn setup_controllers(
         ));
 
     // 業務コントローラ構築（QueryServiceを渡す）
+    let journal_entry_repository =
+        Arc::new(javelin_infrastructure::write::repositories::JournalEntryRepositoryImpl::new(
+            Arc::clone(&event_store),
+        ));
+
     let journal_entry_controller =
         Arc::new(javelin_adapter::controller::JournalEntryController::new(
-            Arc::clone(&event_store),
+            Arc::clone(&journal_entry_repository),
             Arc::clone(&search_query_service),
             Arc::clone(&presenter_registry),
         ));
@@ -309,35 +221,37 @@ pub async fn setup_controllers(
     let ledger_controller = Arc::new(LedgerController::new(Arc::clone(&ledger_query_service)));
 
     // 月次決算Interactor構築
-    let closing_event_store = Arc::new(ClosingEventStore(Arc::clone(&event_store)));
+    // let closing_event_store = Arc::new(ClosingEventStore(Arc::clone(&event_store))); // Disabled
 
     let consolidate_ledger_interactor =
         Arc::new(ConsolidateLedgerInteractor::new(Arc::clone(&ledger_query_service)));
     let prepare_closing_interactor =
         Arc::new(PrepareClosingInteractor::new(Arc::clone(&ledger_query_service)));
-    let lock_closing_period_interactor =
-        Arc::new(LockClosingPeriodInteractor::new(Arc::clone(&closing_event_store)));
+    let lock_closing_period_interactor = Arc::new(LockClosingPeriodInteractor::new()); // No arguments
     let generate_trial_balance_interactor =
         Arc::new(GenerateTrialBalanceInteractor::new(Arc::clone(&ledger_query_service)));
     let generate_note_draft_interactor =
         Arc::new(GenerateNoteDraftInteractor::new(Arc::clone(&ledger_query_service)));
     let adjust_accounts_interactor = Arc::new(AdjustAccountsInteractor::new(
-        Arc::clone(&closing_event_store),
-        Arc::clone(&ledger_query_service),
+        Arc::clone(&ledger_query_service), // Only 1 argument
     ));
     let apply_ifrs_valuation_interactor = Arc::new(ApplyIfrsValuationInteractor::new(
-        Arc::clone(&closing_event_store),
-        Arc::clone(&ledger_query_service),
-        Arc::clone(&_ledger_presenter),
+        Arc::clone(&ledger_query_service), // Only 1 argument
     ));
     let generate_financial_statements_interactor =
         Arc::new(GenerateFinancialStatementsInteractor::new(Arc::clone(&ledger_query_service)));
 
     // Phase 3 Interactors
-    let evaluate_materiality_interactor = Arc::new(EvaluateMaterialityInteractor::new());
-    let verify_ledger_consistency_interactor = Arc::new(VerifyLedgerConsistencyInteractor::new());
+    let evaluate_materiality_interactor = Arc::new(EvaluateMaterialityInteractor::new(
+        Arc::clone(&ledger_query_service), // Needs 1 argument
+    ));
+    let verify_ledger_consistency_interactor = Arc::new(VerifyLedgerConsistencyInteractor::new(
+        Arc::clone(&ledger_query_service), // Needs 1 argument
+    ));
     let generate_comprehensive_financial_statements_interactor =
-        Arc::new(GenerateComprehensiveFinancialStatementsInteractor::new());
+        Arc::new(GenerateComprehensiveFinancialStatementsInteractor::new(
+            Arc::clone(&ledger_query_service), // Needs 1 argument
+        ));
 
     // 11個の個別Closing Controller構築
     let consolidate_ledger_controller =
@@ -347,7 +261,7 @@ pub async fn setup_controllers(
     let prepare_closing_controller = Arc::new(
         javelin_adapter::controller::PrepareClosingController::new(prepare_closing_interactor),
     );
-    let lock_closing_period_controller =
+    let _lock_closing_period_controller =
         Arc::new(javelin_adapter::controller::LockClosingPeriodController::new(
             lock_closing_period_interactor,
         ));
@@ -359,10 +273,10 @@ pub async fn setup_controllers(
         Arc::new(javelin_adapter::controller::GenerateNoteDraftController::new(
             generate_note_draft_interactor,
         ));
-    let adjust_accounts_controller = Arc::new(
+    let _adjust_accounts_controller = Arc::new(
         javelin_adapter::controller::AdjustAccountsController::new(adjust_accounts_interactor),
     );
-    let apply_ifrs_valuation_controller =
+    let _apply_ifrs_valuation_controller =
         Arc::new(javelin_adapter::controller::ApplyIfrsValuationController::new(
             apply_ifrs_valuation_interactor,
         ));
@@ -385,17 +299,17 @@ pub async fn setup_controllers(
     );
 
     // BatchHistoryInteractor構築
-    let get_batch_history_interactor =
-        Arc::new(javelin_application::interactor::GetBatchHistoryInteractor::new(Arc::clone(
-            &batch_history_query_service,
-        )));
+    // let get_batch_history_interactor =
+    //     Arc::new(javelin_application::interactor::GetBatchHistoryInteractor::new(Arc::clone(
+    //         &batch_history_query_service,
+    //     ))); // Disabled
 
     // BatchHistoryController構築
-    let batch_history_controller =
-        Arc::new(javelin_adapter::controller::BatchHistoryController::new(
-            get_batch_history_interactor,
-            Arc::clone(&presenter_registry),
-        ));
+    // let batch_history_controller = // Disabled
+    //     Arc::new(javelin_adapter::controller::BatchHistoryController::new(
+    //         get_batch_history_interactor,
+    //         Arc::clone(&presenter_registry),
+    //     ));
 
     // InvoicePrint構築
     // MockInvoiceQueryService
@@ -449,25 +363,25 @@ pub async fn setup_controllers(
     // Controllers container
     let controllers = Controllers::new(
         account_master_controller,
-        application_settings_controller,
+        // application_settings_controller, // Disabled
         company_master_controller,
         subsidiary_account_master_controller,
         journal_entry_controller,
         journal_detail_controller,
         consolidate_ledger_controller,
         prepare_closing_controller,
-        lock_closing_period_controller,
+        // lock_closing_period_controller, // Disabled
         generate_trial_balance_controller,
         generate_note_draft_controller,
-        adjust_accounts_controller,
-        apply_ifrs_valuation_controller,
+        // adjust_accounts_controller, // Disabled
+        // apply_ifrs_valuation_controller, // Disabled
         generate_financial_statements_controller,
         evaluate_materiality_controller,
         verify_ledger_consistency_controller,
         generate_comprehensive_financial_statements_controller,
         ledger_controller,
         search_controller,
-        batch_history_controller,
+        // batch_history_controller, // Disabled
         invoice_print_controller,
         materiality_evaluation_presenter,
         ledger_consistency_verification_presenter,

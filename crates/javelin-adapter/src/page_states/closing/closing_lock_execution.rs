@@ -48,7 +48,7 @@ impl ClosingLockExecutionPageState {
         Self { template, is_running: false, progress_rx, result_rx }
     }
 
-    fn start_lock(&mut self, controllers: &Controllers) {
+    fn start_lock(&mut self, _controllers: &Controllers) {
         if self.is_running {
             return;
         }
@@ -57,24 +57,29 @@ impl ClosingLockExecutionPageState {
         self.template.add_info("締ロック処理を開始します");
         self.template.update_step(0, ProcessStepStatus::Running, 0);
 
-        let controller = controllers.lock_closing_period.clone();
+        // DISABLED: LockClosingPeriodController not available
+        self.template.add_error("締ロック機能は現在無効化されています");
+        self.is_running = false;
 
-        tokio::spawn(async move {
-            use javelin_application::dtos::LockClosingPeriodRequest;
-
-            let request = LockClosingPeriodRequest {
-                fiscal_year: 2024,
-                period: 1,
-                locked_by: "System".to_string(),
-            };
-
-            match controller.lock_closing_period(request).await {
-                Ok(_response) => {}
-                Err(e) => {
-                    eprintln!("締ロックエラー: {}", e);
-                }
-            }
-        });
+        // Original implementation - disabled
+        // let controller = controllers.lock_closing_period.clone();
+        //
+        // tokio::spawn(async move {
+        // use javelin_application::dtos::LockClosingPeriodRequest;
+        //
+        // let request = LockClosingPeriodRequest {
+        // fiscal_year: 2024,
+        // period: 1,
+        // locked_by: "System".to_string(),
+        // };
+        //
+        // match controller.lock_closing_period(request).await {
+        // Ok(_response) => {}
+        // Err(e) => {
+        // eprintln!("締ロックエラー: {}", e);
+        // }
+        // }
+        // });
     }
 
     fn update(&mut self) {

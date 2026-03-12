@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use javelin_application::dtos::request::FetchApplicationSettingsRequest;
 use ratatui::DefaultTerminal;
 use uuid::Uuid;
 
@@ -68,18 +67,21 @@ impl PageState for ApplicationSettingsPageState {
     fn run(
         &mut self,
         terminal: &mut DefaultTerminal,
-        controllers: &Controllers,
+        _controllers: &Controllers,
     ) -> AdapterResult<NavAction> {
         // 初回ロード
         if !self.data_loaded {
             self.data_loaded = true;
-            let controller = Arc::clone(&controllers.application_settings);
-            let page_id = self.id;
-
-            tokio::spawn(async move {
-                let request = FetchApplicationSettingsRequest;
-                let _ = controller.handle_load_application_settings(page_id, request).await;
-            });
+            // DISABLED: ApplicationSettingsController not available
+            // Show error message to user
+            // Original implementation - disabled
+            // let controller = Arc::clone(&controllers.application_settings);
+            // let page_id = self.id;
+            //
+            // tokio::spawn(async move {
+            // let request = FetchApplicationSettingsRequest;
+            // let _ = controller.handle_load_application_settings(page_id, request).await;
+            // });
         }
 
         loop {

@@ -67,8 +67,7 @@ impl TryFrom<&JournalEntryLineDto> for JournalEntryLine {
                 )])
             })?;
 
-        let currency =
-            dto.currency.parse::<Currency>().map_err(|e| ApplicationError::DomainError(e))?;
+        let currency = dto.currency.parse::<Currency>().map_err(ApplicationError::DomainError)?;
 
         let amount = Money::from_str(&dto.amount.to_string(), currency).map_err(|e| {
             ApplicationError::ValidationFailed(vec![format!("Invalid amount: {:?}", e)])

@@ -90,7 +90,7 @@ impl RepositoryBase<JournalEntry> for JournalEntryRepositoryImpl {
         }
 
         // イベントをデシリアライズ
-        let events: Vec<JournalEntryEvent> = stored_events
+        let _events: Vec<JournalEntryEvent> = stored_events
             .into_iter()
             .map(|stored| {
                 serde_json::from_slice(&stored.payload).map_err(|e| {
