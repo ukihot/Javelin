@@ -34,16 +34,6 @@ use tokio::sync::mpsc;
 
 use crate::app_error::{AppError, AppResult};
 
-/// マスタデータの初期化（イベントが0件の場合のみ）
-async fn initialize_master_data(_event_store: &Arc<EventStore>) -> AppResult<()> {
-    // DISABLED: AccountMaster no longer uses event sourcing
-    // Master data should be initialized through direct repository calls, not events
-
-    println!("✓ Master data initialization disabled (AccountMaster doesn't use event sourcing)");
-
-    Ok(())
-}
-
 /// インフラ層のセットアップ結果
 pub struct InfrastructureComponents {
     pub event_store: Arc<EventStore>,
@@ -178,11 +168,7 @@ pub async fn setup_controllers(
             Arc::clone(&account_master_query_service),
             Arc::clone(&presenter_registry),
         ));
-    // let application_settings_controller =
-    //     Arc::new(javelin_adapter::controller::ApplicationSettingsController::new(
-    //         Arc::clone(&application_settings_master_query_service),
-    //         Arc::clone(&presenter_registry),
-    //     )); // Disabled: ApplicationSettings aggregate removed
+
     let company_master_controller =
         Arc::new(javelin_adapter::controller::CompanyMasterController::new(
             Arc::clone(&company_master_query_service),
@@ -219,9 +205,6 @@ pub async fn setup_controllers(
     ));
 
     let ledger_controller = Arc::new(LedgerController::new(Arc::clone(&ledger_query_service)));
-
-    // 月次決算Interactor構築
-    // let closing_event_store = Arc::new(ClosingEventStore(Arc::clone(&event_store))); // Disabled
 
     let consolidate_ledger_interactor =
         Arc::new(ConsolidateLedgerInteractor::new(Arc::clone(&ledger_query_service)));
@@ -298,19 +281,6 @@ pub async fn setup_controllers(
         ),
     );
 
-    // BatchHistoryInteractor構築
-    // let get_batch_history_interactor =
-    //     Arc::new(javelin_application::interactor::GetBatchHistoryInteractor::new(Arc::clone(
-    //         &batch_history_query_service,
-    //     ))); // Disabled
-
-    // BatchHistoryController構築
-    // let batch_history_controller = // Disabled
-    //     Arc::new(javelin_adapter::controller::BatchHistoryController::new(
-    //         get_batch_history_interactor,
-    //         Arc::clone(&presenter_registry),
-    //     ));
-
     // InvoicePrint構築
     // MockInvoiceQueryService
     let mock_invoice_query_service = Arc::new(MockInvoiceQueryService);
@@ -363,25 +333,20 @@ pub async fn setup_controllers(
     // Controllers container
     let controllers = Controllers::new(
         account_master_controller,
-        // application_settings_controller, // Disabled
         company_master_controller,
         subsidiary_account_master_controller,
         journal_entry_controller,
         journal_detail_controller,
         consolidate_ledger_controller,
         prepare_closing_controller,
-        // lock_closing_period_controller, // Disabled
         generate_trial_balance_controller,
         generate_note_draft_controller,
-        // adjust_accounts_controller, // Disabled
-        // apply_ifrs_valuation_controller, // Disabled
         generate_financial_statements_controller,
         evaluate_materiality_controller,
         verify_ledger_consistency_controller,
         generate_comprehensive_financial_statements_controller,
         ledger_controller,
         search_controller,
-        // batch_history_controller, // Disabled
         invoice_print_controller,
         materiality_evaluation_presenter,
         ledger_consistency_verification_presenter,
