@@ -18,6 +18,4 @@ use crate::common::RepositoryBase;
 #[allow(async_fn_in_trait)]
 pub trait JournalEntryRepository: RepositoryBase<JournalEntry> + Send + Sync {
     // 必要に応じて仕訳エントリ固有のメソッドを追加可能
-    // 例: async fn find_by_voucher_number(&self, voucher_number: &str) ->
-    // DomainResult<Option<JournalEntry>>;
 }
