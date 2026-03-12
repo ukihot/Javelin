@@ -7,6 +7,7 @@ use javelin_application::{
         request::FetchSubsidiaryAccountMasterRequest,
         response::FetchSubsidiaryAccountMasterResponse,
     },
+    output_ports::SubsidiaryAccountMasterOutputPort,
     query_service::SubsidiaryAccountMasterQueryService,
 };
 
@@ -35,6 +36,7 @@ where
     }
 
     /// 補助科目マスタを取得
+    /// CQRS原則: クエリはQueryServiceを直接使用（Interactorを経由しない）
     pub async fn handle_load_subsidiary_account_master(
         &self,
         page_id: uuid::Uuid,
@@ -48,15 +50,16 @@ where
                 format!("Subsidiary account master presenter not found for page_id: {}", page_id)
             })?;
 
-        // 取得したPresenterを使って新しいInteractorを作成
-        let interactor =
-            javelin_application::interactor::FetchSubsidiaryAccountMasterInteractor::new(
-                Arc::clone(&self.query_service),
-                (*presenter).clone(),
-            );
+        // QueryServiceから直接データを取得
+        let response = self
+            .query_service
+            .fetch_subsidiary_account_master(request)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        // UseCaseに委譲
-        use javelin_application::input_ports::FetchSubsidiaryAccountMasterInputPort;
-        interactor.execute(request).await.map_err(|e| e.to_string())
+        // Presenterに結果を渡す
+        presenter.present_subsidiary_account_master(&response).await;
+
+        Ok(response)
     }
 }

@@ -3,6 +3,10 @@
 use std::sync::Arc;
 
 use javelin_application::{
+    dtos::{
+        request::FetchCompanyMasterRequest,
+        response::{CompanyMasterItem, FetchCompanyMasterResponse},
+    },
     error::{ApplicationError, ApplicationResult},
     query_service::CompanyMasterQueryService,
 };
@@ -37,6 +41,35 @@ impl CompanyMasterQueryService for CompanyMasterQueryServiceImpl {
             .get_by_code(code)
             .await
             .map_err(|e| ApplicationError::QueryExecutionFailed(e.to_string()))
+    }
+
+    async fn fetch_company_master(
+        &self,
+        request: FetchCompanyMasterRequest,
+    ) -> ApplicationResult<FetchCompanyMasterResponse> {
+        // すべての会社マスタを取得
+        let mut companies = self.get_all().await?;
+
+        // フィルタ条件があれば適用
+        if let Some(filter) = request.filter {
+            let filter_lower = filter.to_lowercase();
+            companies.retain(|company| {
+                company.code().value().to_lowercase().contains(&filter_lower)
+                    || company.name().value().to_lowercase().contains(&filter_lower)
+            });
+        }
+
+        // ドメインモデルをDTOに変換
+        let items: Vec<CompanyMasterItem> = companies
+            .into_iter()
+            .map(|company| CompanyMasterItem {
+                code: company.code().value().to_string(),
+                name: company.name().value().to_string(),
+                is_active: company.is_active(),
+            })
+            .collect();
+
+        Ok(FetchCompanyMasterResponse { companies: items })
     }
 }
 

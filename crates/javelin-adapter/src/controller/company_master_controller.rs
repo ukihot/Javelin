@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use javelin_application::{
     dtos::{request::FetchCompanyMasterRequest, response::FetchCompanyMasterResponse},
+    output_ports::CompanyMasterOutputPort,
     query_service::CompanyMasterQueryService,
 };
 
@@ -32,6 +33,7 @@ where
     }
 
     /// 会社マスタを取得
+    /// CQRS原則: クエリはQueryServiceを直接使用（Interactorを経由しない）
     pub async fn handle_load_company_master(
         &self,
         page_id: uuid::Uuid,
@@ -43,14 +45,16 @@ where
                 format!("Company master presenter not found for page_id: {}", page_id)
             })?;
 
-        // 取得したPresenterを使って新しいInteractorを作成
-        let interactor = javelin_application::interactor::FetchCompanyMasterInteractor::new(
-            Arc::clone(&self.query_service),
-            (*presenter).clone(),
-        );
+        // QueryServiceから直接データを取得
+        let response = self
+            .query_service
+            .fetch_company_master(request)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        // UseCaseに委譲
-        use javelin_application::input_ports::FetchCompanyMasterInputPort;
-        interactor.execute(request).await.map_err(|e| e.to_string())
+        // Presenterに結果を渡す
+        presenter.present_company_master(&response).await;
+
+        Ok(response)
     }
 }

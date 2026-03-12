@@ -3,6 +3,10 @@
 use std::sync::Arc;
 
 use javelin_application::{
+    dtos::{
+        request::FetchAccountMasterRequest,
+        response::{AccountMasterItem, FetchAccountMasterResponse},
+    },
     error::{ApplicationError, ApplicationResult},
     query_service::AccountMasterQueryService,
 };
@@ -37,6 +41,26 @@ impl AccountMasterQueryService for AccountMasterQueryServiceImpl {
             .get_by_code(code)
             .await
             .map_err(|e| ApplicationError::QueryExecutionFailed(e.to_string()))
+    }
+
+    async fn fetch_account_master(
+        &self,
+        request: FetchAccountMasterRequest,
+    ) -> ApplicationResult<FetchAccountMasterResponse> {
+        // フィルタ条件に基づいて勘定科目を取得
+        let accounts = self.get_filtered(true, request.filter).await?;
+
+        // ドメインモデルをDTOに変換
+        let items: Vec<AccountMasterItem> = accounts
+            .into_iter()
+            .map(|account| AccountMasterItem {
+                code: account.code().value().to_string(),
+                name: account.name().value().to_string(),
+                account_type: format!("{:?}", account.account_type()),
+            })
+            .collect();
+
+        Ok(FetchAccountMasterResponse { accounts: items })
     }
 }
 

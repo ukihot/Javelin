@@ -1,10 +1,12 @@
-// Interactor - Command実装
+// Interactor - Command実装（書き込み操作のみ）
 // 責務: ドメイン操作調整
 // 利用対象: Entity / ValueObject / DomainService / RepositoryTrait
+//
+// CQRS原則: Interactorはコマンド（書き込み）専用
+// クエリ（読み取り）はQueryServiceを直接使用
 
 pub mod closing;
 pub mod journal_entry;
-pub mod master_data;
 pub mod print_invoice_interactor;
 
 pub use closing::{
@@ -21,12 +23,6 @@ pub use journal_entry::{
     DeleteDraftJournalEntryInteractor, GetJournalEntryDetailInteractor,
     RegisterJournalEntryInteractor, RejectJournalEntryInteractor, ReverseJournalEntryInteractor,
     SearchJournalEntryInteractor, SubmitForApprovalInteractor, UpdateDraftJournalEntryInteractor,
-};
-pub use master_data::{
-    FetchAccountMasterInteractor,
-    // FetchApplicationSettingsInteractor, // NOTE: ApplicationSettings 集約が削除されたため無効化
-    FetchCompanyMasterInteractor,
-    FetchSubsidiaryAccountMasterInteractor,
 };
 pub use print_invoice_interactor::PrintInvoiceInteractor;
 

@@ -2,7 +2,10 @@
 
 use javelin_domain::company::{CompanyCode, CompanyMaster};
 
-use crate::error::ApplicationResult;
+use crate::{
+    dtos::{request::FetchCompanyMasterRequest, response::FetchCompanyMasterResponse},
+    error::ApplicationResult,
+};
 
 /// 会社マスタQueryService
 ///
@@ -15,4 +18,11 @@ pub trait CompanyMasterQueryService: Send + Sync {
 
     /// コードで会社マスタを取得
     async fn get_by_code(&self, code: &CompanyCode) -> ApplicationResult<Option<CompanyMaster>>;
+
+    /// 会社マスタを取得（DTO形式）
+    /// Controller層から直接呼び出される
+    async fn fetch_company_master(
+        &self,
+        request: FetchCompanyMasterRequest,
+    ) -> ApplicationResult<FetchCompanyMasterResponse>;
 }

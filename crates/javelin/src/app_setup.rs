@@ -22,7 +22,7 @@ use javelin_application::{
 use javelin_infrastructure::{
     read::{
         // batch_history::BatchHistoryQueryServiceImpl, // Disabled
-        infrastructure::{ProjectionBuilderImpl, ProjectionDb},
+        infrastructure::{ConcreteProjectionBuilder, ProjectionDb},
         invoice::MockInvoiceQueryService,
         journal_entry::JournalEntrySearchQueryServiceImpl,
         ledger::LedgerQueryServiceImpl,
@@ -38,7 +38,7 @@ use crate::app_error::{AppError, AppResult};
 pub struct InfrastructureComponents {
     pub event_store: Arc<EventStore>,
     pub projection_db: Arc<ProjectionDb>,
-    pub projection_builder: Arc<ProjectionBuilderImpl>,
+    pub projection_builder: Arc<ConcreteProjectionBuilder>,
     pub infra_error_receiver: mpsc::UnboundedReceiver<String>,
 }
 
@@ -68,8 +68,10 @@ pub async fn setup_infrastructure(data_dir: &Path) -> AppResult<InfrastructureCo
     let (infra_error_sender, infra_error_receiver) = mpsc::unbounded_channel();
 
     // ProjectionBuilderの構築
-    let projection_builder =
-        Arc::new(ProjectionBuilderImpl::new(Arc::clone(&projection_db), Arc::clone(&event_store)));
+    let projection_builder = Arc::new(ConcreteProjectionBuilder::new(
+        Arc::clone(&projection_db),
+        Arc::clone(&event_store),
+    ));
 
     // イベント通知ハンドラを登録
     let notification_handler =
@@ -91,7 +93,7 @@ pub async fn setup_infrastructure(data_dir: &Path) -> AppResult<InfrastructureCo
 async fn check_and_rebuild_projections(
     event_store: &Arc<EventStore>,
     projection_db: &Arc<ProjectionDb>,
-    projection_builder: &Arc<ProjectionBuilderImpl>,
+    projection_builder: &Arc<ConcreteProjectionBuilder>,
 ) -> AppResult<()> {
     let latest_sequence =
         event_store.get_latest_sequence().await.map(|seq| seq.as_u64()).unwrap_or(0);

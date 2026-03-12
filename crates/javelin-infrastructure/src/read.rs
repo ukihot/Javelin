@@ -1,6 +1,7 @@
 // Read-side (Query side) - CQRS
 
 pub mod infrastructure;
+pub mod projectors;
 
 pub mod account_master;
 pub mod application_settings_master;

@@ -18,30 +18,31 @@
 │                  (javelin-application)                       │
 │                                                              │
 │  ┌──────────────────┐         ┌──────────────────┐         │
-│  │   Interactor     │         │  Query Service   │         │
-│  │  (Use Cases)     │         │   (Read Model)   │         │
+│  │   Interactor     │         │  QueryService    │         │
+│  │  (Use Cases)     │         │   Interface      │         │
+│  │                  │         │  (Read Model)    │         │
 │  └──────────────────┘         └──────────────────┘         │
 │          │                             │                     │
-│          │                             │                     │
+│          │                             │ (直接アクセス)      │
 └──────────┼─────────────────────────────┼─────────────────────┘
            │                             │
-           ▼                             ▼
-┌──────────────────────┐      ┌──────────────────────┐
-│   Domain Layer       │      │   Domain Layer       │
-│  (javelin-domain)    │      │  (javelin-domain)    │
-│                      │      │                      │
-│  ┌────────────────┐ │      │  ┌────────────────┐ │
-│  │  Repository    │ │      │  │ QueryService   │ │
-│  │  Interface     │ │      │  │  Interface     │ │
-│  └────────────────┘ │      │  └────────────────┘ │
-│  ┌────────────────┐ │      │                      │
-│  │   Aggregate    │ │      │                      │
-│  │   Entities     │ │      │                      │
-│  └────────────────┘ │      │                      │
-│  ┌────────────────┐ │      │                      │
-│  │ Domain Events  │ │      │                      │
-│  └────────────────┘ │      │                      │
-└──────────────────────┘      └──────────────────────┘
+           ▼                             │
+┌──────────────────────┐                 │
+│   Domain Layer       │                 │
+│  (javelin-domain)    │                 │
+│                      │                 │
+│  ┌────────────────┐ │                 │
+│  │  Repository    │ │                 │
+│  │  Interface     │ │                 │
+│  └────────────────┘ │                 │
+│  ┌────────────────┐ │                 │
+│  │   Aggregate    │ │                 │
+│  │   Entities     │ │                 │
+│  └────────────────┘ │                 │
+│  ┌────────────────┐ │                 │
+│  │ Domain Events  │ │                 │
+│  └────────────────┘ │                 │
+└──────────────────────┘                 │
            │                             │
            ▼                             ▼
 ┌──────────────────────┐      ┌──────────────────────┐
@@ -50,7 +51,7 @@
 │                      │      │                      │
 │  WRITE SIDE          │      │  READ SIDE           │
 │  ┌────────────────┐ │      │  ┌────────────────┐ │
-│  │ RepositoryImpl │ │      │  │ QueryServiceImpl│ │
+│  │ RepositoryImpl │ │      │  │QueryServiceImpl│ │
 │  └────────────────┘ │      │  └────────────────┘ │
 │          │           │      │          │          │
 │          ▼           │      │          ▼          │
@@ -140,13 +141,20 @@ impl EventStore {
 
 **責務**: 読み取り最適化されたデータの提供
 
-#### QueryService Interface (Domain Layer)
+#### QueryService Interface (Application Layer)
+
+QueryServiceインターフェースはアプリケーション層に配置されます。
+ドメイン層を経由せず、ProjectionDBから直接読み取るため高速です。
+
+**重要**: クエリ（読み取り）操作にはInteractorを使用しません。
+Controller層がQueryServiceを直接呼び出します。
+
 ```rust
 // crates/javelin-application/src/query_service/journal_entry_query_service.rs
 pub trait JournalEntryQueryService: Send + Sync {
-    async fn find_by_id(&self, id: &str) -> DomainResult<Option<JournalEntryDto>>;
-    async fn find_all(&self) -> DomainResult<Vec<JournalEntryDto>>;
-    async fn search(&self, criteria: SearchCriteria) -> DomainResult<Vec<JournalEntryDto>>;
+    async fn find_by_id(&self, id: &str) -> ApplicationResult<Option<JournalEntryDto>>;
+    async fn find_all(&self) -> ApplicationResult<Vec<JournalEntryDto>>;
+    async fn search(&self, criteria: SearchCriteria) -> ApplicationResult<Vec<JournalEntryDto>>;
 }
 ```
 
@@ -158,12 +166,18 @@ pub struct JournalEntryQueryServiceImpl {
 }
 
 impl JournalEntryQueryService for JournalEntryQueryServiceImpl {
-    async fn find_by_id(&self, id: &str) -> DomainResult<Option<JournalEntryDto>> {
-        // ProjectionDBから読み取り
+    async fn find_by_id(&self, id: &str) -> ApplicationResult<Option<JournalEntryDto>> {
+        // ProjectionDBから直接読み取り（ドメイン層を経由しない）
         self.projection_db.get(id).await
     }
 }
 ```
+
+**CQRS の利点**:
+- **高速な読み取り**: ドメイン層を経由せず、ProjectionDBから直接読み取り
+- **最適化されたデータ構造**: 読み取り専用に最適化されたスキーマ
+- **スケーラビリティ**: Read/Writeを独立してスケール可能
+- **シンプルな実装**: クエリにInteractorが不要で、Controller→QueryServiceの直接呼び出し
 
 #### ProjectionDB (Infrastructure Layer)
 ```rust
@@ -183,13 +197,28 @@ impl ProjectionDb {
 ### 3. Event Flow
 
 ```
-1. Command → Interactor
-2. Interactor → Repository.save(aggregate)
-3. Repository → EventStore.append(events)
-4. EventStore → Notification Callback
-5. Callback → ProjectionWorker
-6. ProjectionWorker → ProjectionDB.update()
+Command Flow (書き込み):
+1. Command → Controller
+2. Controller → Interactor
+3. Interactor → Repository.save(aggregate)
+4. Repository → EventStore.append(events)
+5. EventStore → Notification Callback
+6. Callback → ProjectorRegistry
+7. ProjectorRegistry → 各Projector
+8. Projector → ProjectionDB.update()
+
+Query Flow (読み取り):
+1. Query → Controller
+2. Controller → QueryService (Interactorを経由しない)
+3. QueryService → ProjectionDB.get()
+4. ProjectionDB → Response
 ```
+
+**重要な設計原則**:
+- **Command側**: Controller → Interactor → Domain → Repository → EventStore
+- **Query側**: Controller → QueryService → ProjectionDB（Interactorなし）
+- マスタデータは「ディメンション」としてProjectionDBに存在
+- アプリケーション層に「master_data」という概念は存在しない
 
 ## Aggregate Types
 
@@ -233,7 +262,7 @@ LMDBに直接保存されます。
 crates/
 ├── javelin-domain/              # ドメイン層
 │   ├── src/
-│   │   ├── repositories/        # リポジトリインターフェース
+│   │   ├── repositories/        # リポジトリインターフェース（Command側のみ）
 │   │   │   ├── repository_base.rs
 │   │   │   ├── journal_entry_repository.rs
 │   │   │   ├── closing_repository.rs
@@ -249,12 +278,14 @@ crates/
 │   
 ├── javelin-application/         # アプリケーション層
 │   ├── src/
-│   │   ├── interactor/          # ユースケース
+│   │   ├── interactor/          # ユースケース（Command側のみ）
 │   │   │   ├── journal_entry/
 │   │   │   └── closing/
-│   │   └── query_service/       # クエリサービスインターフェース
+│   │   └── query_service/       # QueryServiceインターフェース（Query側）
 │   │       ├── journal_entry_query_service.rs
-│   │       └── account_master_query_service.rs
+│   │       ├── account_master_query_service.rs
+│   │       ├── company_master_query_service.rs
+│   │       └── subsidiary_account_master_query_service.rs
 │   
 └── javelin-infrastructure/      # インフラ層
     ├── src/
@@ -271,13 +302,26 @@ crates/
     │   │
     │   └── read/                # Query側
     │       ├── infrastructure/
-    │       │   └── projection_db.rs
+    │       │   ├── projection_db.rs
+    │       │   └── builder.rs   # ProjectionBuilder
+    │       ├── projectors/      # Projector（イベント購読）
+    │       │   ├── journal_entry_projector.rs
+    │       │   ├── account_master_projector.rs
+    │       │   ├── ledger_projector.rs
+    │       │   ├── trial_balance_projector.rs
+    │       │   └── registry.rs  # ProjectorRegistry
     │       ├── journal_entry/
-    │       │   ├── projection.rs
-    │       │   ├── projection_worker.rs
-    │       │   └── query_service_impl.rs
-    │       └── account_master/
-    │           └── query_service_impl.rs
+    │       │   ├── query_service_impl.rs
+    │       │   └── projection.rs
+    │       ├── account_master/
+    │       │   ├── query_service_impl.rs
+    │       │   └── projection.rs
+    │       ├── company_master/
+    │       │   ├── query_service_impl.rs
+    │       │   └── projection.rs
+    │       └── subsidiary_account_master/
+    │           ├── query_service_impl.rs
+    │           └── projection.rs
 ```
 
 ## Key Design Decisions
@@ -315,9 +359,11 @@ crates/
 **決定**: QueryServiceインターフェースはApplication層、実装はInfrastructure層
 
 **理由**:
-- クリーンアーキテクチャの依存関係原則に従う
-- ドメイン層はインフラ層に依存しない
-- テスト時にモック実装を使用可能
+- **高速な読み取り**: ドメイン層を経由せず、ProjectionDBから直接読み取り
+- **CQRS原則**: Command側（ドメイン層）とQuery側（アプリケーション層）を完全に分離
+- **依存関係の逆転**: アプリケーション層がインターフェースを定義し、インフラ層が実装
+- **テスト容易性**: テスト時にモック実装を使用可能
+- **パフォーマンス**: ドメインロジックを経由しないため、読み取りが高速
 
 ## Testing Strategy
 
@@ -352,9 +398,3 @@ crates/
 3. **Event Versioning**: イベントスキーマの進化対応
 4. **Saga Pattern**: 複数集約にまたがるトランザクション
 5. **Event Sourcing for Master Data**: 必要に応じてマスタデータもイベントソーシング化
-
-## References
-
-- [CQRS Pattern](https://martinfowler.com/bliki/CQRS.html)
-- [Event Sourcing](https://martinfowler.com/eaaDev/EventSourcing.html)
-- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)

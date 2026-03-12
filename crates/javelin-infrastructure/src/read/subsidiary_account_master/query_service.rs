@@ -3,6 +3,10 @@
 use std::sync::Arc;
 
 use javelin_application::{
+    dtos::{
+        request::FetchSubsidiaryAccountMasterRequest,
+        response::{FetchSubsidiaryAccountMasterResponse, SubsidiaryAccountMasterItem},
+    },
     error::{ApplicationError, ApplicationResult},
     query_service::SubsidiaryAccountMasterQueryService,
 };
@@ -52,6 +56,36 @@ impl SubsidiaryAccountMasterQueryService for SubsidiaryAccountMasterQueryService
             .get_by_parent_account(parent_account_code)
             .await
             .map_err(|e| ApplicationError::QueryExecutionFailed(e.to_string()))
+    }
+
+    async fn fetch_subsidiary_account_master(
+        &self,
+        request: FetchSubsidiaryAccountMasterRequest,
+    ) -> ApplicationResult<FetchSubsidiaryAccountMasterResponse> {
+        // すべての補助科目マスタを取得
+        let mut accounts = self.get_all().await?;
+
+        // フィルタ条件があれば適用
+        if let Some(filter) = request.filter {
+            let filter_lower = filter.to_lowercase();
+            accounts.retain(|account| {
+                account.code().value().to_lowercase().contains(&filter_lower)
+                    || account.name().value().to_lowercase().contains(&filter_lower)
+            });
+        }
+
+        // ドメインモデルをDTOに変換
+        let items: Vec<SubsidiaryAccountMasterItem> = accounts
+            .into_iter()
+            .map(|account| SubsidiaryAccountMasterItem {
+                code: account.code().value().to_string(),
+                name: account.name().value().to_string(),
+                parent_account_code: account.parent_account_code().value().to_string(),
+                is_active: account.is_active(),
+            })
+            .collect();
+
+        Ok(FetchSubsidiaryAccountMasterResponse { accounts: items })
     }
 }
 

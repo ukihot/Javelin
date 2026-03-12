@@ -4,7 +4,13 @@ use javelin_domain::chart_of_accounts::{
     AccountCode, SubsidiaryAccountCode, SubsidiaryAccountMaster,
 };
 
-use crate::error::ApplicationResult;
+use crate::{
+    dtos::{
+        request::FetchSubsidiaryAccountMasterRequest,
+        response::FetchSubsidiaryAccountMasterResponse,
+    },
+    error::ApplicationResult,
+};
 
 /// 補助科目マスタQueryService
 ///
@@ -26,4 +32,11 @@ pub trait SubsidiaryAccountMasterQueryService: Send + Sync {
         &self,
         parent_account_code: &AccountCode,
     ) -> ApplicationResult<Vec<SubsidiaryAccountMaster>>;
+
+    /// 補助科目マスタを取得（DTO形式）
+    /// Controller層から直接呼び出される
+    async fn fetch_subsidiary_account_master(
+        &self,
+        request: FetchSubsidiaryAccountMasterRequest,
+    ) -> ApplicationResult<FetchSubsidiaryAccountMasterResponse>;
 }

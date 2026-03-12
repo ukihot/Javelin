@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use javelin_application::{
     dtos::{request::FetchAccountMasterRequest, response::FetchAccountMasterResponse},
+    output_ports::AccountMasterOutputPort,
     query_service::AccountMasterQueryService,
 };
 
@@ -32,6 +33,7 @@ where
     }
 
     /// 勘定科目マスタを取得
+    /// CQRS原則: クエリはQueryServiceを直接使用（Interactorを経由しない）
     pub async fn handle_load_account_master(
         &self,
         page_id: uuid::Uuid,
@@ -43,14 +45,16 @@ where
                 format!("Account master presenter not found for page_id: {}", page_id)
             })?;
 
-        // 取得したPresenterを使って新しいInteractorを作成
-        let interactor = javelin_application::interactor::FetchAccountMasterInteractor::new(
-            Arc::clone(&self.query_service),
-            (*presenter).clone(),
-        );
+        // QueryServiceから直接データを取得
+        let response = self
+            .query_service
+            .fetch_account_master(request)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        // UseCaseに委譲
-        use javelin_application::input_ports::FetchAccountMasterInputPort;
-        interactor.execute(request).await.map_err(|e| e.to_string())
+        // Presenterに結果を渡す
+        presenter.present_account_master(&response).await;
+
+        Ok(response)
     }
 }
