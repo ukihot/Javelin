@@ -98,12 +98,24 @@ impl AccountingPeriod {
         &self.status
     }
 
-    /// 期間を閉じる
+    /// 期間を閉じる（ソフトロック）
     pub fn close(&mut self) -> DomainResult<()> {
-        if self.status == AccountingPeriodStatus::Closed {
+        if self.status != AccountingPeriodStatus::Open {
             return Err(DomainError::ValidationError("既に閉じられた期間です".to_string()));
         }
-        self.status = AccountingPeriodStatus::Closed;
+        self.status = AccountingPeriodStatus::SoftLocked;
+        self.updated_at = chrono::Utc::now();
+        Ok(())
+    }
+
+    /// 期間を確定（ハードロック）
+    pub fn finalize(&mut self) -> DomainResult<()> {
+        if self.status != AccountingPeriodStatus::SoftLocked {
+            return Err(DomainError::ValidationError(
+                "ソフトロック状態でのみ確定可能です".to_string(),
+            ));
+        }
+        self.status = AccountingPeriodStatus::HardLocked;
         self.updated_at = chrono::Utc::now();
         Ok(())
     }

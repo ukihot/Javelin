@@ -39,6 +39,7 @@ pub struct LedgerResult {
     pub account_code: String,
     pub account_name: String,
     pub opening_balance: f64,
+    pub provisional_opening_balance: Option<f64>, // 暫定期首残高
     pub entries: Vec<LedgerEntry>,
     pub closing_balance: f64,
     pub total_debit: f64,

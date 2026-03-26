@@ -172,6 +172,7 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
             account_code: query.account_code.clone(),
             account_name: self.get_account_name(&query.account_code),
             opening_balance,
+            provisional_opening_balance: None, // TODO: 実装
             entries,
             closing_balance,
             total_debit,

@@ -1,7 +1,7 @@
 // 仕訳検索用Projection
 // JournalEntryEventから検索用ReadModelを構築
 
-use javelin_domain::journal_entry::domain_events::JournalEntryEvent;
+use javelin_domain::journal_entry::{domain_events::JournalEntryEvent, values::JournalStatus};
 use serde::{Deserialize, Serialize};
 
 use crate::{error::InfrastructureResult, read::infrastructure::traits::Apply};
@@ -188,7 +188,7 @@ impl Apply<JournalEntryEvent> for JournalEntrySearchProjection {
                     entry_id,
                     None, // 下書き時点では伝票番号なし
                     transaction_date,
-                    "Draft".to_string(),
+                    JournalStatus::Draft.as_str().to_string(),
                     line_models,
                 );
 
@@ -227,51 +227,64 @@ impl Apply<JournalEntryEvent> for JournalEntrySearchProjection {
 
             JournalEntryEvent::ApprovalRequested { entry_id, .. } => {
                 if let Some(entry) = self.find_entry_mut(&entry_id) {
-                    entry.status = "PendingApproval".to_string();
+                    entry.status = JournalStatus::PendingApproval.as_str().to_string();
                 }
             }
 
             JournalEntryEvent::Rejected { entry_id, .. } => {
                 if let Some(entry) = self.find_entry_mut(&entry_id) {
-                    entry.status = "Draft".to_string();
+                    entry.status = JournalStatus::Draft.as_str().to_string();
                 }
             }
 
             JournalEntryEvent::Posted { entry_id, entry_number, .. } => {
                 if let Some(entry) = self.find_entry_mut(&entry_id) {
-                    entry.status = "Posted".to_string();
+                    entry.status = JournalStatus::Posted.as_str().to_string();
                     entry.entry_number = Some(entry_number);
                 }
             }
 
             JournalEntryEvent::Reversed { entry_id, .. } => {
                 if let Some(entry) = self.find_entry_mut(&entry_id) {
-                    entry.status = "Reversed".to_string();
+                    entry.status = JournalStatus::Reversed {
+                        reason: "".to_string(),
+                        original_id: "".to_string(),
+                    }
+                    .as_str()
+                    .to_string();
                 }
             }
 
             JournalEntryEvent::Corrected { entry_id, .. } => {
                 if let Some(entry) = self.find_entry_mut(&entry_id) {
-                    entry.status = "Corrected".to_string();
+                    entry.status = JournalStatus::Corrected {
+                        reason: "".to_string(),
+                        reversed_id: "".to_string(),
+                    }
+                    .as_str()
+                    .to_string();
                 }
             }
 
             JournalEntryEvent::Closed { entry_id, .. } => {
                 if let Some(entry) = self.find_entry_mut(&entry_id) {
-                    entry.status = "Closed".to_string();
+                    entry.status = JournalStatus::Closed.as_str().to_string();
                 }
             }
 
             JournalEntryEvent::Reopened { entry_id, .. } => {
                 if let Some(entry) = self.find_entry_mut(&entry_id) {
-                    entry.status = "Posted".to_string();
+                    entry.status = JournalStatus::Posted.as_str().to_string();
                 }
             }
 
             JournalEntryEvent::Deleted { entry_id, .. } => {
                 if let Some(entry) = self.find_entry_mut(&entry_id) {
-                    entry.status = "Deleted".to_string();
+                    entry.status = JournalStatus::Deleted.as_str().to_string();
                 }
+            }
+            JournalEntryEvent::BalanceDiscrepancyDetected { .. } => {
+                // TODO: 不一致検知の処理を実装
             }
         }
 

@@ -72,6 +72,14 @@ pub enum JournalEntryEvent {
         deleted_by: String,
         deleted_at: DateTime<Utc>,
     },
+    BalanceDiscrepancyDetected {
+        entry_id: String,
+        account_code: String,
+        expected_balance: f64,
+        actual_balance: f64,
+        detected_by: String,
+        detected_at: DateTime<Utc>,
+    },
 }
 
 /// 仕訳明細DTO
@@ -105,6 +113,7 @@ impl JournalEntryEvent {
             JournalEntryEvent::Closed { .. } => "Closed",
             JournalEntryEvent::Reopened { .. } => "Reopened",
             JournalEntryEvent::Deleted { .. } => "Deleted",
+            JournalEntryEvent::BalanceDiscrepancyDetected { .. } => "BalanceDiscrepancyDetected",
         }
     }
 
@@ -119,7 +128,8 @@ impl JournalEntryEvent {
             | JournalEntryEvent::Corrected { entry_id, .. }
             | JournalEntryEvent::Closed { entry_id, .. }
             | JournalEntryEvent::Reopened { entry_id, .. }
-            | JournalEntryEvent::Deleted { entry_id, .. } => entry_id,
+            | JournalEntryEvent::Deleted { entry_id, .. }
+            | JournalEntryEvent::BalanceDiscrepancyDetected { entry_id, .. } => entry_id,
         }
     }
 
@@ -135,6 +145,7 @@ impl JournalEntryEvent {
             JournalEntryEvent::Closed { closed_at, .. } => *closed_at,
             JournalEntryEvent::Reopened { reopened_at, .. } => *reopened_at,
             JournalEntryEvent::Deleted { deleted_at, .. } => *deleted_at,
+            JournalEntryEvent::BalanceDiscrepancyDetected { detected_at, .. } => *detected_at,
         }
     }
 
@@ -150,6 +161,7 @@ impl JournalEntryEvent {
             JournalEntryEvent::Closed { closed_by, .. } => closed_by,
             JournalEntryEvent::Reopened { reopened_by, .. } => reopened_by,
             JournalEntryEvent::Deleted { deleted_by, .. } => deleted_by,
+            JournalEntryEvent::BalanceDiscrepancyDetected { detected_by, .. } => detected_by,
         }
     }
 }

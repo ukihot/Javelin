@@ -15,6 +15,8 @@ pub enum JournalStatus {
     Corrected { reason: String, reversed_id: String },
     /// 締め済
     Closed,
+    /// 削除済
+    Deleted,
 }
 
 impl JournalStatus {
@@ -31,6 +33,7 @@ impl JournalStatus {
                 | (Posted, Closed)
                 | (Reversed { .. }, Corrected { .. })
                 | (Closed, Posted)
+                | (Draft, Deleted)
         )
     }
 
@@ -58,6 +61,7 @@ impl JournalStatus {
             JournalStatus::Reversed { .. } => "Reversed",
             JournalStatus::Corrected { .. } => "Corrected",
             JournalStatus::Closed => "Closed",
+            JournalStatus::Deleted => "Deleted",
         }
     }
 
@@ -69,6 +73,7 @@ impl JournalStatus {
             JournalStatus::Reversed { .. } => "取消済",
             JournalStatus::Corrected { .. } => "修正済",
             JournalStatus::Closed => "締め済",
+            JournalStatus::Deleted => "削除済",
         }
     }
 }
@@ -78,14 +83,22 @@ impl JournalStatus {
 pub enum PeriodStatus {
     /// オープン（入力可能）
     Open,
-    /// クローズ（締め済）
-    Closed,
-    /// ロック（完全ロック）
-    Locked,
+    /// ソフトロック（制限付き修正可能）
+    SoftLocked,
+    /// ハードロック（不変）
+    HardLocked,
 }
 
 impl PeriodStatus {
     pub fn can_post_journal(&self) -> bool {
         matches!(self, PeriodStatus::Open)
+    }
+
+    pub fn can_modify_journal(&self, is_admin: bool) -> bool {
+        match self {
+            PeriodStatus::Open => true,
+            PeriodStatus::SoftLocked => is_admin, // 管理者のみ修正可能
+            PeriodStatus::HardLocked => false,    // 修正不可
+        }
     }
 }

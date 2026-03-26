@@ -8,7 +8,10 @@ use crate::{
     journal_entry::{
         domain_events::{JournalEntryEvent, JournalEntryLineDto},
         entities::{JournalEntryId, JournalEntryLine},
-        values::{DebitCredit, EntryNumber, JournalStatus, TransactionDate, UserId, VoucherNumber},
+        values::{
+            AuditAction, DebitCredit, EntryNumber, JournalStatus, PeriodStatus, TransactionDate,
+            UserId, VoucherNumber,
+        },
     },
 };
 
@@ -54,7 +57,7 @@ pub struct AuditTrail {
 
 #[derive(Debug, Clone)]
 pub struct AuditEntry {
-    pub action: String,
+    pub action: AuditAction,
     pub user_id: UserId,
     pub timestamp: DateTime<Utc>,
     pub reason: Option<String>,
@@ -65,7 +68,7 @@ impl AuditTrail {
         Self { entries: Vec::new() }
     }
 
-    pub fn add_entry(&mut self, action: String, user_id: UserId, reason: Option<String>) {
+    pub fn add_entry(&mut self, action: AuditAction, user_id: UserId, reason: Option<String>) {
         self.entries.push(AuditEntry { action, user_id, timestamp: Utc::now(), reason });
     }
 
@@ -124,7 +127,7 @@ impl JournalEntry {
         };
 
         entry.validate_balance()?;
-        entry.audit_trail.add_entry("Created".to_string(), created_by.clone(), None);
+        entry.audit_trail.add_entry(AuditAction::Created, created_by.clone(), None);
 
         // DraftCreatedイベントを生成
         let event = JournalEntryEvent::DraftCreated {
@@ -245,7 +248,7 @@ impl JournalEntry {
         self.status = target_status;
         self.metadata.update(user_id.clone());
         self.audit_trail
-            .add_entry("SubmittedForApproval".to_string(), user_id.clone(), None);
+            .add_entry(AuditAction::SubmittedForApproval, user_id.clone(), None);
 
         // ApprovalRequestedイベントを生成
         let event = JournalEntryEvent::ApprovalRequested {
@@ -268,7 +271,7 @@ impl JournalEntry {
         self.status = target_status;
         self.metadata.update(user_id.clone());
         self.audit_trail
-            .add_entry("Rejected".to_string(), user_id.clone(), Some(reason.clone()));
+            .add_entry(AuditAction::Rejected, user_id.clone(), Some(reason.clone()));
 
         // Rejectedイベントを生成
         let event = JournalEntryEvent::Rejected {
@@ -292,7 +295,7 @@ impl JournalEntry {
         self.entry_number = Some(entry_number.clone());
         self.status = target_status;
         self.metadata.approve(user_id.clone());
-        self.audit_trail.add_entry("Approved".to_string(), user_id.clone(), None);
+        self.audit_trail.add_entry(AuditAction::Approved, user_id.clone(), None);
 
         // Postedイベントを生成
         let event = JournalEntryEvent::Posted {
@@ -318,7 +321,7 @@ impl JournalEntry {
         self.status = target_status;
         self.metadata.update(user_id.clone());
         self.audit_trail
-            .add_entry("Reversed".to_string(), user_id.clone(), Some(reason.clone()));
+            .add_entry(AuditAction::Reversed, user_id.clone(), Some(reason.clone()));
 
         // Reversedイベントを生成
         let event = JournalEntryEvent::Reversed {
@@ -349,7 +352,7 @@ impl JournalEntry {
         self.status = target_status;
         self.metadata.update(user_id.clone());
         self.audit_trail
-            .add_entry("Corrected".to_string(), user_id.clone(), Some(reason.clone()));
+            .add_entry(AuditAction::Corrected, user_id.clone(), Some(reason.clone()));
 
         // Correctedイベントを生成
         let event = JournalEntryEvent::Corrected {
@@ -373,7 +376,7 @@ impl JournalEntry {
 
         self.status = target_status;
         self.metadata.update(user_id.clone());
-        self.audit_trail.add_entry("Closed".to_string(), user_id.clone(), None);
+        self.audit_trail.add_entry(AuditAction::Closed, user_id.clone(), None);
 
         // Closedイベントを生成
         let event = JournalEntryEvent::Closed {
@@ -396,7 +399,7 @@ impl JournalEntry {
         self.status = target_status;
         self.metadata.update(user_id.clone());
         self.audit_trail
-            .add_entry("Reopened".to_string(), user_id.clone(), Some(reason.clone()));
+            .add_entry(AuditAction::Reopened, user_id.clone(), Some(reason.clone()));
 
         // Reopenedイベントを生成
         let event = JournalEntryEvent::Reopened {
@@ -420,15 +423,20 @@ impl JournalEntry {
         self.uncommitted_events.clear();
     }
 
-    /// 明細を更新（Draft状態のみ）
+    /// 明細を更新
     pub fn update_lines(
         &mut self,
         lines: Vec<JournalEntryLine>,
         user_id: UserId,
+        period_status: &PeriodStatus,
+        is_admin: bool,
+        reason: Option<String>,
     ) -> DomainResult<()> {
-        // Draft状態のみ更新可能
-        if !matches!(self.status, JournalStatus::Draft) {
-            return Err(DomainError::InvalidStatusTransition);
+        // 期間ステータスと権限によるチェック
+        if !period_status.can_modify_journal(is_admin) {
+            return Err(DomainError::ValidationError(
+                "この期間では仕訳の修正が許可されていません".to_string(),
+            ));
         }
 
         // 借貸バランスチェック（新しい明細で）
@@ -437,6 +445,14 @@ impl JournalEntry {
         // 明細を更新
         self.lines = lines;
         self.metadata.update(user_id.clone());
+
+        // 監査証跡に修正理由を追加
+        let action = if reason.is_some() {
+            AuditAction::ModifiedWithReason
+        } else {
+            AuditAction::Modified
+        };
+        self.audit_trail.add_entry(action, user_id.clone(), reason.clone());
 
         // DraftUpdatedイベントを生成
         let line_dtos: Vec<JournalEntryLineDto> =

@@ -6,6 +6,7 @@
 //   （ただし、集約外からの直接使用は想定されない）
 
 // 外部公開：ルート集約のgetterで返される値オブジェクト
+pub mod audit_action;
 pub mod debit_credit;
 pub mod entry_number;
 pub mod external_name;
@@ -26,6 +27,7 @@ pub mod tax_type;
 
 // Re-exports: すべての値オブジェクトを公開
 // （外部からの直接使用は想定されないが、集約内の複数モジュールからのアクセスを許可）
+pub use audit_action::*;
 pub use debit_credit::*;
 pub use department_code::*;
 pub use description::*;

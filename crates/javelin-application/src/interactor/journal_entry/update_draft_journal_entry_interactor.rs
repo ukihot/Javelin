@@ -51,7 +51,13 @@ impl<R: JournalEntryRepository, O: JournalEntryOutputPort> UpdateDraftJournalEnt
 
             // 集約のupdate_linesメソッドを使用
             journal_entry
-                .update_lines(lines, user_id.clone())
+                .update_lines(
+                    lines,
+                    user_id.clone(),
+                    &javelin_domain::journal_entry::values::PeriodStatus::Open,
+                    true,
+                    None,
+                )
                 .map_err(ApplicationError::DomainError)?;
         }
 

@@ -1,7 +1,7 @@
 // JournalEntryProjection実装
 // 仕訳一覧表示用のReadModel
 
-use javelin_domain::journal_entry::domain_events::JournalEntryEvent;
+use javelin_domain::journal_entry::{domain_events::JournalEntryEvent, values::JournalStatus};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -94,7 +94,7 @@ impl Apply<JournalEntryEvent> for JournalEntryProjection {
                 created_at,
             } => {
                 self.entry_id = entry_id;
-                self.status = "Draft".to_string();
+                self.status = JournalStatus::Draft.as_str().to_string();
                 self.transaction_date = transaction_date;
                 self.voucher_number = voucher_number;
                 let (debit, credit) = Self::calculate_totals(&lines);
@@ -126,29 +126,40 @@ impl Apply<JournalEntryEvent> for JournalEntryProjection {
                 self.updated_at = Some(updated_at.to_rfc3339());
             }
             JournalEntryEvent::ApprovalRequested { .. } => {
-                self.status = "PendingApproval".to_string();
+                self.status = JournalStatus::PendingApproval.as_str().to_string();
             }
             JournalEntryEvent::Rejected { .. } => {
-                self.status = "Draft".to_string();
+                self.status = JournalStatus::Draft.as_str().to_string();
             }
             JournalEntryEvent::Posted { entry_number, .. } => {
-                self.status = "Posted".to_string();
+                self.status = JournalStatus::Posted.as_str().to_string();
                 self.entry_number = Some(entry_number);
             }
             JournalEntryEvent::Reversed { .. } => {
-                self.status = "Reversed".to_string();
+                self.status =
+                    JournalStatus::Reversed { reason: "".to_string(), original_id: "".to_string() }
+                        .as_str()
+                        .to_string();
             }
             JournalEntryEvent::Corrected { .. } => {
-                self.status = "Corrected".to_string();
+                self.status = JournalStatus::Corrected {
+                    reason: "".to_string(),
+                    reversed_id: "".to_string(),
+                }
+                .as_str()
+                .to_string();
             }
             JournalEntryEvent::Closed { .. } => {
-                self.status = "Closed".to_string();
+                self.status = JournalStatus::Closed.as_str().to_string();
             }
             JournalEntryEvent::Reopened { .. } => {
-                self.status = "Posted".to_string();
+                self.status = JournalStatus::Posted.as_str().to_string();
             }
             JournalEntryEvent::Deleted { .. } => {
-                self.status = "Deleted".to_string();
+                self.status = JournalStatus::Deleted.as_str().to_string();
+            }
+            JournalEntryEvent::BalanceDiscrepancyDetected { .. } => {
+                // TODO: 不一致検知の処理を実装
             }
         }
 
