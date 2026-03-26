@@ -11,10 +11,16 @@ pub mod entity;
 pub mod value_object;
 
 // 集約モジュール
+pub mod accounting_period_ledger;
+pub mod balance_tracking;
 pub mod billing;
+pub mod cash_flow;
 pub mod chart_of_accounts;
 pub mod company;
+pub mod evidence;
 pub mod journal_entry;
+pub mod partner;
+pub mod reconciliation;
 
 // Re-exports
 pub use common::*;

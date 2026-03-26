@@ -1,0 +1,12 @@
+// 入出金集約
+// 現実のお金の動きと現預金管理
+
+pub mod domain_events;
+pub mod domain_services;
+pub mod entities;
+pub mod values;
+
+pub use domain_events::*;
+pub use domain_services::*;
+pub use entities::*;
+pub use values::*;
