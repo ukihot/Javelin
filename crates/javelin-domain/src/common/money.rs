@@ -177,6 +177,110 @@ impl Money {
     }
 }
 
+/// 金額のAmount（通貨はサポートしない単位）
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Amount(BigDecimal);
+
+impl Amount {
+    pub fn from_i64(value: i64) -> Self {
+        Amount(BigDecimal::from(value))
+    }
+
+    pub fn from(value: BigDecimal) -> Self {
+        Amount(value)
+    }
+
+    pub fn zero() -> Self {
+        Amount(BigDecimal::from(0))
+    }
+
+    pub fn value(&self) -> &BigDecimal {
+        &self.0
+    }
+}
+
+impl std::ops::Add for Amount {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Amount(self.0 + other.0)
+    }
+}
+
+impl<'a> std::ops::Add<&'a Amount> for Amount {
+    type Output = Amount;
+
+    fn add(self, other: &'a Amount) -> Amount {
+        Amount(self.0 + &other.0)
+    }
+}
+
+impl std::ops::Add<Amount> for &Amount {
+    type Output = Amount;
+
+    fn add(self, other: Amount) -> Amount {
+        Amount(&self.0 + other.0)
+    }
+}
+
+impl<'b> std::ops::Add<&'b Amount> for &Amount {
+    type Output = Amount;
+
+    fn add(self, other: &'b Amount) -> Amount {
+        Amount(&self.0 + &other.0)
+    }
+}
+
+impl std::ops::Sub for Amount {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Amount(self.0 - other.0)
+    }
+}
+
+impl<'a> std::ops::Sub<&'a Amount> for Amount {
+    type Output = Amount;
+
+    fn sub(self, other: &'a Amount) -> Amount {
+        Amount(self.0 - &other.0)
+    }
+}
+
+impl std::ops::Sub<Amount> for &Amount {
+    type Output = Amount;
+
+    fn sub(self, other: Amount) -> Amount {
+        Amount(&self.0 - other.0)
+    }
+}
+
+impl<'b> std::ops::Sub<&'b Amount> for &Amount {
+    type Output = Amount;
+
+    fn sub(self, other: &'b Amount) -> Amount {
+        Amount(&self.0 - &other.0)
+    }
+}
+
+impl std::ops::AddAssign for Amount {
+    fn add_assign(&mut self, other: Self) {
+        self.0 += other.0;
+    }
+}
+
+impl std::ops::SubAssign for Amount {
+    fn sub_assign(&mut self, other: Self) {
+        self.0 -= other.0;
+    }
+}
+
+impl std::fmt::Display for Amount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

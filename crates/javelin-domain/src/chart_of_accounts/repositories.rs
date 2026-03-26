@@ -1,5 +1,10 @@
 // ChartOfAccounts Repository - 勘定科目表リポジトリ
 
+pub mod account_master_repository;
+pub mod subsidiary_account_master_repository;
+
+// Re-exports
+
 use super::entities::{AccountMaster, SubsidiaryAccountMaster};
 use crate::common::RepositoryBase;
 

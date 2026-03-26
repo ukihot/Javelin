@@ -11,7 +11,7 @@ pub mod entity;
 pub mod value_object;
 
 // 集約モジュール
-// 各集約は entities, values, repositories で構成
+pub mod billing;
 pub mod chart_of_accounts;
 pub mod company;
 pub mod journal_entry;

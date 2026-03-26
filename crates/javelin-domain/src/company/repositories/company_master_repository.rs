@@ -1,11 +1,6 @@
-// Company Repository - 会社リポジトリ
+// CompanyMaster Repository - 会社マスタリポジトリ
 
-pub mod company_master_repository;
-
-// Re-exports
-
-use super::entities::CompanyMaster;
-use crate::common::RepositoryBase;
+use crate::{common::RepositoryBase, company::entities::CompanyMaster};
 
 /// 会社マスタリポジトリトレイト
 ///

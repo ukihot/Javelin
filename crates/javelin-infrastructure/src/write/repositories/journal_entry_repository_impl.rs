@@ -7,7 +7,8 @@ use javelin_domain::{
     common::RepositoryBase,
     error::DomainResult,
     journal_entry::{
-        entities::JournalEntry, events::JournalEntryEvent, repositories::JournalEntryRepository,
+        domain_events::JournalEntryEvent, entities::JournalEntry,
+        repositories::JournalEntryRepository,
     },
 };
 

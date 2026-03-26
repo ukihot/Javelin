@@ -106,11 +106,13 @@ impl TryFrom<&JournalEntryLineDto> for JournalEntryLine {
     }
 }
 
-impl TryFrom<&javelin_domain::journal_entry::events::JournalEntryLineDto> for JournalEntryLineDto {
+impl TryFrom<&javelin_domain::journal_entry::domain_events::JournalEntryLineDto>
+    for JournalEntryLineDto
+{
     type Error = ApplicationError;
 
     fn try_from(
-        domain_dto: &javelin_domain::journal_entry::events::JournalEntryLineDto,
+        domain_dto: &javelin_domain::journal_entry::domain_events::JournalEntryLineDto,
     ) -> Result<Self, Self::Error> {
         Ok(JournalEntryLineDto {
             line_number: domain_dto.line_number,

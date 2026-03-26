@@ -1,7 +1,7 @@
 // LedgerProjection実装
 // 元帳表示用のReadModel
 
-use javelin_domain::journal_entry::events::JournalEntryEvent;
+use javelin_domain::journal_entry::domain_events::JournalEntryEvent;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -33,7 +33,7 @@ pub struct LedgerProjection {
     // 仕訳明細をキャッシュ（entry_id -> lines）
     entry_lines_cache: std::collections::HashMap<
         String,
-        Vec<javelin_domain::journal_entry::events::JournalEntryLineDto>,
+        Vec<javelin_domain::journal_entry::domain_events::JournalEntryLineDto>,
     >,
     // 仕訳の取引日をキャッシュ（entry_id -> transaction_date）
     entry_transaction_date_cache: std::collections::HashMap<String, String>,
@@ -67,7 +67,7 @@ impl LedgerProjection {
         entry_number: &str,
         transaction_date: &str,
         description: &str,
-        lines: &[javelin_domain::journal_entry::events::JournalEntryLineDto],
+        lines: &[javelin_domain::journal_entry::domain_events::JournalEntryLineDto],
     ) {
         use javelin_domain::journal_entry::values::DebitCredit;
 
@@ -99,7 +99,7 @@ impl LedgerProjection {
         entry_number: &str,
         transaction_date: &str,
         description: &str,
-        lines: &[javelin_domain::journal_entry::events::JournalEntryLineDto],
+        lines: &[javelin_domain::journal_entry::domain_events::JournalEntryLineDto],
     ) {
         use javelin_domain::journal_entry::values::DebitCredit;
 
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_create_ledger_entries() {
-        use javelin_domain::journal_entry::events::JournalEntryLineDto;
+        use javelin_domain::journal_entry::domain_events::JournalEntryLineDto;
 
         let mut projection = LedgerProjection::new();
 
@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn test_create_reversal_entries() {
-        use javelin_domain::journal_entry::events::JournalEntryLineDto;
+        use javelin_domain::journal_entry::domain_events::JournalEntryLineDto;
 
         let mut projection = LedgerProjection::new();
 
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_apply_draft_created() {
-        use javelin_domain::journal_entry::events::JournalEntryLineDto;
+        use javelin_domain::journal_entry::domain_events::JournalEntryLineDto;
 
         let mut projection = LedgerProjection::new();
 
@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_apply_posted() {
-        use javelin_domain::journal_entry::events::JournalEntryLineDto;
+        use javelin_domain::journal_entry::domain_events::JournalEntryLineDto;
 
         let mut projection = LedgerProjection::new();
 
@@ -424,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_apply_reversed() {
-        use javelin_domain::journal_entry::events::JournalEntryLineDto;
+        use javelin_domain::journal_entry::domain_events::JournalEntryLineDto;
 
         let mut projection = LedgerProjection::new();
 
@@ -479,7 +479,7 @@ mod tests {
 
     #[test]
     fn test_apply_deleted() {
-        use javelin_domain::journal_entry::events::JournalEntryLineDto;
+        use javelin_domain::journal_entry::domain_events::JournalEntryLineDto;
 
         let mut projection = LedgerProjection::new();
 

@@ -6,8 +6,8 @@ use crate::{
     entity::{Entity, EntityId},
     error::{DomainError, DomainResult},
     journal_entry::{
+        domain_events::{JournalEntryEvent, JournalEntryLineDto},
         entities::{JournalEntryId, JournalEntryLine},
-        events::{JournalEntryEvent, JournalEntryLineDto},
         values::{DebitCredit, EntryNumber, JournalStatus, TransactionDate, UserId, VoucherNumber},
     },
 };

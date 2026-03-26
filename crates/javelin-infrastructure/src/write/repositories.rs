@@ -2,7 +2,6 @@
 
 pub mod account_master_repository_impl;
 pub mod accounting_period_repository_impl;
-pub mod application_settings_repository_impl; // Disabled: ApplicationSettings aggregate removed
 pub mod company_master_repository_impl;
 pub mod journal_entry_repository_impl;
 pub mod subsidiary_account;

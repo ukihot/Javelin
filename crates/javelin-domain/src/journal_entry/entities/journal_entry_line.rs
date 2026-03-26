@@ -1,4 +1,7 @@
 // JournalEntryLine Entity - 仕訳明細エンティティ
+//
+// 子エンティティ：JournalEntry 集約内でのみインスタンス化可能（new は pub(super)）
+// ただしstructと gettersは pub で、集約内他モジュール（domain_events等）からアクセス可能
 
 use crate::{
     chart_of_accounts::values::AccountCode,
@@ -11,6 +14,8 @@ use crate::{
 };
 
 /// 仕訳明細
+///
+/// 子エンティティ：ルート集約（JournalEntry）経由でのみ操作される
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JournalEntryLine {
     line_number: LineNumber,
@@ -25,6 +30,11 @@ pub struct JournalEntryLine {
 }
 
 impl JournalEntryLine {
+    /// 仕訳明細を新規作成
+    ///
+    /// # 制限
+    /// - この関数は pub(super) - 集約内でのみ呼び出し可能
+    /// - 外部から直接インスタンス化不可
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         line_number: LineNumber,

@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use javelin_domain::journal_entry::events::JournalEntryEvent;
+use javelin_domain::journal_entry::domain_events::JournalEntryEvent;
 use tokio::time::{Duration, interval};
 
 use crate::{
