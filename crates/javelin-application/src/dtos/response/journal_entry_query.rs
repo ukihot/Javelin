@@ -34,6 +34,9 @@ pub struct JournalEntryLineDetail {
     pub currency: String,
     pub tax_type: String,
     pub tax_amount: f64,
+    pub partner_id: Option<String>,
+    pub external_name: Option<String>,
+    pub tracking_number: Option<String>,
 }
 
 /// 仕訳詳細レスポンス

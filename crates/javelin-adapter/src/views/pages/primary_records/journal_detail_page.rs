@@ -199,11 +199,15 @@ impl JournalDetailPage {
             "通貨",
             "税区分",
             "税額",
+            "取引先",
+            "追跡番号",
         ])
         .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
         .bottom_margin(1);
 
         let rows = detail.lines.iter().map(|line| {
+            let partner_display =
+                line.external_name.as_deref().or(line.partner_id.as_deref()).unwrap_or("-");
             Row::new(vec![
                 line.line_number.to_string(),
                 line.side_label.clone(),
@@ -214,6 +218,8 @@ impl JournalDetailPage {
                 line.currency.clone(),
                 line.tax_type.clone(),
                 format!("{:.2}", line.tax_amount),
+                partner_display.to_string(),
+                line.tracking_number.as_deref().unwrap_or("-").to_string(),
             ])
             .style(Style::default().fg(Color::White))
         });
@@ -230,6 +236,8 @@ impl JournalDetailPage {
                 Constraint::Length(6),  // 通貨
                 Constraint::Length(10), // 税区分
                 Constraint::Length(12), // 税額
+                Constraint::Min(20),    // 取引先
+                Constraint::Length(14), // 追跡番号
             ],
         )
         .header(header)

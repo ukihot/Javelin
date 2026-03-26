@@ -12,7 +12,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```rust,ignore
 //! // In SearchPageState::new()
 //! let id = uuid::Uuid::new_v4();
 //! let presenter = std::sync::Arc::new(crate::presenter::SearchPresenter::new(...));

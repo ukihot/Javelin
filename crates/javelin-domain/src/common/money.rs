@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{DomainError, DomainResult};
@@ -196,6 +196,11 @@ impl Amount {
 
     pub fn value(&self) -> &BigDecimal {
         &self.0
+    }
+
+    /// BigDecimal を i64 に変換できる場合の値を返す（小数がある場合は None になる）。
+    pub fn to_i64(&self) -> Option<i64> {
+        self.0.to_i64()
     }
 }
 

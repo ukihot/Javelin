@@ -259,6 +259,9 @@ impl JournalEntrySearchQueryService for JournalEntrySearchQueryServiceImpl {
                 currency: "JPY".to_string(),  // TODO: 通貨対応
                 tax_type: "None".to_string(), // TODO: 税区分対応
                 tax_amount: 0.0,              // TODO: 税額対応
+                partner_id: line.partner_id,
+                external_name: line.external_name,
+                tracking_number: line.tracking_number,
             })
             .collect();
 

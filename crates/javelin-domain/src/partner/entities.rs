@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::values::{ContactInfo, PartnerType};
+use super::values::{BankAccount, ContactInfo, InvoiceRegistrationNumber, PartnerType};
 use crate::{
     entity::{Entity, EntityId},
     error::{DomainError, DomainResult},
@@ -35,7 +35,9 @@ pub struct Partner {
     name: String,
     partner_type: PartnerType,
     contact_info: Option<ContactInfo>,
-    tax_id: Option<String>, // 税務ID
+    tax_id: Option<String>,                                         // 税務ID
+    bank_account: Option<BankAccount>,                              // 銀行口座情報（振込先など）
+    invoice_registration_number: Option<InvoiceRegistrationNumber>, // インボイス登録番号
     is_active: bool,
     created_at: chrono::DateTime<chrono::Utc>,
     updated_at: chrono::DateTime<chrono::Utc>,
@@ -47,6 +49,8 @@ impl Partner {
         partner_type: PartnerType,
         contact_info: Option<ContactInfo>,
         tax_id: Option<String>,
+        bank_account: Option<BankAccount>,
+        invoice_registration_number: Option<InvoiceRegistrationNumber>,
     ) -> DomainResult<Self> {
         if name.trim().is_empty() {
             return Err(DomainError::ValidationError("取引先名は空にできません".to_string()));
@@ -59,6 +63,8 @@ impl Partner {
             partner_type,
             contact_info,
             tax_id,
+            bank_account,
+            invoice_registration_number,
             is_active: true,
             created_at: now,
             updated_at: now,
@@ -84,6 +90,14 @@ impl Partner {
 
     pub fn tax_id(&self) -> Option<&str> {
         self.tax_id.as_deref()
+    }
+
+    pub fn bank_account(&self) -> Option<&BankAccount> {
+        self.bank_account.as_ref()
+    }
+
+    pub fn invoice_registration_number(&self) -> Option<&InvoiceRegistrationNumber> {
+        self.invoice_registration_number.as_ref()
     }
 
     pub fn is_active(&self) -> bool {

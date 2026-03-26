@@ -15,6 +15,9 @@ pub struct JournalEntryLineReadModel {
     pub account_name: String,
     pub amount: f64,
     pub description: Option<String>,
+    pub partner_id: Option<String>,
+    pub external_name: Option<String>,
+    pub tracking_number: Option<String>,
 }
 
 impl JournalEntryLineReadModel {
@@ -26,7 +29,17 @@ impl JournalEntryLineReadModel {
         amount: f64,
         description: Option<String>,
     ) -> Self {
-        Self { line_number, side, account_code, account_name, amount, description }
+        Self {
+            line_number,
+            side,
+            account_code,
+            account_name,
+            amount,
+            description,
+            partner_id: None,
+            external_name: None,
+            tracking_number: None,
+        }
     }
 }
 
@@ -289,6 +302,9 @@ mod tests {
                 tax_type: "NonTaxable".to_string(),
                 tax_amount: 0.0,
                 description: Some("売上入金".to_string()),
+                partner_id: None,
+                external_name: None,
+                tracking_number: None,
             },
             JournalEntryLineDto {
                 line_number: 2,
@@ -301,6 +317,9 @@ mod tests {
                 tax_type: "NonTaxable".to_string(),
                 tax_amount: 0.0,
                 description: Some("商品販売".to_string()),
+                partner_id: None,
+                external_name: None,
+                tracking_number: None,
             },
         ];
 
@@ -391,6 +410,9 @@ mod tests {
             tax_type: "NonTaxable".to_string(),
             tax_amount: 0.0,
             description: Some("修正後".to_string()),
+            partner_id: None,
+            external_name: None,
+            tracking_number: None,
         }];
 
         let event2 = JournalEntryEvent::DraftUpdated {

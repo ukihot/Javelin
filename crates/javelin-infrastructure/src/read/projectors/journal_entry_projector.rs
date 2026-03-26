@@ -109,6 +109,16 @@ impl Projector for JournalEntryProjector {
                                         .to_string(),
                                     tax_type: line["tax_type"].as_str().unwrap_or("").to_string(),
                                     tax_amount: line["tax_amount"].as_f64().unwrap_or(0.0),
+                                    description: line["description"]
+                                        .as_str()
+                                        .map(|s| s.to_string()),
+                                    partner_id: line["partner_id"].as_str().map(|s| s.to_string()),
+                                    external_name: line["external_name"]
+                                        .as_str()
+                                        .map(|s| s.to_string()),
+                                    tracking_number: line["tracking_number"]
+                                        .as_str()
+                                        .map(|s| s.to_string()),
                                 })
                                 .collect()
                         })
@@ -261,4 +271,8 @@ struct StoredJournalEntryLine {
     currency: String,
     tax_type: String,
     tax_amount: f64,
+    description: Option<String>,
+    partner_id: Option<String>,
+    external_name: Option<String>,
+    tracking_number: Option<String>,
 }

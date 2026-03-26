@@ -5,8 +5,12 @@ use javelin_domain::{
     common::{Currency, Money},
     journal_entry::{
         entities::JournalEntryLine,
-        values::{DebitCredit, DepartmentCode, Description, LineNumber, SubAccountCode, TaxType},
+        values::{
+            DebitCredit, DepartmentCode, Description, ExternalName, LineNumber, SubAccountCode,
+            TaxType, TrackingNumber,
+        },
     },
+    partner::PartnerId,
 };
 
 use crate::error::ApplicationError;
@@ -24,6 +28,9 @@ pub struct JournalEntryLineDto {
     pub tax_type: String,
     pub tax_amount: f64,
     pub description: Option<String>,
+    pub partner_id: Option<String>,
+    pub external_name: Option<String>,
+    pub tracking_number: Option<String>,
 }
 
 impl TryFrom<&JournalEntryLineDto> for JournalEntryLine {
@@ -91,6 +98,29 @@ impl TryFrom<&JournalEntryLineDto> for JournalEntryLine {
                 ApplicationError::ValidationFailed(vec![format!("Invalid description: {:?}", e)])
             })?;
 
+        let partner_id = dto.partner_id.as_ref().map(|id| PartnerId::new(id.clone()));
+
+        let external_name = dto
+            .external_name
+            .as_ref()
+            .map(|name| ExternalName::new(name.clone()))
+            .transpose()
+            .map_err(|e| {
+                ApplicationError::ValidationFailed(vec![format!("Invalid external_name: {:?}", e)])
+            })?;
+
+        let tracking_number = dto
+            .tracking_number
+            .as_ref()
+            .map(|n| TrackingNumber::new(n.clone()))
+            .transpose()
+            .map_err(|e| {
+                ApplicationError::ValidationFailed(vec![format!(
+                    "Invalid tracking_number: {:?}",
+                    e
+                )])
+            })?;
+
         JournalEntryLine::new(
             line_number,
             side,
@@ -101,6 +131,9 @@ impl TryFrom<&JournalEntryLineDto> for JournalEntryLine {
             tax_type,
             tax_amount,
             description,
+            partner_id,
+            external_name,
+            tracking_number,
         )
         .map_err(ApplicationError::DomainError)
     }
@@ -125,6 +158,9 @@ impl TryFrom<&javelin_domain::journal_entry::domain_events::JournalEntryLineDto>
             tax_type: domain_dto.tax_type.clone(),
             tax_amount: domain_dto.tax_amount,
             description: domain_dto.description.clone(),
+            partner_id: domain_dto.partner_id.clone(),
+            external_name: domain_dto.external_name.clone(),
+            tracking_number: domain_dto.tracking_number.clone(),
         })
     }
 }

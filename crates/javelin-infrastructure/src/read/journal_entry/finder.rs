@@ -241,6 +241,9 @@ impl<O: QueryOutputPort> JournalEntryFinderService for JournalEntryFinderImpl<O>
                     currency: line.currency,
                     tax_type: line.tax_type,
                     tax_amount: line.tax_amount,
+                    partner_id: line.partner_id,
+                    external_name: line.external_name,
+                    tracking_number: line.tracking_number,
                 })
                 .collect();
 
@@ -315,4 +318,9 @@ struct StoredJournalEntryLine {
     currency: String,
     tax_type: String,
     tax_amount: f64,
+    // Optional fields for “temporary partner” and “balance tracking” integration.
+    description: Option<String>,
+    partner_id: Option<String>,
+    external_name: Option<String>,
+    tracking_number: Option<String>,
 }

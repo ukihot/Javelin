@@ -39,7 +39,7 @@ pub struct JournalEntryFormPage {
     // 明細行フォーム（タブ付き）
     tabbed_form: TabbedJournalEntryForm,
     // 状態
-    focused_field: usize, // 0-2: ヘッダー, 3-7: 明細行
+    focused_field: usize, // 0-2: ヘッダー, 3-9: 明細行
     // Vimライク操作
     input_mode: InputMode,
     jj_detector: JjEscapeDetector,
@@ -259,10 +259,32 @@ impl JournalEntryFormPage {
             let debit_account = line_form.debit_account().value();
             let debit_amount_str = line_form.debit_amount().value();
             let description_value = line_form.description().value();
+
+            // 一過性取引先（ExternalName）と BalanceTracking の追跡番号
+            // ドメイン層仕様: `tracking_number` を入れるなら `external_name` も必須
+            let external_name_value = line_form.external_name().value();
+            let tracking_number_value = line_form.tracking_number().value();
+            if !tracking_number_value.is_empty() && external_name_value.is_empty() {
+                return Err(format!(
+                    "明細 #{}: 追跡番号を入力する場合、外部名称（取引先名）も入力してください",
+                    line_number
+                ));
+            }
+
             let description = if description_value.is_empty() {
                 None
             } else {
                 Some(description_value.to_string())
+            };
+            let external_name = if external_name_value.is_empty() {
+                None
+            } else {
+                Some(external_name_value.to_string())
+            };
+            let tracking_number = if tracking_number_value.is_empty() {
+                None
+            } else {
+                Some(tracking_number_value.to_string())
             };
 
             if !debit_account.is_empty() && !debit_amount_str.is_empty() {
@@ -281,6 +303,9 @@ impl JournalEntryFormPage {
                     tax_type: "NonTaxable".to_string(),
                     tax_amount: 0.0,
                     description: description.clone(),
+                    partner_id: None,
+                    external_name: external_name.clone(),
+                    tracking_number: tracking_number.clone(),
                 });
             }
 
@@ -303,6 +328,9 @@ impl JournalEntryFormPage {
                     tax_type: "NonTaxable".to_string(),
                     tax_amount: 0.0,
                     description,
+                    partner_id: None,
+                    external_name,
+                    tracking_number,
                 });
             }
         }
@@ -587,7 +615,7 @@ impl JournalEntryFormPage {
             1 => &self.voucher_field,
             2 => &self.risk_field,
             // 3-7は現在選択中の明細行のフィールド
-            n if (3..=7).contains(&n) => {
+            n if (3..=9).contains(&n) => {
                 let field_index = n - 3;
                 self.tabbed_form
                     .current_line()
@@ -605,7 +633,7 @@ impl JournalEntryFormPage {
             1 => &mut self.voucher_field,
             2 => &mut self.risk_field,
             // 3-7は現在選択中の明細行のフィールド
-            n if (3..=7).contains(&n) => {
+            n if (3..=9).contains(&n) => {
                 let field_index = n - 3;
                 self.tabbed_form.current_line_mut().get_field_mut(field_index).unwrap()
             }
@@ -690,7 +718,7 @@ impl JournalEntryFormPage {
 
     /// 次のフィールドへ移動
     pub fn focus_next(&mut self) {
-        if self.focused_field < 8 {
+        if self.focused_field < 9 {
             self.focused_field += 1;
         }
         self.update_focus();
@@ -710,7 +738,7 @@ impl JournalEntryFormPage {
         self.risk_field.set_focused(self.focused_field == 2);
 
         // タブ内のフィールドにフォーカスがある場合
-        if self.focused_field >= 3 && self.focused_field <= 7 {
+        if self.focused_field >= 3 && self.focused_field <= 9 {
             let field_index = self.focused_field - 3;
             self.tabbed_form.current_line_mut().update_focus(field_index);
         } else {

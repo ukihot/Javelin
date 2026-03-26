@@ -66,6 +66,9 @@ pub struct JournalEntryLineViewModel {
     pub currency: String,
     pub tax_type: String,
     pub tax_amount: f64,
+    pub partner_id: Option<String>,
+    pub external_name: Option<String>,
+    pub tracking_number: Option<String>,
 }
 
 /// 仕訳登録ビューモデル
@@ -241,6 +244,9 @@ impl QueryOutputPort for JournalEntryPresenter {
                 currency: line.currency,
                 tax_type: line.tax_type,
                 tax_amount: line.tax_amount,
+                partner_id: line.partner_id,
+                external_name: line.external_name,
+                tracking_number: line.tracking_number,
             })
             .collect();
 

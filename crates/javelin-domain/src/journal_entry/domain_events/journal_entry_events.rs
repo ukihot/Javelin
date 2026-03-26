@@ -87,6 +87,9 @@ pub struct JournalEntryLineDto {
     pub tax_type: String,
     pub tax_amount: f64,
     pub description: Option<String>,
+    pub partner_id: Option<String>,
+    pub external_name: Option<String>,
+    pub tracking_number: Option<String>,
 }
 
 impl JournalEntryEvent {
@@ -165,6 +168,9 @@ impl JournalEntryLineDto {
             tax_type: line.tax_type().as_str().to_string(),
             tax_amount: f64::from_str(&line.tax_amount().amount().to_string()).unwrap_or(0.0),
             description: line.description().map(|d| d.value().to_string()),
+            partner_id: line.partner_id().map(|id| id.value().to_string()),
+            external_name: line.external_name().map(|n| n.value().to_string()),
+            tracking_number: line.tracking_number().map(|t| t.value().to_string()),
         }
     }
 }

@@ -8,8 +8,10 @@
 // 外部公開：ルート集約のgetterで返される値オブジェクト
 pub mod debit_credit;
 pub mod entry_number;
+pub mod external_name;
 pub mod journal_entry_type;
 pub mod journal_status;
+pub mod tracking_number;
 pub mod transaction_date;
 pub mod user_id;
 pub mod valuation;
@@ -28,11 +30,13 @@ pub use debit_credit::*;
 pub use department_code::*;
 pub use description::*;
 pub use entry_number::*;
+pub use external_name::*;
 pub use journal_entry_type::*;
 pub use journal_status::{PeriodStatus, *};
 pub use line_number::*;
 pub use sub_account_code::*;
 pub use tax_type::*;
+pub use tracking_number::*;
 pub use transaction_date::*;
 pub use user_id::*;
 pub use valuation::*;

@@ -18,6 +18,8 @@ pub struct JournalEntryLineForm {
     credit_account: InputField,
     credit_amount: InputField,
     description: InputField,
+    external_name: InputField,
+    tracking_number: InputField,
 }
 
 impl JournalEntryLineForm {
@@ -37,6 +39,13 @@ impl JournalEntryLineForm {
                 .with_input_type(ModifyInputType::NumberOnly),
             description: InputField::new(format!("摘要 #{}", line_number))
                 .with_placeholder("取引内容")
+                .with_input_type(ModifyInputType::Direct),
+            external_name: InputField::new(format!("一過性取引先 #{}", line_number))
+                .with_placeholder("例: セブンイレブン")
+                .with_input_type(ModifyInputType::Direct),
+            tracking_number: InputField::new(format!("追跡番号 #{}", line_number))
+                .with_placeholder("例: 20260326-001")
+                .with_max_length(50)
                 .with_input_type(ModifyInputType::Direct),
         }
     }
@@ -81,6 +90,22 @@ impl JournalEntryLineForm {
         &mut self.description
     }
 
+    pub fn external_name(&self) -> &InputField {
+        &self.external_name
+    }
+
+    pub fn external_name_mut(&mut self) -> &mut InputField {
+        &mut self.external_name
+    }
+
+    pub fn tracking_number(&self) -> &InputField {
+        &self.tracking_number
+    }
+
+    pub fn tracking_number_mut(&mut self) -> &mut InputField {
+        &mut self.tracking_number
+    }
+
     /// フィールドのフォーカスを更新
     pub fn update_focus(&mut self, field_index: usize) {
         self.debit_account.set_focused(field_index == 0);
@@ -88,6 +113,8 @@ impl JournalEntryLineForm {
         self.credit_account.set_focused(field_index == 2);
         self.credit_amount.set_focused(field_index == 3);
         self.description.set_focused(field_index == 4);
+        self.external_name.set_focused(field_index == 5);
+        self.tracking_number.set_focused(field_index == 6);
     }
 
     /// 指定されたフィールドを取得
@@ -98,6 +125,8 @@ impl JournalEntryLineForm {
             2 => Some(&self.credit_account),
             3 => Some(&self.credit_amount),
             4 => Some(&self.description),
+            5 => Some(&self.external_name),
+            6 => Some(&self.tracking_number),
             _ => None,
         }
     }
@@ -110,18 +139,22 @@ impl JournalEntryLineForm {
             2 => Some(&mut self.credit_account),
             3 => Some(&mut self.credit_amount),
             4 => Some(&mut self.description),
+            5 => Some(&mut self.external_name),
+            6 => Some(&mut self.tracking_number),
             _ => None,
         }
     }
 
     /// 描画
     pub fn render(&mut self, frame: &mut Frame, chunks: &[Rect], is_in_modify: bool) {
-        if chunks.len() >= 5 {
+        if chunks.len() >= 7 {
             self.debit_account.render(frame, chunks[0], is_in_modify);
             self.debit_amount.render(frame, chunks[1], is_in_modify);
             self.credit_account.render(frame, chunks[2], is_in_modify);
             self.credit_amount.render(frame, chunks[3], is_in_modify);
             self.description.render(frame, chunks[4], is_in_modify);
+            self.external_name.render(frame, chunks[5], is_in_modify);
+            self.tracking_number.render(frame, chunks[6], is_in_modify);
         }
     }
 }
@@ -241,6 +274,8 @@ impl TabbedJournalEntryForm {
             Constraint::Length(4), // 貸方科目
             Constraint::Length(4), // 貸方金額
             Constraint::Length(4), // 摘要
+            Constraint::Length(4), // 一過性取引先（ExternalName）
+            Constraint::Length(4), // 追跡番号（TrackingNumber）
         ];
 
         let form_chunks = Layout::default()

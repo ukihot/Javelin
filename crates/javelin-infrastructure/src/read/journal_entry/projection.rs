@@ -282,6 +282,9 @@ mod tests {
                 tax_type: "NonTaxable".to_string(),
                 tax_amount: 0.0,
                 description: None,
+                partner_id: None,
+                external_name: None,
+                tracking_number: None,
             },
             JournalEntryLineDto {
                 line_number: 2,
@@ -294,6 +297,9 @@ mod tests {
                 tax_type: "NonTaxable".to_string(),
                 tax_amount: 0.0,
                 description: None,
+                partner_id: None,
+                external_name: None,
+                tracking_number: None,
             },
         ];
 

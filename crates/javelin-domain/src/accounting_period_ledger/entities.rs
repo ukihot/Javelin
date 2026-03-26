@@ -44,7 +44,7 @@ pub struct AccountingPeriod {
 
 impl AccountingPeriod {
     pub fn new(year: u32, month: u8) -> DomainResult<Self> {
-        if month < 1 || month > 12 {
+        if !(1..=12).contains(&month) {
             return Err(DomainError::ValidationError(
                 "月は1-12の範囲である必要があります".to_string(),
             ));
