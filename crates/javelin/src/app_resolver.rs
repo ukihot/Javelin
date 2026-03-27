@@ -22,6 +22,7 @@ impl PageStateResolver {
         match route {
             // ========== TOP ==========
             Route::Home => Ok(Box::new(HomePageState::new())),
+            Route::RiskRadar => Ok(Box::new(javelin_adapter::RiskRadarPageState::new())),
             Route::MaintenanceHome => {
                 Ok(Box::new(javelin_adapter::MaintenanceHomePageState::new()))
             }

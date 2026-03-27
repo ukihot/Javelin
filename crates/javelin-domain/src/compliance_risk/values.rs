@@ -1,6 +1,5 @@
 // ComplianceRisk値オブジェクト
 
-
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 

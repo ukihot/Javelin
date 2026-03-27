@@ -72,6 +72,8 @@ pub enum Route {
     // ========== TOP ==========
     /// TOP: Dashboard - Main entry point
     Home,
+    /// TOP: Compliance Risk Radar screen
+    RiskRadar,
     /// TOP: Maintenance - Maintenance mode entry point
     MaintenanceHome,
     /// Maintenance menu (child of MaintenanceHome)

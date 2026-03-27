@@ -59,6 +59,9 @@ impl PageState for HomePageState {
                     KeyCode::Char('h') | KeyCode::Char('l') => {
                         self.page.switch_menu();
                     }
+                    KeyCode::Char('r') => {
+                        return Ok(NavAction::Go(Route::RiskRadar));
+                    }
                     KeyCode::Char('k') => {
                         self.page.select_previous();
                     }

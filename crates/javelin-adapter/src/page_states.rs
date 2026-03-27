@@ -8,6 +8,8 @@ pub use stub_page_state::StubPageState;
 // Top-level pages
 pub mod home_page_state;
 pub use home_page_state::HomePageState;
+pub mod risk_radar_page_state;
+pub use risk_radar_page_state::RiskRadarPageState;
 
 // Route hierarchy modules
 pub mod billing;

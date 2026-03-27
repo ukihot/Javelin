@@ -32,6 +32,9 @@ impl HomePage {
         let mut layout = MenuLayout::new("財務会計システム JAVELIN", "主計部", "担当者");
         layout.event_viewer_mut().add_info("システム起動完了");
         layout.event_viewer_mut().add_info("バージョン: 1.0.0");
+        layout
+            .event_viewer_mut()
+            .add_info("[TOP] h/l: メニュー切替, r: RiskRadar(トップタブ)");
 
         // 販売管理メニュー
         let sales_menu_items = vec![ListItemData::new("A", "請求書発行", "請求書印刷・発行管理")];
