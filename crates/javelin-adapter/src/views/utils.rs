@@ -1,12 +1,13 @@
 // Utils - View層のユーティリティマクロ
 // 責務: 共通フォーマット処理
+// Note: UI層はBigDecimalをf64に変換してから表示（最終ユーザー表示用）
 
-/// 数値をカンマ区切りでフォーマットするマクロ
+/// f64 をカンマ区切りでフォーマットするマクロ
 #[macro_export]
 macro_rules! format_number {
     ($num:expr) => {{
         let num: f64 = $num;
-        let num_str = format!("{:.0}", num);
+        let num_str = format!("{:.0}", num.abs());
         let mut result = String::new();
         let chars: Vec<char> = num_str.chars().collect();
 
@@ -21,6 +22,7 @@ macro_rules! format_number {
 }
 
 /// 金額をフォーマットするマクロ（ゼロは"---"表示）
+/// 入力: f64 のみ（BigDecimalの場合は呼び出し側で .to_string().parse::<f64>() で変換）
 #[macro_export]
 macro_rules! format_amount {
     ($amount:expr) => {{
@@ -42,6 +44,7 @@ macro_rules! format_amount {
 }
 
 /// 残高をフォーマットするマクロ（マイナスは括弧表示）
+/// 入力: f64 のみ（BigDecimalの場合は呼び出し側で .to_string().parse::<f64>() で変換）
 #[macro_export]
 macro_rules! format_balance {
     ($balance:expr) => {{
@@ -51,7 +54,7 @@ macro_rules! format_balance {
         } else if balance > 0.0 {
             $crate::format_number!(balance)
         } else {
-            format!("({})", $crate::format_number!(balance.abs()))
+            format!("({})", $crate::format_number!(-balance))
         }
     }};
     ($balance:expr, $width:expr) => {{
@@ -61,11 +64,7 @@ macro_rules! format_balance {
         } else if balance > 0.0 {
             format!("{:>width$}", $crate::format_number!(balance), width = $width)
         } else {
-            format!(
-                "{:>width$}",
-                format!("({})", $crate::format_number!(balance.abs())),
-                width = $width
-            )
+            format!("{:>width$}", format!("({})", $crate::format_number!(-balance)), width = $width)
         }
     }};
 }

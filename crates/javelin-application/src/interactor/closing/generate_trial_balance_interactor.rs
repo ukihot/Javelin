@@ -47,31 +47,55 @@ where
         let account_balances: Vec<AccountBalanceDto> = trial_balance
             .entries
             .iter()
-            .map(|entry| AccountBalanceDto {
-                account_code: entry.account_code.clone(),
-                debit_balance: if entry.closing_balance >= 0.0 {
-                    entry.closing_balance
+            .map(|entry| {
+                use std::str::FromStr;
+
+                use bigdecimal::BigDecimal;
+                // Stringから数値に変換
+                let closing_balance = BigDecimal::from_str(&entry.closing_balance)
+                    .unwrap_or_else(|_| BigDecimal::from(0));
+                let zero = BigDecimal::from(0);
+
+                let debit_balance = if closing_balance >= zero.clone() {
+                    closing_balance.clone()
                 } else {
-                    0.0
-                },
-                debit_balance_currency: "JPY".to_string(),
-                credit_balance: if entry.closing_balance < 0.0 {
-                    -entry.closing_balance
+                    zero.clone()
+                };
+
+                let credit_balance = if closing_balance < zero.clone() {
+                    -closing_balance.clone()
                 } else {
-                    0.0
-                },
-                credit_balance_currency: "JPY".to_string(),
-                net_balance: entry.closing_balance,
-                net_balance_currency: "JPY".to_string(),
+                    zero.clone()
+                };
+
+                AccountBalanceDto {
+                    account_code: entry.account_code.clone(),
+                    debit_balance: debit_balance.to_string(),
+                    debit_balance_currency: "JPY".to_string(),
+                    credit_balance: credit_balance.to_string(),
+                    credit_balance_currency: "JPY".to_string(),
+                    net_balance: closing_balance.to_string(),
+                    net_balance_currency: "JPY".to_string(),
+                }
             })
             .collect();
+
+        // 総計の計算（String→BigDecimal→計算）
+        use std::str::FromStr;
+
+        use bigdecimal::BigDecimal;
+        let total_debit = BigDecimal::from_str(&trial_balance.total_debit)
+            .unwrap_or_else(|_| BigDecimal::from(0));
+        let total_credit = BigDecimal::from_str(&trial_balance.total_credit)
+            .unwrap_or_else(|_| BigDecimal::from(0));
+        let diff = (total_debit.clone() - total_credit.clone()).abs();
 
         Ok(GenerateTrialBalanceResponse {
             total_debit: trial_balance.total_debit,
             total_debit_currency: "JPY".to_string(),
             total_credit: trial_balance.total_credit,
             total_credit_currency: "JPY".to_string(),
-            is_balanced: (trial_balance.total_debit - trial_balance.total_credit).abs() < 0.01,
+            is_balanced: diff < BigDecimal::from_str("0.01").unwrap(),
             account_balances,
             temporary_account_balances: vec![],
             foreign_exchange_differences: vec![],

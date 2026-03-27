@@ -1,5 +1,5 @@
 // 決算処理関連 - Response DTOs
-// すべてのプロパティはプリミティブ型
+// すべての金額をString（BigDecimal由来の10進数文字列）で保持
 
 /// 元帳集約処理レスポンス
 #[derive(Debug, Clone)]
@@ -12,11 +12,11 @@ pub struct ConsolidateLedgerResponse {
 #[derive(Debug, Clone)]
 pub struct LedgerDiscrepancyDto {
     pub account_code: String,
-    pub general_ledger_balance: f64,
+    pub general_ledger_balance: String, // 10進数文字列
     pub general_ledger_currency: String,
-    pub subsidiary_ledger_balance: f64,
+    pub subsidiary_ledger_balance: String, // 10進数文字列
     pub subsidiary_ledger_currency: String,
-    pub difference: f64,
+    pub difference: String, // 10進数文字列
     pub difference_currency: String,
 }
 
@@ -32,11 +32,11 @@ pub struct PrepareClosingResponse {
 #[derive(Debug, Clone)]
 pub struct BankReconciliationDifferenceDto {
     pub bank_account: String,
-    pub bank_balance: f64,
+    pub bank_balance: String, // 10進数文字列
     pub bank_balance_currency: String,
-    pub cash_log_balance: f64,
+    pub cash_log_balance: String, // 10進数文字列
     pub cash_log_balance_currency: String,
-    pub difference: f64,
+    pub difference: String, // 10進数文字列
     pub difference_currency: String,
 }
 
@@ -51,9 +51,9 @@ pub struct LockClosingPeriodResponse {
 /// 試算表生成処理レスポンス
 #[derive(Debug, Clone)]
 pub struct GenerateTrialBalanceResponse {
-    pub total_debit: f64,
+    pub total_debit: String, // 10進数文字列
     pub total_debit_currency: String,
-    pub total_credit: f64,
+    pub total_credit: String, // 10進数文字列
     pub total_credit_currency: String,
     pub is_balanced: bool,
     pub account_balances: Vec<AccountBalanceDto>,
@@ -64,23 +64,23 @@ pub struct GenerateTrialBalanceResponse {
 #[derive(Debug, Clone)]
 pub struct AccountBalanceDto {
     pub account_code: String,
-    pub debit_balance: f64,
+    pub debit_balance: String, // BigDecimal由来の10進数文字列
     pub debit_balance_currency: String,
-    pub credit_balance: f64,
+    pub credit_balance: String, // BigDecimal由来の10進数文字列
     pub credit_balance_currency: String,
-    pub net_balance: f64,
+    pub net_balance: String, // BigDecimal由来の10進数文字列
     pub net_balance_currency: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct ForeignExchangeDifferenceDto {
     pub account_code: String,
-    pub original_amount: f64,
+    pub original_amount: String, // 10進数文字列
     pub original_currency: String,
-    pub exchange_rate: f64,
-    pub converted_amount: f64,
+    pub exchange_rate: String,    // 10進数文字列
+    pub converted_amount: String, // 10進数文字列
     pub converted_currency: String,
-    pub difference: f64,
+    pub difference: String, // 10進数文字列
     pub difference_currency: String,
 }
 

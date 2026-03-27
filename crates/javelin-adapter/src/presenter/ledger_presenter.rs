@@ -99,20 +99,20 @@ impl QueryOutputPort for LedgerPresenter {
                 entry_number: entry.entry_number,
                 entry_id: entry.entry_id,
                 description: entry.description,
-                debit_amount: entry.debit_amount,
-                credit_amount: entry.credit_amount,
-                balance: entry.balance,
+                debit_amount: entry.debit_amount.parse::<f64>().unwrap_or(0.0),
+                credit_amount: entry.credit_amount.parse::<f64>().unwrap_or(0.0),
+                balance: entry.balance.parse::<f64>().unwrap_or(0.0),
             })
             .collect();
 
         let view_model = LedgerViewModel {
             account_code: result.account_code,
             account_name: result.account_name,
-            opening_balance: result.opening_balance,
+            opening_balance: result.opening_balance.parse::<f64>().unwrap_or(0.0),
             entries,
-            closing_balance: result.closing_balance,
-            total_debit: result.total_debit,
-            total_credit: result.total_credit,
+            closing_balance: result.closing_balance.parse::<f64>().unwrap_or(0.0),
+            total_debit: result.total_debit.parse::<f64>().unwrap_or(0.0),
+            total_credit: result.total_credit.parse::<f64>().unwrap_or(0.0),
         };
 
         let _ = self.ledger_sender.send(view_model);
@@ -125,10 +125,10 @@ impl QueryOutputPort for LedgerPresenter {
             .map(|entry| TrialBalanceEntryViewModel {
                 account_code: entry.account_code,
                 account_name: entry.account_name,
-                opening_balance: entry.opening_balance,
-                debit_amount: entry.debit_amount,
-                credit_amount: entry.credit_amount,
-                closing_balance: entry.closing_balance,
+                opening_balance: entry.opening_balance.parse::<f64>().unwrap_or(0.0),
+                debit_amount: entry.debit_amount.parse::<f64>().unwrap_or(0.0),
+                credit_amount: entry.credit_amount.parse::<f64>().unwrap_or(0.0),
+                closing_balance: entry.closing_balance.parse::<f64>().unwrap_or(0.0),
             })
             .collect();
 
@@ -136,8 +136,8 @@ impl QueryOutputPort for LedgerPresenter {
             period_year: result.period_year,
             period_month: result.period_month,
             entries,
-            total_debit: result.total_debit,
-            total_credit: result.total_credit,
+            total_debit: result.total_debit.parse::<f64>().unwrap_or(0.0),
+            total_credit: result.total_credit.parse::<f64>().unwrap_or(0.0),
         };
 
         let _ = self.trial_balance_sender.send(view_model);

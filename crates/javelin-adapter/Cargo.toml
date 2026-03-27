@@ -20,5 +20,6 @@ color-eyre = { workspace = true }
 chrono = { workspace = true }
 time = { version = "0.3", features = ["local-offset", "macros"] }
 uuid = { workspace = true }
+bigdecimal = { workspace = true }
 lazy_static = "1.4"
 

@@ -162,21 +162,21 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
                 entry_number: entry.entry_number.clone(),
                 entry_id: entry.entry_number.clone(), // entry_idがないのでentry_numberを使用
                 description: entry.description.clone(),
-                debit_amount: entry.debit_amount,
-                credit_amount: entry.credit_amount,
-                balance: entry.balance,
+                debit_amount: entry.debit_amount.to_string(),
+                credit_amount: entry.credit_amount.to_string(),
+                balance: entry.balance.to_string(),
             })
             .collect();
 
         Ok(LedgerResult {
             account_code: query.account_code.clone(),
             account_name: self.get_account_name(&query.account_code),
-            opening_balance,
+            opening_balance: opening_balance.to_string(),
             provisional_opening_balance: None, // TODO: 実装
             entries,
-            closing_balance,
-            total_debit,
-            total_credit,
+            closing_balance: closing_balance.to_string(),
+            total_debit: total_debit.to_string(),
+            total_credit: total_credit.to_string(),
         })
     }
 
@@ -224,10 +224,10 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
                     TrialBalanceEntry {
                         account_code: account_code.clone(),
                         account_name: self.get_account_name(&account_code),
-                        opening_balance,
-                        debit_amount,
-                        credit_amount,
-                        closing_balance,
+                        opening_balance: opening_balance.to_string(),
+                        debit_amount: debit_amount.to_string(),
+                        credit_amount: credit_amount.to_string(),
+                        closing_balance: closing_balance.to_string(),
                     }
                 },
             )
@@ -240,16 +240,16 @@ impl LedgerQueryService for LedgerQueryServiceImpl {
         let mut total_debit = 0.0;
         let mut total_credit = 0.0;
         for entry in &entries {
-            total_debit += entry.debit_amount;
-            total_credit += entry.credit_amount;
+            total_debit += entry.debit_amount.parse::<f64>().unwrap_or(0.0);
+            total_credit += entry.credit_amount.parse::<f64>().unwrap_or(0.0);
         }
 
         Ok(TrialBalanceResult {
             period_year: query.period_year,
             period_month: query.period_month,
             entries,
-            total_debit,
-            total_credit,
+            total_debit: total_debit.to_string(),
+            total_credit: total_credit.to_string(),
         })
     }
 }

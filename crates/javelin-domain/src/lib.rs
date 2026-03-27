@@ -17,6 +17,7 @@ pub mod billing;
 pub mod cash_flow;
 pub mod chart_of_accounts;
 pub mod company;
+pub mod compliance_risk;
 pub mod evidence;
 pub mod journal_entry;
 pub mod partner;

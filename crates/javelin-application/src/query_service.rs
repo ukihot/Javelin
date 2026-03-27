@@ -6,6 +6,7 @@ pub mod account_master_query_service;
 pub mod application_settings_master_query_service;
 pub mod batch_history_query_service;
 pub mod company_master_query_service;
+pub mod compliance_risk_query_service;
 pub mod invoice_query_service;
 pub mod journal_entry_finder;
 pub mod journal_entry_search_query_service;
@@ -29,6 +30,7 @@ pub use account_master_query_service::*;
 // aggregate removed
 pub use batch_history_query_service::*;
 pub use company_master_query_service::*;
+pub use compliance_risk_query_service::*;
 pub use invoice_query_service::*;
 pub use journal_entry_finder::*;
 pub use journal_entry_search_query_service::*;
