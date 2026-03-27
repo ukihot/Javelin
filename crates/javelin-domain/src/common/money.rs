@@ -1,6 +1,6 @@
 // Money - 通貨付き金額の値オブジェクト
 
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use bigdecimal::{BigDecimal, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -170,10 +170,12 @@ impl Money {
     pub fn negate(&self) -> Money {
         Money { amount: -&self.amount, currency: self.currency }
     }
+}
 
-    /// 文字列表現
-    pub fn to_string(&self) -> String {
-        format!("{} {}", self.currency.symbol(), self.amount)
+impl fmt::Display for Money {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Use the write! macro to send the formatted string to the formatter
+        write!(f, "{} {}", self.currency.symbol(), self.amount)
     }
 }
 
