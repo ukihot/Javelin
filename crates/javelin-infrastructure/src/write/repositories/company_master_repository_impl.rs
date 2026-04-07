@@ -1,14 +1,19 @@
 // CompanyMasterRepositoryImpl - 会社マスタリポジトリの実装
+//
+// Organization集約をLMDBに永続化する。
+// 後方互換性のため、CompanyMasterの保存・ロードインターフェースを維持しつつ
+// 内部でOrganization集約全体を管理する。
 
 use std::{path::Path, sync::Arc};
 
 use javelin_domain::{
     common::RepositoryBase,
     company::{
-        entities::CompanyMaster,
-        repositories::CompanyMasterRepository,
-        values::{CompanyCode, CompanyName},
+        entities::{CompanyMaster, Organization},
+        repositories::company_master_repository::CompanyMasterRepository,
+        values::{CompanyCode, CompanyName, OrganizationId},
     },
+    entity::{Entity, EntityId},
     error::DomainResult,
 };
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction};
@@ -16,6 +21,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct StoredCompanyMaster {
+    organization_id: String,
     code: String,
     name: String,
     is_active: bool,
@@ -55,39 +61,45 @@ impl CompanyMasterRepositoryImpl {
 
         if is_empty {
             let defaults = vec![
-                CompanyMaster::new(
+                Organization::new(
+                    OrganizationId::generate(),
                     CompanyCode::new("0001").unwrap(),
                     CompanyName::new("本社").unwrap(),
-                    true,
                 ),
-                CompanyMaster::new(
+                Organization::new(
+                    OrganizationId::generate(),
                     CompanyCode::new("0002").unwrap(),
                     CompanyName::new("支社A").unwrap(),
-                    true,
                 ),
             ];
 
-            for company in defaults {
-                self.save(&company).await?;
+            for org in defaults {
+                self.save(&org).await?;
             }
         }
 
         Ok(())
     }
 
-    fn to_stored(company: &CompanyMaster) -> StoredCompanyMaster {
+    fn to_stored(org: &Organization) -> StoredCompanyMaster {
         StoredCompanyMaster {
-            code: company.code().value().to_string(),
-            name: company.name().value().to_string(),
-            is_active: company.is_active(),
+            organization_id: org.id().value().to_string(),
+            code: org.company().code().value().to_string(),
+            name: org.company().name().value().to_string(),
+            is_active: org.company().is_active(),
         }
     }
 
     #[allow(dead_code)]
-    fn from_stored(stored: &StoredCompanyMaster) -> DomainResult<CompanyMaster> {
+    fn from_stored(stored: &StoredCompanyMaster) -> DomainResult<Organization> {
+        let id = OrganizationId::new(&stored.organization_id);
         let code = CompanyCode::new(&stored.code)?;
         let name = CompanyName::new(&stored.name)?;
-        Ok(CompanyMaster::new(code, name, stored.is_active))
+        let mut org = Organization::new(id, code, name);
+        if !stored.is_active {
+            org.company_mut().deactivate();
+        }
+        Ok(org)
     }
 }
 
@@ -95,15 +107,15 @@ impl CompanyMasterRepositoryImpl {
 impl CompanyMasterRepository for CompanyMasterRepositoryImpl {}
 
 // RepositoryBase trait implementation
-impl RepositoryBase<CompanyMaster> for CompanyMasterRepositoryImpl {
-    async fn save(&self, company_master: &CompanyMaster) -> DomainResult<()> {
-        let stored = Self::to_stored(company_master);
+impl RepositoryBase<Organization> for CompanyMasterRepositoryImpl {
+    async fn save(&self, organization: &Organization) -> DomainResult<()> {
+        let stored = Self::to_stored(organization);
         let value = serde_json::to_vec(&stored)
             .map_err(|e| javelin_domain::error::DomainError::RepositoryError(e.to_string()))?;
 
         let env = Arc::clone(&self.env);
         let db = self.db;
-        let key = company_master.code().value().to_string();
+        let key = organization.company().code().value().to_string();
 
         tokio::task::spawn_blocking(move || {
             let mut txn = env.begin_rw_txn()?;
@@ -118,7 +130,7 @@ impl RepositoryBase<CompanyMaster> for CompanyMasterRepositoryImpl {
         Ok(())
     }
 
-    async fn load(&self, id: &str) -> DomainResult<Option<CompanyMaster>> {
+    async fn load(&self, id: &str) -> DomainResult<Option<Organization>> {
         let env = Arc::clone(&self.env);
         let db = self.db;
         let key = id.to_string();
@@ -142,8 +154,8 @@ impl RepositoryBase<CompanyMaster> for CompanyMasterRepositoryImpl {
 
         match result {
             Some(stored) => {
-                let company = Self::from_stored(&stored)?;
-                Ok(Some(company))
+                let org = Self::from_stored(&stored)?;
+                Ok(Some(org))
             }
             None => Ok(None),
         }

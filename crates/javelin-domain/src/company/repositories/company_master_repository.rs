@@ -1,20 +1,11 @@
-// CompanyMaster Repository - 会社マスタリポジトリ
+// CompanyMaster Repository - 会社マスタリポジトリ（後方互換用エイリアス）
 
-use crate::{common::RepositoryBase, company::entities::CompanyMaster};
+use crate::{common::RepositoryBase, company::entities::Organization};
 
-/// 会社マスタリポジトリトレイト
+/// 会社マスタリポジトリトレイト（後方互換エイリアス）
 ///
-/// CompanyMaster集約を扱う専用リポジトリ。
-/// RepositoryBaseを継承し、集約のロード/保存機能を提供。
-///
-/// # 責務
-/// - CompanyMaster集約の保存
-/// - CompanyMaster集約のロード
-///
-/// # インフラ層での実装
-/// マスタデータのため、EventStoreではなくLMDBに直接保存
-/// （イベントソーシング不要）
+/// OrganizationRepositoryへの移行を推奨。
 #[allow(async_fn_in_trait)]
-pub trait CompanyMasterRepository: RepositoryBase<CompanyMaster> + Send + Sync {
-    // 必要に応じて会社マスタ固有のメソッドを追加可能
+pub trait CompanyMasterRepository: RepositoryBase<Organization> + Send + Sync {
+    // OrganizationRepositoryに統合予定
 }

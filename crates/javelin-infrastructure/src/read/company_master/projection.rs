@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use javelin_domain::company::{CompanyCode, CompanyMaster, CompanyName};
+use javelin_domain::company::{CompanyCode, CompanyMaster, CompanyName, OrganizationId};
 use serde::{Deserialize, Serialize};
 
 use crate::read::infrastructure::db::ProjectionDb;
@@ -96,6 +96,6 @@ impl CompanyMasterProjection {
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
         let name = CompanyName::new(&stored.name)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-        Ok(CompanyMaster::new(code, name, stored.is_active))
+        Ok(CompanyMaster::new(OrganizationId::new("default"), code, name, stored.is_active))
     }
 }
