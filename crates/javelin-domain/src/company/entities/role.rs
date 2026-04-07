@@ -61,15 +61,11 @@ impl Role {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::company::values::*;
 
-    use super::*;
-
     fn create_test_role() -> Role {
-        Role::new(
-            RoleId::generate(),
-            RoleName::new("経理担当").unwrap(),
-        )
+        Role::new(RoleId::generate(), RoleName::new("経理担当").unwrap())
     }
 
     #[test]

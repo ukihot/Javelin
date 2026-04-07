@@ -1,7 +1,6 @@
 // PositionName - 役職名値オブジェクト
 
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -18,9 +17,7 @@ impl PositionName {
     pub fn new(name: impl Into<String>) -> DomainResult<Self> {
         let name = name.into();
         if name.is_empty() {
-            return Err(DomainError::ValidationError(
-                "役職名は空にできません".to_string(),
-            ));
+            return Err(DomainError::ValidationError("役職名は空にできません".to_string()));
         }
         if name.len() > 100 {
             return Err(DomainError::ValidationError(
@@ -38,9 +35,7 @@ impl PositionName {
 impl ValueObject for PositionName {
     fn validate(&self) -> DomainResult<()> {
         if self.0.is_empty() {
-            return Err(DomainError::ValidationError(
-                "役職名は空にできません".to_string(),
-            ));
+            return Err(DomainError::ValidationError("役職名は空にできません".to_string()));
         }
         Ok(())
     }

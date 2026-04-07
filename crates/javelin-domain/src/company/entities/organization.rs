@@ -3,6 +3,7 @@
 // 組織体制全体を管理するルート集約。
 // 部署ツリー・役職・メンバー・ロールを統合管理する。
 
+use super::{CompanyMaster, Department, Member, Position, Role};
 use crate::{
     company::values::{
         CompanyCode, CompanyName, DepartmentId, MemberId, OrganizationId, PositionId, RoleId,
@@ -10,8 +11,6 @@ use crate::{
     entity::Entity,
     error::{DomainError, DomainResult},
 };
-
-use super::{CompanyMaster, Department, Member, Position, Role};
 
 /// 組織体（ルート集約）
 ///
@@ -41,11 +40,7 @@ impl Entity for Organization {
 
 impl Organization {
     /// 新しい組織体を作成
-    pub fn new(
-        id: OrganizationId,
-        code: CompanyCode,
-        name: CompanyName,
-    ) -> Self {
+    pub fn new(id: OrganizationId, code: CompanyCode, name: CompanyName) -> Self {
         let company = CompanyMaster::new(id.clone(), code, name, true);
         Self {
             id,
@@ -76,15 +71,17 @@ impl Organization {
     /// 部署を追加（コード重複チェック付き）
     pub fn add_department(&mut self, department: Department) -> DomainResult<()> {
         if self.departments.iter().any(|d| d.code() == department.code()) {
-            return Err(DomainError::ValidationError(
-                format!("部署コード '{}' は既に存在します", department.code()),
-            ));
+            return Err(DomainError::ValidationError(format!(
+                "部署コード '{}' は既に存在します",
+                department.code()
+            )));
         }
         if let Some(parent_id) = department.parent_id() {
             if !self.departments.iter().any(|d| d.id() == parent_id) {
-                return Err(DomainError::ValidationError(
-                    format!("親部署 '{}' が存在しません", parent_id),
-                ));
+                return Err(DomainError::ValidationError(format!(
+                    "親部署 '{}' が存在しません",
+                    parent_id
+                )));
             }
         }
         self.departments.push(department);
@@ -136,9 +133,10 @@ impl Organization {
     /// 役職を追加（名前重複チェック付き）
     pub fn add_position(&mut self, position: Position) -> DomainResult<()> {
         if self.positions.iter().any(|p| p.name() == position.name()) {
-            return Err(DomainError::ValidationError(
-                format!("役職名 '{}' は既に存在します", position.name()),
-            ));
+            return Err(DomainError::ValidationError(format!(
+                "役職名 '{}' は既に存在します",
+                position.name()
+            )));
         }
         self.positions.push(position);
         Ok(())
@@ -152,9 +150,7 @@ impl Organization {
     /// 役職を削除（メンバーが使用中の場合はエラー）
     pub fn remove_position(&mut self, id: &PositionId) -> DomainResult<()> {
         if self.members.iter().any(|m| m.position_id() == id) {
-            return Err(DomainError::ValidationError(
-                "使用中の役職は削除できません".to_string(),
-            ));
+            return Err(DomainError::ValidationError("使用中の役職は削除できません".to_string()));
         }
         self.positions.retain(|p| p.id() != id);
         Ok(())
@@ -169,25 +165,29 @@ impl Organization {
     /// メンバーを追加（部署・役職の存在確認付き）
     pub fn add_member(&mut self, member: Member) -> DomainResult<()> {
         if self.members.iter().any(|m| m.email() == member.email()) {
-            return Err(DomainError::ValidationError(
-                format!("メールアドレス '{}' は既に使用されています", member.email()),
-            ));
+            return Err(DomainError::ValidationError(format!(
+                "メールアドレス '{}' は既に使用されています",
+                member.email()
+            )));
         }
         if self.find_department(member.department_id()).is_none() {
-            return Err(DomainError::ValidationError(
-                format!("部署 '{}' が存在しません", member.department_id()),
-            ));
+            return Err(DomainError::ValidationError(format!(
+                "部署 '{}' が存在しません",
+                member.department_id()
+            )));
         }
         if self.find_position(member.position_id()).is_none() {
-            return Err(DomainError::ValidationError(
-                format!("役職 '{}' が存在しません", member.position_id()),
-            ));
+            return Err(DomainError::ValidationError(format!(
+                "役職 '{}' が存在しません",
+                member.position_id()
+            )));
         }
         for role_id in member.role_ids() {
             if self.find_role(role_id).is_none() {
-                return Err(DomainError::ValidationError(
-                    format!("ロール '{}' が存在しません", role_id),
-                ));
+                return Err(DomainError::ValidationError(format!(
+                    "ロール '{}' が存在しません",
+                    role_id
+                )));
             }
         }
         self.members.push(member);
@@ -227,9 +227,10 @@ impl Organization {
     /// ロールを追加（名前重複チェック付き）
     pub fn add_role(&mut self, role: Role) -> DomainResult<()> {
         if self.roles.iter().any(|r| r.name() == role.name()) {
-            return Err(DomainError::ValidationError(
-                format!("ロール名 '{}' は既に存在します", role.name()),
-            ));
+            return Err(DomainError::ValidationError(format!(
+                "ロール名 '{}' は既に存在します",
+                role.name()
+            )));
         }
         self.roles.push(role);
         Ok(())
@@ -243,9 +244,7 @@ impl Organization {
     /// ロールを削除（メンバーが使用中の場合はエラー）
     pub fn remove_role(&mut self, id: &RoleId) -> DomainResult<()> {
         if self.members.iter().any(|m| m.role_ids().contains(id)) {
-            return Err(DomainError::ValidationError(
-                "使用中のロールは削除できません".to_string(),
-            ));
+            return Err(DomainError::ValidationError("使用中のロールは削除できません".to_string()));
         }
         self.roles.retain(|r| r.id() != id);
         Ok(())
@@ -254,10 +253,8 @@ impl Organization {
 
 #[cfg(test)]
 mod tests {
-    use crate::company::values::*;
-    use crate::entity::EntityId;
-
     use super::*;
+    use crate::{company::values::*, entity::EntityId};
 
     fn create_test_org() -> Organization {
         let id = OrganizationId::generate();
@@ -284,10 +281,7 @@ mod tests {
     }
 
     fn create_test_role() -> Role {
-        let mut role = Role::new(
-            RoleId::generate(),
-            RoleName::new("経理担当").unwrap(),
-        );
+        let mut role = Role::new(RoleId::generate(), RoleName::new("経理担当").unwrap());
         role.grant(Permission::new("journal_entry:create").unwrap());
         role
     }

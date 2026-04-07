@@ -62,10 +62,11 @@
 ///     │   ├── Judgment Log Input (EXEC)
 ///     │   ├── Audit Log List (VIEW) → Audit Log Detail (VIEW)
 ///     │   └── Period Management (EXEC)
-///     └── [H. Master Management] (Menu)
+///     └── [H. Setup (導入処理)] (Menu)
 ///         ├── Chart of Accounts (VIEW/EXEC)
 ///         ├── Subsidiary Accounts (VIEW/EXEC)
-///         └── Business Partners (VIEW/EXEC)
+///         ├── Business Partners (VIEW/EXEC)
+///         └── Organization Management (VIEW/EXEC)
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Route {
@@ -237,13 +238,19 @@ pub enum Route {
     /// G-06: Period Management (EXEC)
     PeriodManagement,
 
-    // ========== H. Master Management ==========
-    /// H-01: Master Management Menu
-    MasterManagementMenu,
+    // ========== H. Setup (導入処理) ==========
+    /// H-01: Setup Menu (導入処理メニュー)
+    SetupMenu,
     /// H-02: Chart of Accounts (VIEW/EXEC)
     ChartOfAccounts,
     /// H-03: Subsidiary Accounts (VIEW/EXEC)
     SubsidiaryAccounts,
     /// H-04: Business Partners (VIEW/EXEC)
     BusinessPartners,
+    /// H-05: Organization Management (VIEW/EXEC)
+    OrganizationManagement,
+
+    // ========== Legacy (後方互換) ==========
+    /// Legacy: Master Management Menu (→ SetupMenu にリダイレクト)
+    MasterManagementMenu,
 }

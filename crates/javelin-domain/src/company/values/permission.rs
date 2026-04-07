@@ -1,7 +1,6 @@
 // Permission - 権限値オブジェクト
 
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -21,9 +20,7 @@ impl Permission {
     pub fn new(permission: impl Into<String>) -> DomainResult<Self> {
         let permission = permission.into();
         if permission.is_empty() {
-            return Err(DomainError::ValidationError(
-                "権限は空にできません".to_string(),
-            ));
+            return Err(DomainError::ValidationError("権限は空にできません".to_string()));
         }
         if !permission.contains(':') {
             return Err(DomainError::ValidationError(

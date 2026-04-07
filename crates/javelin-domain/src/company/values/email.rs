@@ -1,7 +1,6 @@
 // Email - メールアドレス値オブジェクト
 
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -18,14 +17,10 @@ impl Email {
     pub fn new(email: impl Into<String>) -> DomainResult<Self> {
         let email = email.into();
         if email.is_empty() {
-            return Err(DomainError::ValidationError(
-                "メールアドレスは空にできません".to_string(),
-            ));
+            return Err(DomainError::ValidationError("メールアドレスは空にできません".to_string()));
         }
         if !email.contains('@') || !email.contains('.') {
-            return Err(DomainError::ValidationError(
-                "メールアドレスの形式が不正です".to_string(),
-            ));
+            return Err(DomainError::ValidationError("メールアドレスの形式が不正です".to_string()));
         }
         Ok(Self(email))
     }
@@ -38,9 +33,7 @@ impl Email {
 impl ValueObject for Email {
     fn validate(&self) -> DomainResult<()> {
         if self.0.is_empty() || !self.0.contains('@') {
-            return Err(DomainError::ValidationError(
-                "メールアドレスの形式が不正です".to_string(),
-            ));
+            return Err(DomainError::ValidationError("メールアドレスの形式が不正です".to_string()));
         }
         Ok(())
     }

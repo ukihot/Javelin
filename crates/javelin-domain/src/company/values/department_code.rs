@@ -1,7 +1,6 @@
 // DepartmentCode - 部署コード値オブジェクト
 
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -18,9 +17,7 @@ impl DepartmentCode {
     pub fn new(code: impl Into<String>) -> DomainResult<Self> {
         let code = code.into();
         if code.is_empty() {
-            return Err(DomainError::ValidationError(
-                "部署コードは空にできません".to_string(),
-            ));
+            return Err(DomainError::ValidationError("部署コードは空にできません".to_string()));
         }
         if code.len() > 20 {
             return Err(DomainError::ValidationError(
@@ -38,9 +35,7 @@ impl DepartmentCode {
 impl ValueObject for DepartmentCode {
     fn validate(&self) -> DomainResult<()> {
         if self.0.is_empty() {
-            return Err(DomainError::ValidationError(
-                "部署コードは空にできません".to_string(),
-            ));
+            return Err(DomainError::ValidationError("部署コードは空にできません".to_string()));
         }
         Ok(())
     }

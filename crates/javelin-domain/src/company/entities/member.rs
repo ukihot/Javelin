@@ -98,9 +98,8 @@ impl Member {
 
 #[cfg(test)]
 mod tests {
-    use crate::company::values::*;
-
     use super::*;
+    use crate::company::values::*;
 
     fn create_test_member() -> Member {
         Member::new(

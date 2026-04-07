@@ -98,9 +98,8 @@ impl OrganizationDomainService {
 
 #[cfg(test)]
 mod tests {
-    use crate::company::{entities::*, values::*};
-
     use super::*;
+    use crate::company::{entities::*, values::*};
 
     fn setup_org() -> (Organization, MemberId, RoleId) {
         let mut org = Organization::new(
@@ -126,10 +125,7 @@ mod tests {
         let pos_id = pos.id().clone();
         org.add_position(pos).unwrap();
 
-        let mut role = Role::new(
-            RoleId::generate(),
-            RoleName::new("経理担当").unwrap(),
-        );
+        let mut role = Role::new(RoleId::generate(), RoleName::new("経理担当").unwrap());
         role.grant(Permission::new("journal_entry:create").unwrap());
         role.grant(Permission::new("journal_entry:approve").unwrap());
         let role_id = role.id().clone();
@@ -157,7 +153,9 @@ mod tests {
         assert!(OrganizationDomainService::has_permission(&org, &member_id, &create_perm).unwrap());
 
         let closing_perm = Permission::new("closing:execute").unwrap();
-        assert!(!OrganizationDomainService::has_permission(&org, &member_id, &closing_perm).unwrap());
+        assert!(
+            !OrganizationDomainService::has_permission(&org, &member_id, &closing_perm).unwrap()
+        );
     }
 
     #[test]

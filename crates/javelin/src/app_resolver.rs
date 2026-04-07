@@ -273,10 +273,15 @@ impl PageStateResolver {
                 ))))
             }
 
-            // ========== H. Master Management ==========
-            Route::MasterManagementMenu => {
+            // ========== H. 導入処理 (Setup) ==========
+            Route::SetupMenu | Route::MasterManagementMenu => {
                 Ok(Box::new(javelin_adapter::MasterManagementMenuPageState::new()))
             }
+            Route::OrganizationManagement => Ok(Box::new(javelin_adapter::StubPageState::new(
+                Route::OrganizationManagement,
+                "H-05: Organization Management",
+                "組織体制・権限管理画面",
+            ))),
             Route::ChartOfAccounts => Ok(Box::new(javelin_adapter::AccountMasterPageState::new(
                 Arc::clone(&self.presenter_registry),
             ))),

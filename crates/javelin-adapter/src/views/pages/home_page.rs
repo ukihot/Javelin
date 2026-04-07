@@ -16,14 +16,14 @@ use crate::{
 enum MenuType {
     Sales,   // 販売管理
     Finance, // 財務会計
-    System,  // システム
+    Setup,   // 導入処理
 }
 
 pub struct HomePage {
     layout: MenuLayout,
     sales_menu_selector: ListSelector,
     finance_menu_selector: ListSelector,
-    system_menu_selector: ListSelector,
+    setup_menu_selector: ListSelector,
     active_menu: MenuType,
 }
 
@@ -50,19 +50,23 @@ impl HomePage {
             ListItemData::new("H", "判断ログ・監査証跡", "会計判断記録・監査ログ"),
         ];
 
-        // システムメニュー
-        let system_menu_items =
-            vec![ListItemData::new("I", "マスタ管理", "勘定科目・補助科目・取引先")];
+        // 導入処理メニュー
+        let setup_menu_items = vec![
+            ListItemData::new("I", "勘定科目", "勘定科目マスタ管理"),
+            ListItemData::new("J", "補助科目", "補助科目マスタ管理"),
+            ListItemData::new("K", "取引先", "取引先マスタ管理"),
+            ListItemData::new("L", "組織", "組織体制・権限管理"),
+        ];
 
         let sales_menu_selector = ListSelector::new("販売管理", sales_menu_items);
         let finance_menu_selector = ListSelector::new("財務会計", finance_menu_items);
-        let system_menu_selector = ListSelector::new("システム", system_menu_items);
+        let setup_menu_selector = ListSelector::new("導入処理", setup_menu_items);
 
         Self {
             layout,
             sales_menu_selector,
             finance_menu_selector,
-            system_menu_selector,
+            setup_menu_selector,
             active_menu: MenuType::Sales,
         }
     }
@@ -75,10 +79,10 @@ impl HomePage {
                 MenuType::Finance
             }
             MenuType::Finance => {
-                self.layout.event_viewer_mut().add_info("システムメニューに切替");
-                MenuType::System
+                self.layout.event_viewer_mut().add_info("導入処理メニューに切替");
+                MenuType::Setup
             }
-            MenuType::System => {
+            MenuType::Setup => {
                 self.layout.event_viewer_mut().add_info("販売管理メニューに切替");
                 MenuType::Sales
             }
@@ -95,7 +99,7 @@ impl HomePage {
         match self.active_menu {
             MenuType::Sales => self.sales_menu_selector.select_previous(),
             MenuType::Finance => self.finance_menu_selector.select_previous(),
-            MenuType::System => self.system_menu_selector.select_previous(),
+            MenuType::Setup => self.setup_menu_selector.select_previous(),
         }
     }
 
@@ -104,7 +108,7 @@ impl HomePage {
         match self.active_menu {
             MenuType::Sales => self.sales_menu_selector.select_next(),
             MenuType::Finance => self.finance_menu_selector.select_next(),
-            MenuType::System => self.system_menu_selector.select_next(),
+            MenuType::Setup => self.setup_menu_selector.select_next(),
         }
     }
 
@@ -129,9 +133,12 @@ impl HomePage {
                     _ => None,
                 })
             }
-            MenuType::System => {
-                self.system_menu_selector.selected_index().and_then(|idx| match idx {
-                    0 => Some(Route::MasterManagementMenu),
+            MenuType::Setup => {
+                self.setup_menu_selector.selected_index().and_then(|idx| match idx {
+                    0 => Some(Route::ChartOfAccounts),
+                    1 => Some(Route::SubsidiaryAccounts),
+                    2 => Some(Route::BusinessPartners),
+                    3 => Some(Route::OrganizationManagement),
                     _ => None,
                 })
             }
@@ -145,7 +152,7 @@ impl HomePage {
         let active_menu = self.active_menu;
         let sales_selector = &mut self.sales_menu_selector;
         let finance_selector = &mut self.finance_menu_selector;
-        let system_selector = &mut self.system_menu_selector;
+        let setup_selector = &mut self.setup_menu_selector;
 
         self.layout.render(frame, |frame, area| {
             // メインエリアを上中下3分割: 販売管理(上) + 財務会計(中) + システム(下)
@@ -153,8 +160,8 @@ impl HomePage {
                 .direction(Direction::Vertical)
                 .constraints([
                     Constraint::Percentage(15), // 販売管理
-                    Constraint::Percentage(70), // 財務会計
-                    Constraint::Percentage(15), // システム
+                    Constraint::Percentage(60), // 財務会計
+                    Constraint::Percentage(25), // 導入処理
                 ])
                 .split(area);
 
@@ -168,10 +175,10 @@ impl HomePage {
             finance_selector.set_active(is_finance_active);
             finance_selector.render(frame, menu_chunks[1]);
 
-            // システムメニュー
-            let is_system_active = active_menu == MenuType::System;
-            system_selector.set_active(is_system_active);
-            system_selector.render(frame, menu_chunks[2]);
+            // 導入処理メニュー
+            let is_setup_active = active_menu == MenuType::Setup;
+            setup_selector.set_active(is_setup_active);
+            setup_selector.render(frame, menu_chunks[2]);
         });
     }
 }
